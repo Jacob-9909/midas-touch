@@ -4,6 +4,7 @@ import os
 import re
 import pandas as pd
 from datasets import load_dataset
+from huggingface_hub import HfApi
 from openai import AsyncOpenAI
 from tqdm.asyncio import tqdm
 from dotenv import load_dotenv
@@ -190,6 +191,27 @@ async def main():
         print("\n[생성된 데이터 미리보기]")
         display_cols = ['age', 'total_amount', 'monthly_income', 'aggressiveness', 'target_return_percent']
         print(new_df[display_cols].head())
+
+    # 5. 허깅페이스 비공개 데이터셋에 업로드
+    hf_token = os.environ.get("HF_TOKEN")
+    if hf_token:
+        print("\n5. 허깅페이스 데이터셋에 업로드 중...")
+        api = HfApi()
+        repo_id = "Jacob-9909/midas-touch-finance"
+        try:
+            api.create_repo(repo_id=repo_id, repo_type="dataset", private=True, token=hf_token, exist_ok=True)
+        except Exception:
+            pass
+        api.upload_file(
+            path_or_fileobj=output_file,
+            path_in_repo="augmented_personas.csv",
+            repo_id=repo_id,
+            repo_type="dataset",
+            token=hf_token,
+        )
+        print(f"   완료! https://huggingface.co/datasets/{repo_id}")
+    else:
+        print("\n[경고] HF_TOKEN이 없어 허깅페이스 업로드를 건너뜁니다.")
 
 if __name__ == "__main__":
     asyncio.run(main())
