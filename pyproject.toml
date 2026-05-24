@@ -11,7 +11,12 @@ dependencies = [
     "openai>=2.37.0",
     "pandas>=3.0.3",
     "tqdm>=4.67.3",
+    # Azure SQL
+    "pyodbc>=5.2.0",
+    # Supabase (pgvector RAG)
+    "supabase>=2.15.0",
+    "psycopg2-binary>=2.9.12",
 ]
 
-[tool.uv]
-dev-dependencies = []
+[dependency-groups]
+dev = []
