@@ -16,6 +16,9 @@ dependencies = [
     # Supabase (pgvector RAG)
     "supabase>=2.15.0",
     "psycopg2-binary>=2.9.12",
+    "alembic>=1.18.4",
+    "sqlalchemy>=2.0.49",
+    "pgvector>=0.4.2",
 ]
 
 [dependency-groups]

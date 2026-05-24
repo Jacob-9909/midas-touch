@@ -21,3 +21,11 @@ data/
 # Python/uv
 .uv/
 .python-version
+
+# IDE / Editors
+.vscode/
+.idea/
+.claude/
+
+# OS specific
+.DS_Store

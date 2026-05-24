@@ -56,7 +56,8 @@ def db_cursor():
 def apply_schema(schema_path: str | None = None) -> None:
     """Run schema.sql against the target database (idempotent-safe)."""
     if schema_path is None:
-        schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        schema_path = os.path.join(project_root, "database", "schema", "azure_schema.sql")
 
     with open(schema_path, encoding="utf-8") as f:
         sql = f.read()
@@ -104,6 +105,7 @@ def upsert_user(row: dict[str, Any]) -> str:
         total_amount = ?, monthly_income = ?, monthly_investable = ?,
         specific_items = ?,
         has_stock = ?, has_bond = ?, has_deposit = ?, has_real_estate = ?,
+        stock_amount = ?, bond_amount = ?, deposit_amount = ?, real_estate_amount = ?,
         aggressiveness = ?, preferred_asset = ?, financial_literacy = ?,
         target_return_percent = ?, investable_period_months = ?,
         requires_liquidity = ?,
@@ -115,11 +117,13 @@ def upsert_user(row: dict[str, Any]) -> str:
         career_goals_and_ambitions,
         total_amount, monthly_income, monthly_investable, specific_items,
         has_stock, has_bond, has_deposit, has_real_estate,
+        stock_amount, bond_amount, deposit_amount, real_estate_amount,
         aggressiveness, preferred_asset, financial_literacy,
         target_return_percent, investable_period_months, requires_liquidity
     ) VALUES (
         ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
+        ?, ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?, ?,
@@ -166,6 +170,10 @@ def _user_params(row: dict[str, Any]) -> list:
         int(row.get("has_bond", 0)),
         int(row.get("has_deposit", 0)),
         int(row.get("has_real_estate", 0)),
+        int(row.get("stock_amount", 0)),
+        int(row.get("bond_amount", 0)),
+        int(row.get("deposit_amount", 0)),
+        int(row.get("real_estate_amount", 0)),
         row.get("aggressiveness"),
         row.get("preferred_asset"),
         row.get("financial_literacy"),

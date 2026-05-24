@@ -54,9 +54,9 @@ PROMPT_TEMPLATE = """당신은 금융 데이터를 분석하고 페르소나에 
   "asset_size": {{
     "total_amount": 50000000,
     "asset_types": {{
-      "stock": 1,
+      "stock": 15000000,
       "bond": 0,
-      "deposit": 1,
+      "deposit": 35000000,
       "real_estate": 0
     }},
     "specific_items": "삼성전자, 청약예금",
@@ -76,7 +76,7 @@ PROMPT_TEMPLATE = """당신은 금융 데이터를 분석하고 페르소나에 
 }}
 
 [제약 조건]
-- asset_types의 하위 값들은 반드시 0 또는 1 이어야 합니다.
+- asset_types의 하위 값들(stock, bond, deposit, real_estate)은 각 자산의 실제 보유 금액(원화 기준 정수)이어야 하며, 이 값들의 합은 반드시 total_amount와 정확히 일치해야 합니다.
 - aggressiveness, financial_literacy는 1~10 사이의 숫자입니다.
 - 모든 금액이나 퍼센트, 개월 수는 문자열이 아닌 정수(숫자)로 입력하세요."""
 
@@ -127,10 +127,16 @@ async def generate_finance_data(row, semaphore):
                 # 행 데이터에 병합하기 위해 딕셔너리 구조 평탄화 (Flatten)
                 result = row.to_dict()
                 result['total_amount'] = finance_data['asset_size']['total_amount']
-                result['has_stock'] = finance_data['asset_size']['asset_types']['stock']
-                result['has_bond'] = finance_data['asset_size']['asset_types']['bond']
-                result['has_deposit'] = finance_data['asset_size']['asset_types']['deposit']
-                result['has_real_estate'] = finance_data['asset_size']['asset_types']['real_estate']
+                result['stock_amount'] = finance_data['asset_size']['asset_types']['stock']
+                result['bond_amount'] = finance_data['asset_size']['asset_types']['bond']
+                result['deposit_amount'] = finance_data['asset_size']['asset_types']['deposit']
+                result['real_estate_amount'] = finance_data['asset_size']['asset_types']['real_estate']
+                
+                result['has_stock'] = 1 if result['stock_amount'] > 0 else 0
+                result['has_bond'] = 1 if result['bond_amount'] > 0 else 0
+                result['has_deposit'] = 1 if result['deposit_amount'] > 0 else 0
+                result['has_real_estate'] = 1 if result['real_estate_amount'] > 0 else 0
+
                 result['specific_items'] = finance_data['asset_size']['specific_items']
                 result['monthly_income'] = finance_data['asset_size']['monthly_income']
                 result['monthly_investable'] = finance_data['asset_size']['monthly_investable']

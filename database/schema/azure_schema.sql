@@ -37,6 +37,10 @@ CREATE TABLE users (
     has_bond            BIT             NOT NULL DEFAULT 0,
     has_deposit         BIT             NOT NULL DEFAULT 0,
     has_real_estate     BIT             NOT NULL DEFAULT 0,
+    stock_amount        BIGINT          NOT NULL DEFAULT 0,
+    bond_amount         BIGINT          NOT NULL DEFAULT 0,
+    deposit_amount      BIGINT          NOT NULL DEFAULT 0,
+    real_estate_amount  BIGINT          NOT NULL DEFAULT 0,
     -- 투자 성향
     aggressiveness      TINYINT         NULL CHECK (aggressiveness BETWEEN 1 AND 10),
     preferred_asset     NVARCHAR(200)   NULL,
