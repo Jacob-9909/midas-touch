@@ -15,9 +15,9 @@ CREATE TABLE users (
     uuid            VARCHAR(100)        NULL,       -- HuggingFace 원본 uuid
     -- 인적 정보
     age             SMALLINT            NULL,
-    sex             VARCHAR(10)         NULL,
-    marital_status  VARCHAR(50)         NULL,
-    education_level VARCHAR(100)        NULL,
+    sex             NVARCHAR(10)        NULL,
+    marital_status  NVARCHAR(50)        NULL,
+    education_level NVARCHAR(100)       NULL,
     bachelors_field NVARCHAR(200)       NULL,
     occupation      NVARCHAR(200)       NULL,
     family_type     NVARCHAR(100)       NULL,
@@ -37,6 +37,10 @@ CREATE TABLE users (
     has_bond            BIT             NOT NULL DEFAULT 0,
     has_deposit         BIT             NOT NULL DEFAULT 0,
     has_real_estate     BIT             NOT NULL DEFAULT 0,
+    stock_amount        BIGINT          NOT NULL DEFAULT 0,
+    bond_amount         BIGINT          NOT NULL DEFAULT 0,
+    deposit_amount      BIGINT          NOT NULL DEFAULT 0,
+    real_estate_amount  BIGINT          NOT NULL DEFAULT 0,
     -- 투자 성향
     aggressiveness      TINYINT         NULL CHECK (aggressiveness BETWEEN 1 AND 10),
     preferred_asset     NVARCHAR(200)   NULL,

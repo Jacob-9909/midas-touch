@@ -4,8 +4,8 @@ generate_finance_data.py가 생성한 augmented_personas.csv를 읽어
 Azure SQL users 테이블에 upsert합니다.
 
 실행:
-    uv run python src/db/save_to_azure.py
-    uv run python src/db/save_to_azure.py --file data/augmented_personas.csv --batch 100
+    uv run python scripts/save_to_azure.py
+    uv run python scripts/save_to_azure.py --file data/augmented_personas.csv --batch 100
 """
 
 import argparse
@@ -15,21 +15,25 @@ import sys
 import pandas as pd
 from tqdm import tqdm
 
-# 프로젝트 루트 경로 설정
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 프로젝트 루트 경로 및 src 경로 설정
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(project_root, "src"))
 from db.connector import bulk_upsert_users, apply_schema
 
 
 def load_csv(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
+    df = pd.read_csv(path, encoding="utf-8-sig")
     print(f"로드 완료: {len(df):,}행 / 컬럼: {list(df.columns)}")
     return df
 
 
 def df_to_rows(df: pd.DataFrame) -> list[dict]:
     """DataFrame → connector가 기대하는 dict 리스트로 변환."""
-    bool_cols = ["has_stock", "has_bond", "has_deposit", "has_real_estate", "requires_liquidity"]
-    for col in bool_cols:
+    int_cols = [
+        "has_stock", "has_bond", "has_deposit", "has_real_estate", "requires_liquidity",
+        "stock_amount", "bond_amount", "deposit_amount", "real_estate_amount"
+    ]
+    for col in int_cols:
         if col in df.columns:
             df[col] = df[col].fillna(0).astype(int)
 
@@ -44,10 +48,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="페르소나 CSV → Azure SQL 적재")
     parser.add_argument(
         "--file", "-f",
-        default=os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-            "data", "augmented_personas.csv",
-        ),
+        default=os.path.join(project_root, "data", "augmented_personas.csv"),
         help="입력 CSV 경로 (기본값: data/augmented_personas.csv)",
     )
     parser.add_argument("--batch", "-b", type=int, default=50, help="배치 크기 (기본 50)")
