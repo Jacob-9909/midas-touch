@@ -3,7 +3,7 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "1. PostgreSQL 컨테이너 시작 중..."
-cd "$SCRIPT_DIR" && docker compose up -d
+cd "$SCRIPT_DIR/.." && docker compose up -d
 
 echo "2. DB 준비 대기 중..."
 sleep 3

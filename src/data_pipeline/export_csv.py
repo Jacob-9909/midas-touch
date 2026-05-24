@@ -16,7 +16,7 @@ print("필요한 컬럼 추출 중...")
 df_filtered = df[SELECTED_COLUMNS].copy()
 
 import os
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 output_file = os.path.join(PROJECT_ROOT, "data", "base_personas.csv")
 os.makedirs(os.path.dirname(output_file), exist_ok=True)
 print(f"'{output_file}' 로 저장하는 중 (용량이 커서 몇 초 정도 걸릴 수 있습니다)...")
