@@ -2,21 +2,30 @@ import asyncio
 import json
 import os
 import re
+import sys
 import pandas as pd
 from datasets import load_dataset
 from huggingface_hub import HfApi
 from openai import AsyncOpenAI
+from tqdm import tqdm as sync_tqdm
 from tqdm.asyncio import tqdm
 from dotenv import load_dotenv
 
 # .env 파일 로드
 load_dotenv()
 
+# src 경로를 sys.path에 추가해 db.connector 임포트 가능하게 함
+_SRC_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _SRC_ROOT not in sys.path:
+    sys.path.insert(0, _SRC_ROOT)
+
+from db.connector import bulk_upsert_users
+
 # ==========================================
 # 1. 설정 (Settings)
 # ==========================================
 # 생성할 데이터 수 지정
-NUM_SAMPLES = 500
+NUM_SAMPLES = 50
 
 # 초당 요청 수 제어 (딜레이를 단축하여 대기 시간 단축)
 DELAY_BETWEEN_REQUESTS = 0.5 
@@ -28,7 +37,7 @@ client = AsyncOpenAI(
     timeout=300.0
 )
 
-MODEL_NAME = "nvidia/nemotron-3-super-120b-a12b" # 또는 사용할 텍스트 생성 모델 지정
+MODEL_NAME = "deepseek-ai/deepseek-v4-flash" # 또는 사용할 텍스트 생성 모델 지정
 
 # 사용할 기존 컬럼
 SELECTED_COLUMNS = [
@@ -211,12 +220,33 @@ async def main():
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     new_df.to_csv(output_file, index=False, encoding="utf-8-sig")
     print(f"4. 결과가 '{output_file}'에 저장되었습니다.")
-    
+
     # 데이터 미리보기
     if not new_df.empty:
         print("\n[생성된 데이터 미리보기]")
         display_cols = ['age', 'total_amount', 'monthly_income', 'aggressiveness', 'target_return_percent']
         print(new_df[display_cols].head())
+
+    # 4.5. Azure SQL에 직접 upsert
+    print(f"\n4.5. Azure SQL에 {len(new_df)}건 적재 중...")
+    int_cols = [
+        "has_stock", "has_bond", "has_deposit", "has_real_estate", "requires_liquidity",
+        "stock_amount", "bond_amount", "deposit_amount", "real_estate_amount",
+    ]
+    for col in int_cols:
+        if col in new_df.columns:
+            new_df[col] = new_df[col].fillna(0).astype(int)
+    rows = [
+        {k: (None if pd.isna(v) else v) for k, v in row.items()}
+        for row in new_df.to_dict(orient="records")
+    ]
+    BATCH_SIZE = 50
+    saved = 0
+    with sync_tqdm(total=len(rows), unit="rows") as pbar:
+        for i in range(0, len(rows), BATCH_SIZE):
+            saved += bulk_upsert_users(rows[i : i + BATCH_SIZE])
+            pbar.update(min(BATCH_SIZE, len(rows) - i))
+    print(f"    완료! {saved}/{len(rows)}건 적재.")
 
     # 5. 허깅페이스 비공개 데이터셋에 업로드
     hf_token = os.environ.get("HF_TOKEN")

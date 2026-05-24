@@ -33,9 +33,9 @@ class User(AzureBase):
     
     # Personal Info
     age = Column(SmallInteger, nullable=True)
-    sex = Column(String(10), nullable=True)
-    marital_status = Column(String(50), nullable=True)
-    education_level = Column(String(100), nullable=True)
+    sex = Column(Unicode(10), nullable=True)
+    marital_status = Column(Unicode(50), nullable=True)
+    education_level = Column(Unicode(100), nullable=True)
     bachelors_field = Column(Unicode(200), nullable=True)
     occupation = Column(Unicode(200), nullable=True)
     family_type = Column(Unicode(100), nullable=True)

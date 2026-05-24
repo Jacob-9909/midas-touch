@@ -22,7 +22,7 @@ from db.connector import bulk_upsert_users, apply_schema
 
 
 def load_csv(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
+    df = pd.read_csv(path, encoding="utf-8-sig")
     print(f"로드 완료: {len(df):,}행 / 컬럼: {list(df.columns)}")
     return df
 

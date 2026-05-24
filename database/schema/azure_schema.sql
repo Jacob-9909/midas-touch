@@ -15,9 +15,9 @@ CREATE TABLE users (
     uuid            VARCHAR(100)        NULL,       -- HuggingFace 원본 uuid
     -- 인적 정보
     age             SMALLINT            NULL,
-    sex             VARCHAR(10)         NULL,
-    marital_status  VARCHAR(50)         NULL,
-    education_level VARCHAR(100)        NULL,
+    sex             NVARCHAR(10)        NULL,
+    marital_status  NVARCHAR(50)        NULL,
+    education_level NVARCHAR(100)       NULL,
     bachelors_field NVARCHAR(200)       NULL,
     occupation      NVARCHAR(200)       NULL,
     family_type     NVARCHAR(100)       NULL,
