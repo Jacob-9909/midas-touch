@@ -27,8 +27,8 @@ CREATE TABLE IF NOT EXISTS news_embeddings (
     -- 분류
     category        VARCHAR(50)         NULL,   -- 'exchange_rate', 'interest_rate', 'oil', 'gold', 'politics', 'disaster'
     sentiment_score NUMERIC(4,3)        NULL,   -- -1.0 ~ 1.0 (LLM 감성 분석)
-    -- 벡터 (text-embedding-3-small: 1536차원)
-    embedding       VECTOR(1536)        NOT NULL,
+    -- 벡터 (nlpai-lab/KURE-v1: 1024차원)
+    embedding       VECTOR(1024)        NOT NULL,
     -- 메타
     created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
 
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS strategy_docs (
     chunk_index     INT                 NOT NULL DEFAULT 0,
     chunk_text      TEXT                NOT NULL,
     -- 벡터
-    embedding       VECTOR(1536)        NOT NULL,
+    embedding       VECTOR(1024)        NOT NULL,
     -- Azure SQL legal_references와의 연결 고리
     azure_legal_id  INT                 NULL,
     source_url      TEXT                NULL,
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS macro_indicators (
     unit            VARCHAR(20)         NULL,       -- 'KRW', '%', 'USD/BBL'
     -- LLM이 생성한 이 수치의 거시경제 해설 + 임베딩
     analysis_text   TEXT                NULL,
-    embedding       VECTOR(1536)        NULL,       -- analysis_text의 임베딩
+    embedding       VECTOR(1024)        NULL,       -- analysis_text의 임베딩
     source          VARCHAR(50)         NOT NULL,
     created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
 
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS persona_embeddings (
     id              BIGSERIAL           PRIMARY KEY,
     azure_user_uuid VARCHAR(100)        NOT NULL UNIQUE,  -- users.uuid FK (논리적)
     persona_text    TEXT                NOT NULL,         -- 합성된 페르소나 요약
-    embedding       VECTOR(1536)        NOT NULL,
+    embedding       VECTOR(1024)        NOT NULL,
     created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW()
 );
@@ -125,7 +125,7 @@ CREATE INDEX IF NOT EXISTS idx_persona_embedding_hnsw
 -- 유틸 함수: 코사인 유사도 기반 뉴스 검색 (TOP-K)
 -- ============================================================
 CREATE OR REPLACE FUNCTION search_news(
-    query_embedding VECTOR(1536),
+    query_embedding VECTOR(1024),
     top_k           INT     DEFAULT 10,
     category_filter VARCHAR DEFAULT NULL,
     days_back       INT     DEFAULT 30
@@ -160,7 +160,7 @@ $$;
 -- 유틸 함수: 전략 문서 RAG 검색
 -- ============================================================
 CREATE OR REPLACE FUNCTION search_strategies(
-    query_embedding VECTOR(1536),
+    query_embedding VECTOR(1024),
     top_k           INT     DEFAULT 5,
     strategy_filter VARCHAR DEFAULT NULL
 )
@@ -189,7 +189,7 @@ $$;
 -- 유틸 함수: 유사 페르소나 사용자 검색
 -- ============================================================
 CREATE OR REPLACE FUNCTION search_similar_personas(
-    query_embedding VECTOR(1536),
+    query_embedding VECTOR(1024),
     top_k           INT DEFAULT 5
 )
 RETURNS TABLE (

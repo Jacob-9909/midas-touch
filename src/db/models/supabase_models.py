@@ -31,8 +31,8 @@ class NewsEmbedding(SupabaseBase):
     category = Column(String(50), nullable=True)
     sentiment_score = Column(Numeric(4, 3), nullable=True)
     
-    # 1536-dimensional embedding using text-embedding-3-small
-    embedding = Column(Vector(1536), nullable=False)
+    # 1024-dimensional embedding using nlpai-lab/KURE-v1
+    embedding = Column(Vector(1024), nullable=False)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
@@ -51,8 +51,8 @@ class StrategyDoc(SupabaseBase):
     chunk_index = Column(Integer, nullable=False, server_default=text("0"))
     chunk_text = Column(Text, nullable=False)
     
-    # 1536-dimensional embedding
-    embedding = Column(Vector(1536), nullable=False)
+    # 1024-dimensional embedding
+    embedding = Column(Vector(1024), nullable=False)
     azure_legal_id = Column(Integer, nullable=True)
     source_url = Column(Text, nullable=True)
     created_at = Column(
@@ -72,8 +72,8 @@ class MacroIndicator(SupabaseBase):
     unit = Column(String(20), nullable=True)
     analysis_text = Column(Text, nullable=True)
     
-    # 1536-dimensional embedding
-    embedding = Column(Vector(1536), nullable=True)
+    # 1024-dimensional embedding
+    embedding = Column(Vector(1024), nullable=True)
     source = Column(String(50), nullable=False)
     created_at = Column(
         DateTime(timezone=True),
@@ -89,8 +89,8 @@ class PersonaEmbedding(SupabaseBase):
     azure_user_uuid = Column(String(100), unique=True, nullable=False)
     persona_text = Column(Text, nullable=False)
     
-    # 1536-dimensional embedding
-    embedding = Column(Vector(1536), nullable=False)
+    # 1024-dimensional embedding
+    embedding = Column(Vector(1024), nullable=False)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
