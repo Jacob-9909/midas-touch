@@ -22,8 +22,47 @@ IMAGE_OS="Canonical Ubuntu"
 IMAGE_OS_VERSION="22.04 Minimal"
 IMAGE_BUILD="2026.04.30-1"
 
-# SSH 공개 키 (생성할 인스턴스에 등록할 공개 키)
-SSH_PUBLIC_KEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGbLV7n3HTc+th2VKpp3hmdJ41db8dH78oSqlEFSyhCK4Y2OeQ9flSH2MUskGdaNYSG+nVW+oDCuVua9x31tG/S6JimXgExiVbEGWxaKwIiDpFSYJKk5JS8ImlETp5h3cb0942RWYtu8XG5M6ntAyrmExaSpPMWWvLp35byFB7qt1OJvNGG+FxCkm17JB7JTR/j6KlEhtH090GvyHCWa2DUpR0hX1GSbxh2KscFA003BvcEn46E3uW+OVUT9tupm4v+K1QNfFbfR5RsCk0WQ2mLs9Q7fdReSBaMLkUX1gQqdVuC4xSWbWexgw7vC/QJJTcNMj7CwI1HOd3xvdHz/gh ssh-key-2026-05-24"
+# .env 파일 안전 로드 함수
+load_env() {
+    local env_file="$1"
+    if [ -f "$env_file" ]; then
+        while IFS= read -r line || [ -n "$line" ]; do
+            # 주석 및 빈 줄 제외
+            if [[ ! "$line" =~ ^# ]] && [[ -n "$line" ]]; then
+                key=$(echo "$line" | cut -d'=' -f1)
+                value=$(echo "$line" | cut -d'=' -f2-)
+                key=$(echo "$key" | xargs)
+                value=$(echo "$value" | xargs | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
+                if [ -n "$key" ]; then
+                    export "$key=$value"
+                fi
+            fi
+        done < "$env_file"
+    fi
+}
+
+# 부모 디렉토리 또는 현재 디렉토리의 .env 로드
+if [ -f .env ]; then
+    load_env .env
+elif [ -f ../.env ]; then
+    load_env ../.env
+fi
+
+# SSH 공개 키 설정 (우선순위: .env의 OCI_SSH_PUBLIC_KEY > 로컬 SSH 공개키 파일 > 기존 하드코딩 키 폴백)
+SSH_PUBLIC_KEY="$OCI_SSH_PUBLIC_KEY"
+if [ -z "$SSH_PUBLIC_KEY" ]; then
+    if [ -f ~/.ssh/id_rsa.pub ]; then
+        SSH_PUBLIC_KEY=$(cat ~/.ssh/id_rsa.pub)
+        echo "   ℹ️  로컬 SSH 공개 키(~/.ssh/id_rsa.pub)를 자동으로 감지하여 사용합니다."
+    elif [ -f ~/.ssh/id_ed25519.pub ]; then
+        SSH_PUBLIC_KEY=$(cat ~/.ssh/id_ed25519.pub)
+        echo "   ℹ️  로컬 SSH 공개 키(~/.ssh/id_ed25519.pub)를 자동으로 감지하여 사용합니다."
+    else
+        SSH_PUBLIC_KEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGbLV7n3HTc+th2VKpp3hmdJ41db8dH78oSqlEFSyhCK4Y2OeQ9flSH2MUskGdaNYSG+nVW+oDCuVua9x31tG/S6JimXgExiVbEGWxaKwIiDpFSYJKk5JS8ImlETp5h3cb0942RWYtu8XG5M6ntAyrmExaSpPMWWvLp35byFB7qt1OJvNGG+FxCkm17JB7JTR/j6KlEhtH090GvyHCWa2DUpR0hX1GSbxh2KscFA003BvcEn46E3uW+OVUT9tupm4v+K1QNfFbfR5RsCk0WQ2mLs9Q7fdReSBaMLkUX1gQqdVuC4xSWbWexgw7vC/QJJTcNMj7CwI1HOd3xvdHz/gh ssh-key-2026-05-24"
+        echo "   ⚠️  보안 경고: 하드코딩된 기본 SSH 공개 키를 임시 폴백으로 사용 중입니다."
+        echo "      개인 보안을 위해 .env 파일에 OCI_SSH_PUBLIC_KEY=\"본인의_공개키\"를 등록하는 것을 강력히 권장합니다."
+    fi
+fi
 
 # 인스턴스 사양 설정 (DB 전용 추천 사양: 2 OCPU / 12GB RAM / 100GB Boot Volume)
 INSTANCE_NAME="instance-20260524-1412"

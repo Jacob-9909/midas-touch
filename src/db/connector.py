@@ -24,7 +24,7 @@ def _build_connection_string() -> str:
         f"UID={user};"
         f"PWD={password};"
         "Encrypt=yes;"
-        "TrustServerCertificate=no;"
+        "TrustServerCertificate=yes;"
         "Connection Timeout=30;"
     )
 
@@ -212,6 +212,52 @@ def upsert_market_snapshot(
             value, unit, source,            # WHEN MATCHED
             date, data_type, sub_key, value, unit, source,  # WHEN NOT MATCHED
         ])
+
+
+def bulk_upsert_market_snapshots(rows: list[dict[str, Any]]) -> int:
+    """Bulk upsert market snapshots in a single transaction. Returns count of rows processed."""
+    sql = """
+    MERGE market_snapshots AS target
+    USING (SELECT ? AS snapshot_date, ? AS data_type, ? AS sub_key) AS src
+        ON  target.snapshot_date = src.snapshot_date
+        AND target.data_type     = src.data_type
+        AND target.sub_key       = src.sub_key
+    WHEN MATCHED THEN UPDATE SET value = ?, unit = ?, source = ?
+    WHEN NOT MATCHED THEN INSERT
+        (snapshot_date, data_type, source, sub_key, value, unit)
+        VALUES (?, ?, ?, ?, ?, ?);
+    """
+    # Wait, check if INSERT columns match the SELECT/VALUES order!
+    # Table schema: (snapshot_date, data_type, sub_key, value, unit, source)
+    # Let's write the INSERT explicitly:
+    sql = """
+    MERGE market_snapshots AS target
+    USING (SELECT ? AS snapshot_date, ? AS data_type, ? AS sub_key) AS src
+        ON  target.snapshot_date = src.snapshot_date
+        AND target.data_type     = src.data_type
+        AND target.sub_key       = src.sub_key
+    WHEN MATCHED THEN UPDATE SET value = ?, unit = ?, source = ?
+    WHEN NOT MATCHED THEN INSERT
+        (snapshot_date, data_type, sub_key, value, unit, source)
+        VALUES (?, ?, ?, ?, ?, ?);
+    """
+    count = 0
+    with db_cursor() as (_, cursor):
+        for row in rows:
+            dt = row.get("snapshot_date")
+            dtype = row.get("data_type")
+            skey = row.get("sub_key")
+            val = row.get("value")
+            unit = row.get("unit")
+            src = row.get("source")
+            
+            cursor.execute(sql, [
+                dt, dtype, skey,       # USING keys
+                val, unit, src,        # MATCHED
+                dt, dtype, skey, val, unit, src  # INSERT
+            ])
+            count += 1
+    return count
 
 
 # ---------------------------------------------------------------------------
