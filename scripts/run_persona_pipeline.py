@@ -25,40 +25,30 @@ load_dotenv()
 
 
 def bootstrap_supabase_schema() -> None:
-    db_url = os.environ.get("SUPABASE_DB_URL")
+    db_url = os.environ.get("DATABASE_URL") or os.environ.get("SUPABASE_DB_URL")
     if not db_url:
-        print("SUPABASE_DB_URL이 설정되지 않아 스키마 부트스트랩을 건너뜁니다.")
+        print("DATABASE_URL 또는 SUPABASE_DB_URL이 설정되지 않아 스키마 부트스트랩을 건너뜁니다.")
         return
         
-    schema_path = os.path.join(project_root, "database", "schema", "supabase_schema.sql")
+    schema_path = os.path.join(project_root, "database", "schema", "postgres_schema.sql")
     if not os.path.exists(schema_path):
         print(f"스키마 파일 없음: {schema_path}")
         return
 
-    print("1. Supabase pgvector 기존 테이블 정리 및 스키마 초기화 중...")
+    print("1. PostgreSQL 기존 테이블 정리 및 통합 스키마 초기화 중...")
     with open(schema_path, encoding="utf-8") as f:
         sql_schema = f.read()
-
-    # Drop old tables to clear 1536-dim tables and ensure clean 1024-dim creation
-    drop_sql = """
-    DROP TABLE IF EXISTS news_embeddings CASCADE;
-    DROP TABLE IF EXISTS strategy_docs CASCADE;
-    DROP TABLE IF EXISTS macro_indicators CASCADE;
-    DROP TABLE IF EXISTS persona_embeddings CASCADE;
-    """
 
     try:
         conn = psycopg2.connect(db_url)
         with conn.cursor() as cursor:
-            # 1. Drop old tables
-            cursor.execute(drop_sql)
-            # 2. Execute entire schema script at once (psycopg2 handles multi-statement query perfectly)
+            # Execute entire schema script at once
             cursor.execute(sql_schema)
             conn.commit()
         conn.close()
-        print("   Supabase 스키마 및 RPC 함수 부트스트랩 성공 (1024차원 KURE-v1 최적화 완료).")
+        print("   PostgreSQL 통합 스키마 및 RPC 함수 부트스트랩 성공 (1024차원 KURE-v1 최적화 완료).")
     except Exception as e:
-        print(f"⚠️ Supabase 스키마 초기화 중 예외 발생: {e}")
+        print(f"⚠️ PostgreSQL 스키마 초기화 중 예외 발생: {e}")
         print("   (경고: 테이블 수정 권한을 확인해 주세요.)")
 
 
@@ -133,13 +123,13 @@ def main() -> None:
             "embedding": embedding_vec
         })
 
-    # 5. Direct Bulk Upsert to Supabase
-    db_url = os.environ.get("SUPABASE_DB_URL")
+    # 5. Direct Bulk Upsert to Consolidated PostgreSQL DB
+    db_url = os.environ.get("DATABASE_URL") or os.environ.get("SUPABASE_DB_URL")
     if not db_url:
-        print("❌ 오류: SUPABASE_DB_URL 환경변수가 존재하지 않아 적재를 종료합니다.")
+        print("❌ 오류: DATABASE_URL 또는 SUPABASE_DB_URL 환경변수가 존재하지 않아 적재를 종료합니다.")
         sys.exit(1)
 
-    print(f"\n5. Supabase pgvector(persona_embeddings)에 {len(rows_to_insert):,}건 적재를 시작합니다...")
+    print(f"\n5. PostgreSQL pgvector(persona_embeddings)에 {len(rows_to_insert):,}건 적재를 시작합니다...")
     
     upsert_sql = """
     INSERT INTO persona_embeddings (azure_user_uuid, persona_text, embedding, updated_at)
@@ -166,9 +156,9 @@ def main() -> None:
                 print(f"   [적재 진행] {saved_count:,} / {len(rows_to_insert):,} 완료")
             conn.commit()
         conn.close()
-        print(f"\n🎉 파이프라인 완수! 총 {saved_count:,}개의 페르소나 벡터가 Supabase에 성공적으로 동기화되었습니다.")
+        print(f"\n🎉 파이프라인 완수! 총 {saved_count:,}개의 페르소나 벡터가 PostgreSQL에 성공적으로 동기화되었습니다.")
     except Exception as e:
-        print(f"❌ Supabase 적재 작업 중 오류 발생: {e}")
+        print(f"❌ PostgreSQL 적재 작업 중 오류 발생: {e}")
         sys.exit(1)
 
 
