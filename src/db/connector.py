@@ -287,3 +287,57 @@ def get_latest_market_value(data_type: str, sub_key: str) -> dict | None:
         if row is None:
             return None
         return {"date": row[0], "value": row[1], "unit": row[2], "source": row[3]}
+
+
+def get_all_tax_rules() -> list[dict]:
+    """Retrieve all current active tax rules."""
+    sql = """
+    SELECT asset_type, income_type, min_amount, max_amount, tax_rate, local_tax_rate, deduction_limit, description, legal_basis
+    FROM tax_rules
+    """
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in rows]
+
+
+def get_latest_market_snapshots() -> list[dict]:
+    """Retrieve the latest snapshot value for every unique (data_type, sub_key) pair."""
+    sql = """
+    WITH RankedSnapshots AS (
+        SELECT snapshot_date, data_type, sub_key, value, unit, source,
+               ROW_NUMBER() OVER (PARTITION BY data_type, sub_key ORDER BY snapshot_date DESC) as rn
+        FROM market_snapshots
+    )
+    SELECT snapshot_date, data_type, sub_key, value, unit, source
+    FROM RankedSnapshots
+    WHERE rn = 1
+    """
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in rows]
+
+
+def search_similar_personas_db(embedding: list[float], top_k: int = 3) -> list[dict]:
+    """Search similar personas in Supabase using the custom pgvector search function."""
+    db_url = os.environ.get("SUPABASE_DB_URL")
+    if not db_url:
+        raise ValueError("SUPABASE_DB_URL environment variable is missing.")
+    
+    sql = """
+    SELECT azure_user_uuid, persona_text, similarity
+    FROM search_similar_personas(%s::vector, %s)
+    """
+    import psycopg2
+    conn = psycopg2.connect(db_url)
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (embedding, top_k))
+            rows = cursor.fetchall()
+            cols = [d[0] for d in cursor.description]
+            return [dict(zip(cols, r)) for r in rows]
+    finally:
+        conn.close()
