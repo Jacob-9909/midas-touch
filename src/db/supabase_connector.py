@@ -1,18 +1,17 @@
-"""Supabase (pgvector) connector for Midas Touch."""
+"""Consolidated supabase_connector routing vector operations directly to the unified PostgreSQL database.
+
+This keeps 100% compatibility with existing method signatures while removing the slow, external Supabase REST HTTP API client.
+All operations are now executed directly on the unified PostgreSQL DB via psycopg2.
+"""
 
 import os
-from typing import Any
-
-from dotenv import load_dotenv
-from supabase import create_client, Client
-
-load_dotenv()
+from typing import Any, List, Dict
+from db.connector import db_cursor
 
 
-def get_client() -> Client:
-    url = os.environ["SUPABASE_URL"]
-    key = os.environ["SUPABASE_KEY"]
-    return create_client(url, key)
+def get_client() -> Any:
+    """Mock get_client for backward compatibility."""
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -20,53 +19,60 @@ def get_client() -> Client:
 # ---------------------------------------------------------------------------
 
 def upsert_news(
-    client: Client,
+    client: Any,
     title: str,
     content: str,
     published_at: str,      # ISO 8601
     source: str,
-    embedding: list[float],
+    embedding: List[float],
     source_url: str | None = None,
     language: str = "ko",
     category: str | None = None,
     sentiment_score: float | None = None,
-) -> dict:
-    row = {
-        "title": title,
-        "content": content,
-        "published_at": published_at,
-        "source": source,
-        "source_url": source_url,
-        "language": language,
-        "category": category,
-        "sentiment_score": sentiment_score,
-        "embedding": embedding,
-    }
-    result = (
-        client.table("news_embeddings")
-        .upsert(row, on_conflict="source_url")
-        .execute()
+) -> Dict[str, Any]:
+    sql = """
+    INSERT INTO news_embeddings (
+        title, content, published_at, source, source_url, language, category, sentiment_score, embedding, created_at
+    ) VALUES (
+        %s, %s, %s, %s, %s, %s, %s, %s, %s::vector, CURRENT_TIMESTAMP
     )
-    return result.data[0] if result.data else {}
+    ON CONFLICT (source_url) DO UPDATE SET
+        title = EXCLUDED.title,
+        content = EXCLUDED.content,
+        published_at = EXCLUDED.published_at,
+        source = EXCLUDED.source,
+        language = EXCLUDED.language,
+        category = EXCLUDED.category,
+        sentiment_score = EXCLUDED.sentiment_score,
+        embedding = EXCLUDED.embedding,
+        created_at = CURRENT_TIMESTAMP
+    RETURNING id, title, content, published_at, source, source_url, language, category, sentiment_score, created_at;
+    """
+    with db_cursor() as (conn, cursor):
+        cursor.execute(sql, (title, content, published_at, source, source_url, language, category, sentiment_score, embedding))
+        row = cursor.fetchone()
+        if row:
+            cols = [d[0] for d in cursor.description]
+            return dict(zip(cols, row))
+    return {}
 
 
 def search_news(
-    client: Client,
-    query_embedding: list[float],
+    client: Any,
+    query_embedding: List[float],
     top_k: int = 10,
     category: str | None = None,
     days_back: int = 30,
-) -> list[dict]:
-    result = client.rpc(
-        "search_news",
-        {
-            "query_embedding": query_embedding,
-            "top_k": top_k,
-            "category_filter": category,
-            "days_back": days_back,
-        },
-    ).execute()
-    return result.data or []
+) -> List[Dict[str, Any]]:
+    sql = """
+    SELECT id, title, content, published_at, source, category, sentiment_score, similarity
+    FROM search_news(%s::vector, %s, %s, %s)
+    """
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql, (query_embedding, top_k, category, days_back))
+        rows = cursor.fetchall()
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -74,47 +80,49 @@ def search_news(
 # ---------------------------------------------------------------------------
 
 def upsert_strategy_doc(
-    client: Client,
+    client: Any,
     title: str,
     chunk_text: str,
-    embedding: list[float],
+    embedding: List[float],
     author: str | None = None,
     published_year: int | None = None,
     strategy_type: str | None = None,
     chunk_index: int = 0,
     source_url: str | None = None,
     azure_legal_id: int | None = None,
-) -> dict:
-    row = {
-        "title": title,
-        "author": author,
-        "published_year": published_year,
-        "strategy_type": strategy_type,
-        "chunk_index": chunk_index,
-        "chunk_text": chunk_text,
-        "embedding": embedding,
-        "source_url": source_url,
-        "azure_legal_id": azure_legal_id,
-    }
-    result = client.table("strategy_docs").insert(row).execute()
-    return result.data[0] if result.data else {}
+) -> Dict[str, Any]:
+    sql = """
+    INSERT INTO strategy_docs (
+        title, author, published_year, strategy_type, chunk_index, chunk_text, embedding, azure_legal_id, source_url, created_at
+    ) VALUES (
+        %s, %s, %s, %s, %s, %s, %s::vector, %s, %s, CURRENT_TIMESTAMP
+    )
+    RETURNING id, title, author, published_year, strategy_type, chunk_index, chunk_text, azure_legal_id, source_url, created_at;
+    """
+    with db_cursor() as (conn, cursor):
+        cursor.execute(sql, (title, author, published_year, strategy_type, chunk_index, chunk_text, embedding, azure_legal_id, source_url))
+        row = cursor.fetchone()
+        if row:
+            cols = [d[0] for d in cursor.description]
+            return dict(zip(cols, row))
+    return {}
 
 
 def search_strategies(
-    client: Client,
-    query_embedding: list[float],
+    client: Any,
+    query_embedding: List[float],
     top_k: int = 5,
     strategy_type: str | None = None,
-) -> list[dict]:
-    result = client.rpc(
-        "search_strategies",
-        {
-            "query_embedding": query_embedding,
-            "top_k": top_k,
-            "strategy_filter": strategy_type,
-        },
-    ).execute()
-    return result.data or []
+) -> List[Dict[str, Any]]:
+    sql = """
+    SELECT id, title, chunk_text, strategy_type, author, similarity
+    FROM search_strategies(%s::vector, %s, %s)
+    """
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql, (query_embedding, top_k, strategy_type))
+        rows = cursor.fetchall()
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -122,30 +130,37 @@ def search_strategies(
 # ---------------------------------------------------------------------------
 
 def upsert_macro_indicator(
-    client: Client,
+    client: Any,
     indicator_name: str,
     indicator_date: str,    # 'YYYY-MM-DD'
     numeric_value: float,
     unit: str,
     source: str,
     analysis_text: str | None = None,
-    embedding: list[float] | None = None,
-) -> dict:
-    row: dict[str, Any] = {
-        "indicator_name": indicator_name,
-        "indicator_date": indicator_date,
-        "numeric_value": numeric_value,
-        "unit": unit,
-        "source": source,
-        "analysis_text": analysis_text,
-        "embedding": embedding,
-    }
-    result = (
-        client.table("macro_indicators")
-        .upsert(row, on_conflict="indicator_name,indicator_date")
-        .execute()
+    embedding: List[float] | None = None,
+) -> Dict[str, Any]:
+    sql = """
+    INSERT INTO macro_indicators (
+        indicator_name, indicator_date, numeric_value, unit, source, analysis_text, embedding, created_at
+    ) VALUES (
+        %s, %s, %s, %s, %s, %s, %s::vector, CURRENT_TIMESTAMP
     )
-    return result.data[0] if result.data else {}
+    ON CONFLICT (indicator_name, indicator_date) DO UPDATE SET
+        numeric_value = EXCLUDED.numeric_value,
+        unit = EXCLUDED.unit,
+        source = EXCLUDED.source,
+        analysis_text = EXCLUDED.analysis_text,
+        embedding = EXCLUDED.embedding,
+        created_at = CURRENT_TIMESTAMP
+    RETURNING id, indicator_name, indicator_date, numeric_value, unit, source, analysis_text, created_at;
+    """
+    with db_cursor() as (conn, cursor):
+        cursor.execute(sql, (indicator_name, indicator_date, numeric_value, unit, source, analysis_text, embedding))
+        row = cursor.fetchone()
+        if row:
+            cols = [d[0] for d in cursor.description]
+            return dict(zip(cols, row))
+    return {}
 
 
 # ---------------------------------------------------------------------------
@@ -153,31 +168,43 @@ def upsert_macro_indicator(
 # ---------------------------------------------------------------------------
 
 def upsert_persona_embedding(
-    client: Client,
+    client: Any,
     azure_user_uuid: str,
     persona_text: str,
-    embedding: list[float],
-) -> dict:
-    row = {
-        "azure_user_uuid": azure_user_uuid,
-        "persona_text": persona_text,
-        "embedding": embedding,
-    }
-    result = (
-        client.table("persona_embeddings")
-        .upsert(row, on_conflict="azure_user_uuid")
-        .execute()
+    embedding: List[float],
+) -> Dict[str, Any]:
+    sql = """
+    INSERT INTO persona_embeddings (
+        azure_user_uuid, persona_text, embedding, created_at, updated_at
+    ) VALUES (
+        %s, %s, %s::vector, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
-    return result.data[0] if result.data else {}
+    ON CONFLICT (azure_user_uuid) DO UPDATE SET
+        persona_text = EXCLUDED.persona_text,
+        embedding = EXCLUDED.embedding,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id, azure_user_uuid, persona_text, created_at, updated_at;
+    """
+    with db_cursor() as (conn, cursor):
+        cursor.execute(sql, (azure_user_uuid, persona_text, embedding))
+        row = cursor.fetchone()
+        if row:
+            cols = [d[0] for d in cursor.description]
+            return dict(zip(cols, row))
+    return {}
 
 
 def search_similar_personas(
-    client: Client,
-    query_embedding: list[float],
+    client: Any,
+    query_embedding: List[float],
     top_k: int = 5,
-) -> list[dict]:
-    result = client.rpc(
-        "search_similar_personas",
-        {"query_embedding": query_embedding, "top_k": top_k},
-    ).execute()
-    return result.data or []
+) -> List[Dict[str, Any]]:
+    sql = """
+    SELECT azure_user_uuid, persona_text, similarity
+    FROM search_similar_personas(%s::vector, %s)
+    """
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql, (query_embedding, top_k))
+        rows = cursor.fetchall()
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in rows]

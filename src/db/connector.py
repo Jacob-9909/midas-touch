@@ -1,37 +1,31 @@
-"""Azure SQL Database connector for Midas Touch."""
+"""Consolidated PostgreSQL & pgvector Database connector for Midas Touch."""
 
 import os
 from contextlib import contextmanager
 from typing import Any
 
-import pyodbc
+import psycopg2
 from dotenv import load_dotenv
 
 load_dotenv()
 
-_DRIVER = "ODBC Driver 18 for SQL Server"
+
+def _get_database_url() -> str:
+    """Retrieve the unified PostgreSQL database URL from environment variables."""
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        host = os.environ.get("POSTGRES_HOST", "localhost")
+        port = os.environ.get("POSTGRES_PORT", "5432")
+        user = os.environ.get("POSTGRES_USER", "postgres")
+        password = os.environ.get("POSTGRES_PASSWORD", "postgres")
+        database = os.environ.get("POSTGRES_DB", "postgres")
+        url = f"postgresql://{user}:{password}@{host}:{port}/{database}"
+    return url
 
 
-def _build_connection_string() -> str:
-    server   = os.environ["AZURE_SQL_SERVER"]    # e.g. midas-touch.database.windows.net
-    database = os.environ["AZURE_SQL_DATABASE"]  # e.g. midas-touch
-    user     = os.environ["AZURE_SQL_USER"]
-    password = os.environ["AZURE_SQL_PASSWORD"]
-    return (
-        f"DRIVER={{{_DRIVER}}};"
-        f"SERVER={server},1433;"
-        f"DATABASE={database};"
-        f"UID={user};"
-        f"PWD={password};"
-        "Encrypt=yes;"
-        "TrustServerCertificate=yes;"
-        "Connection Timeout=30;"
-    )
-
-
-def get_connection() -> pyodbc.Connection:
-    """Raw pyodbc connection (caller must close)."""
-    return pyodbc.connect(_build_connection_string())
+def get_connection() -> psycopg2.extensions.connection:
+    """Raw psycopg2 connection (caller must close)."""
+    return psycopg2.connect(_get_database_url())
 
 
 @contextmanager
@@ -54,37 +48,18 @@ def db_cursor():
 # ---------------------------------------------------------------------------
 
 def apply_schema(schema_path: str | None = None) -> None:
-    """Run schema.sql against the target database (idempotent-safe)."""
+    """Run consolidated postgres_schema.sql against the database."""
     if schema_path is None:
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        schema_path = os.path.join(project_root, "database", "schema", "azure_schema.sql")
+        schema_path = os.path.join(project_root, "database", "schema", "postgres_schema.sql")
 
-    with open(schema_path, encoding="utf-8") as f:
+    print(f"Applying schema from {schema_path}...")
+    with open(schema_path, "r", encoding="utf-8") as f:
         sql = f.read()
 
-    # SQL Server doesn't support multi-statement execution via pyodbc directly;
-    # split on GO or semicolons between top-level statements.
-    statements = [s.strip() for s in sql.split(";") if s.strip()]
-
     with db_cursor() as (conn, cursor):
-        for stmt in statements:
-            # Filter out comment-only lines from the statement
-            cleaned_lines = []
-            for line in stmt.splitlines():
-                stripped = line.strip()
-                if not stripped.startswith("--") and stripped:
-                    cleaned_lines.append(line)
-            cleaned_stmt = "\n".join(cleaned_lines).strip()
-            
-            if not cleaned_stmt:
-                continue
-            try:
-                cursor.execute(cleaned_stmt)
-            except pyodbc.ProgrammingError as e:
-                # 객체가 이미 존재하면 건너뜀 (idempotent)
-                if "already an object" in str(e) or "There is already" in str(e):
-                    continue
-                raise
+        cursor.execute(sql)
+    print("Schema applied successfully!")
 
 
 # ---------------------------------------------------------------------------
@@ -94,23 +69,7 @@ def apply_schema(schema_path: str | None = None) -> None:
 def upsert_user(row: dict[str, Any]) -> str:
     """Insert or update a user row. Returns the user UUID."""
     sql = """
-    MERGE users AS target
-    USING (SELECT ? AS uuid) AS source ON target.uuid = source.uuid
-    WHEN MATCHED THEN UPDATE SET
-        age = ?, sex = ?, marital_status = ?, education_level = ?,
-        bachelors_field = ?, occupation = ?, family_type = ?,
-        housing_type = ?, district = ?,
-        persona = ?, professional_persona = ?, family_persona = ?,
-        career_goals_and_ambitions = ?,
-        total_amount = ?, monthly_income = ?, monthly_investable = ?,
-        specific_items = ?,
-        has_stock = ?, has_bond = ?, has_deposit = ?, has_real_estate = ?,
-        stock_amount = ?, bond_amount = ?, deposit_amount = ?, real_estate_amount = ?,
-        aggressiveness = ?, preferred_asset = ?, financial_literacy = ?,
-        target_return_percent = ?, investable_period_months = ?,
-        requires_liquidity = ?,
-        updated_at = GETDATE()
-    WHEN NOT MATCHED THEN INSERT (
+    INSERT INTO users (
         uuid, age, sex, marital_status, education_level,
         bachelors_field, occupation, family_type, housing_type, district,
         persona, professional_persona, family_persona,
@@ -119,31 +78,126 @@ def upsert_user(row: dict[str, Any]) -> str:
         has_stock, has_bond, has_deposit, has_real_estate,
         stock_amount, bond_amount, deposit_amount, real_estate_amount,
         aggressiveness, preferred_asset, financial_literacy,
-        target_return_percent, investable_period_months, requires_liquidity
+        target_return_percent, investable_period_months, requires_liquidity,
+        updated_at
     ) VALUES (
-        ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?,
-        ?, ?, ?
-    );
+        %s, %s, %s, %s, %s,
+        %s, %s, %s, %s, %s,
+        %s, %s, %s, %s,
+        %s, %s, %s, %s,
+        %s, %s, %s, %s,
+        %s, %s, %s, %s,
+        %s, %s, %s,
+        %s, %s, %s,
+        CURRENT_TIMESTAMP
+    )
+    ON CONFLICT (uuid) DO UPDATE SET
+        age = EXCLUDED.age,
+        sex = EXCLUDED.sex,
+        marital_status = EXCLUDED.marital_status,
+        education_level = EXCLUDED.education_level,
+        bachelors_field = EXCLUDED.bachelors_field,
+        occupation = EXCLUDED.occupation,
+        family_type = EXCLUDED.family_type,
+        housing_type = EXCLUDED.housing_type,
+        district = EXCLUDED.district,
+        persona = EXCLUDED.persona,
+        professional_persona = EXCLUDED.professional_persona,
+        family_persona = EXCLUDED.family_persona,
+        career_goals_and_ambitions = EXCLUDED.career_goals_and_ambitions,
+        total_amount = EXCLUDED.total_amount,
+        monthly_income = EXCLUDED.monthly_income,
+        monthly_investable = EXCLUDED.monthly_investable,
+        specific_items = EXCLUDED.specific_items,
+        has_stock = EXCLUDED.has_stock,
+        has_bond = EXCLUDED.has_bond,
+        has_deposit = EXCLUDED.has_deposit,
+        has_real_estate = EXCLUDED.has_real_estate,
+        stock_amount = EXCLUDED.stock_amount,
+        bond_amount = EXCLUDED.bond_amount,
+        deposit_amount = EXCLUDED.deposit_amount,
+        real_estate_amount = EXCLUDED.real_estate_amount,
+        aggressiveness = EXCLUDED.aggressiveness,
+        preferred_asset = EXCLUDED.preferred_asset,
+        financial_literacy = EXCLUDED.financial_literacy,
+        target_return_percent = EXCLUDED.target_return_percent,
+        investable_period_months = EXCLUDED.investable_period_months,
+        requires_liquidity = EXCLUDED.requires_liquidity,
+        updated_at = CURRENT_TIMESTAMP;
     """
     vals = _user_params(row)
-    # MERGE requires params twice (WHEN MATCHED + WHEN NOT MATCHED)
     with db_cursor() as (_, cursor):
-        cursor.execute(sql, [row.get("uuid")] + vals + [row.get("uuid")] + vals)
+        cursor.execute(sql, [row.get("uuid")] + vals)
     return row.get("uuid", "")
 
 
 def bulk_upsert_users(rows: list[dict[str, Any]]) -> int:
     """Batch upsert. Returns count of rows processed."""
+    sql = """
+    INSERT INTO users (
+        uuid, age, sex, marital_status, education_level,
+        bachelors_field, occupation, family_type, housing_type, district,
+        persona, professional_persona, family_persona,
+        career_goals_and_ambitions,
+        total_amount, monthly_income, monthly_investable, specific_items,
+        has_stock, has_bond, has_deposit, has_real_estate,
+        stock_amount, bond_amount, deposit_amount, real_estate_amount,
+        aggressiveness, preferred_asset, financial_literacy,
+        target_return_percent, investable_period_months, requires_liquidity,
+        updated_at
+    ) VALUES (
+        %s, %s, %s, %s, %s,
+        %s, %s, %s, %s, %s,
+        %s, %s, %s, %s,
+        %s, %s, %s, %s,
+        %s, %s, %s, %s,
+        %s, %s, %s, %s,
+        %s, %s, %s,
+        %s, %s, %s,
+        CURRENT_TIMESTAMP
+    )
+    ON CONFLICT (uuid) DO UPDATE SET
+        age = EXCLUDED.age,
+        sex = EXCLUDED.sex,
+        marital_status = EXCLUDED.marital_status,
+        education_level = EXCLUDED.education_level,
+        bachelors_field = EXCLUDED.bachelors_field,
+        occupation = EXCLUDED.occupation,
+        family_type = EXCLUDED.family_type,
+        housing_type = EXCLUDED.housing_type,
+        district = EXCLUDED.district,
+        persona = EXCLUDED.persona,
+        professional_persona = EXCLUDED.professional_persona,
+        family_persona = EXCLUDED.family_persona,
+        career_goals_and_ambitions = EXCLUDED.career_goals_and_ambitions,
+        total_amount = EXCLUDED.total_amount,
+        monthly_income = EXCLUDED.monthly_income,
+        monthly_investable = EXCLUDED.monthly_investable,
+        specific_items = EXCLUDED.specific_items,
+        has_stock = EXCLUDED.has_stock,
+        has_bond = EXCLUDED.has_bond,
+        has_deposit = EXCLUDED.has_deposit,
+        has_real_estate = EXCLUDED.has_real_estate,
+        stock_amount = EXCLUDED.stock_amount,
+        bond_amount = EXCLUDED.bond_amount,
+        deposit_amount = EXCLUDED.deposit_amount,
+        real_estate_amount = EXCLUDED.real_estate_amount,
+        aggressiveness = EXCLUDED.aggressiveness,
+        preferred_asset = EXCLUDED.preferred_asset,
+        financial_literacy = EXCLUDED.financial_literacy,
+        target_return_percent = EXCLUDED.target_return_percent,
+        investable_period_months = EXCLUDED.investable_period_months,
+        requires_liquidity = EXCLUDED.requires_liquidity,
+        updated_at = CURRENT_TIMESTAMP;
+    """
     count = 0
-    for row in rows:
-        upsert_user(row)
-        count += 1
+    with db_cursor() as (_, cursor):
+        batch_params = []
+        for row in rows:
+            vals = _user_params(row)
+            batch_params.append([row.get("uuid")] + vals)
+        cursor.executemany(sql, batch_params)
+        count = len(rows)
     return count
 
 
@@ -166,20 +220,20 @@ def _user_params(row: dict[str, Any]) -> list:
         row.get("monthly_income"),
         row.get("monthly_investable"),
         row.get("specific_items"),
-        int(row.get("has_stock", 0)),
-        int(row.get("has_bond", 0)),
-        int(row.get("has_deposit", 0)),
-        int(row.get("has_real_estate", 0)),
-        int(row.get("stock_amount", 0)),
-        int(row.get("bond_amount", 0)),
-        int(row.get("deposit_amount", 0)),
-        int(row.get("real_estate_amount", 0)),
+        bool(row.get("has_stock", 0)),
+        bool(row.get("has_bond", 0)),
+        bool(row.get("has_deposit", 0)),
+        bool(row.get("has_real_estate", 0)),
+        row.get("stock_amount", 0),
+        row.get("bond_amount", 0),
+        row.get("deposit_amount", 0),
+        row.get("real_estate_amount", 0),
         row.get("aggressiveness"),
         row.get("preferred_asset"),
         row.get("financial_literacy"),
         row.get("target_return_percent"),
         row.get("investable_period_months"),
-        int(row.get("requires_liquidity", 0)),
+        bool(row.get("requires_liquidity", 0)),
     ]
 
 
@@ -196,53 +250,38 @@ def upsert_market_snapshot(
     source: str,
 ) -> None:
     sql = """
-    MERGE market_snapshots AS target
-    USING (SELECT ? AS snapshot_date, ? AS data_type, ? AS sub_key) AS src
-        ON  target.snapshot_date = src.snapshot_date
-        AND target.data_type     = src.data_type
-        AND target.sub_key       = src.sub_key
-    WHEN MATCHED THEN UPDATE SET value = ?, unit = ?, source = ?
-    WHEN NOT MATCHED THEN INSERT
-        (snapshot_date, data_type, sub_key, value, unit, source)
-        VALUES (?, ?, ?, ?, ?, ?);
+    INSERT INTO market_snapshots (
+        snapshot_date, data_type, sub_key, value, unit, source, created_at
+    ) VALUES (
+        %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
+    )
+    ON CONFLICT (snapshot_date, data_type, sub_key) DO UPDATE SET
+        value = EXCLUDED.value,
+        unit = EXCLUDED.unit,
+        source = EXCLUDED.source,
+        created_at = CURRENT_TIMESTAMP;
     """
     with db_cursor() as (_, cursor):
-        cursor.execute(sql, [
-            date, data_type, sub_key,       # key (USING)
-            value, unit, source,            # WHEN MATCHED
-            date, data_type, sub_key, value, unit, source,  # WHEN NOT MATCHED
-        ])
+        cursor.execute(sql, [date, data_type, sub_key, value, unit, source])
 
 
 def bulk_upsert_market_snapshots(rows: list[dict[str, Any]]) -> int:
     """Bulk upsert market snapshots in a single transaction. Returns count of rows processed."""
     sql = """
-    MERGE market_snapshots AS target
-    USING (SELECT ? AS snapshot_date, ? AS data_type, ? AS sub_key) AS src
-        ON  target.snapshot_date = src.snapshot_date
-        AND target.data_type     = src.data_type
-        AND target.sub_key       = src.sub_key
-    WHEN MATCHED THEN UPDATE SET value = ?, unit = ?, source = ?
-    WHEN NOT MATCHED THEN INSERT
-        (snapshot_date, data_type, source, sub_key, value, unit)
-        VALUES (?, ?, ?, ?, ?, ?);
-    """
-    # Wait, check if INSERT columns match the SELECT/VALUES order!
-    # Table schema: (snapshot_date, data_type, sub_key, value, unit, source)
-    # Let's write the INSERT explicitly:
-    sql = """
-    MERGE market_snapshots AS target
-    USING (SELECT ? AS snapshot_date, ? AS data_type, ? AS sub_key) AS src
-        ON  target.snapshot_date = src.snapshot_date
-        AND target.data_type     = src.data_type
-        AND target.sub_key       = src.sub_key
-    WHEN MATCHED THEN UPDATE SET value = ?, unit = ?, source = ?
-    WHEN NOT MATCHED THEN INSERT
-        (snapshot_date, data_type, sub_key, value, unit, source)
-        VALUES (?, ?, ?, ?, ?, ?);
+    INSERT INTO market_snapshots (
+        snapshot_date, data_type, sub_key, value, unit, source, created_at
+    ) VALUES (
+        %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
+    )
+    ON CONFLICT (snapshot_date, data_type, sub_key) DO UPDATE SET
+        value = EXCLUDED.value,
+        unit = EXCLUDED.unit,
+        source = EXCLUDED.source,
+        created_at = CURRENT_TIMESTAMP;
     """
     count = 0
     with db_cursor() as (_, cursor):
+        batch_params = []
         for row in rows:
             dt = row.get("snapshot_date")
             dtype = row.get("data_type")
@@ -250,13 +289,9 @@ def bulk_upsert_market_snapshots(rows: list[dict[str, Any]]) -> int:
             val = row.get("value")
             unit = row.get("unit")
             src = row.get("source")
-            
-            cursor.execute(sql, [
-                dt, dtype, skey,       # USING keys
-                val, unit, src,        # MATCHED
-                dt, dtype, skey, val, unit, src  # INSERT
-            ])
-            count += 1
+            batch_params.append([dt, dtype, skey, val, unit, src])
+        cursor.executemany(sql, batch_params)
+        count = len(rows)
     return count
 
 
@@ -266,7 +301,7 @@ def bulk_upsert_market_snapshots(rows: list[dict[str, Any]]) -> int:
 
 def get_user_by_uuid(uuid: str) -> dict | None:
     with db_cursor() as (_, cursor):
-        cursor.execute("SELECT * FROM users WHERE uuid = ?", [uuid])
+        cursor.execute("SELECT * FROM users WHERE uuid = %s", [uuid])
         row = cursor.fetchone()
         if row is None:
             return None
@@ -276,10 +311,11 @@ def get_user_by_uuid(uuid: str) -> dict | None:
 
 def get_latest_market_value(data_type: str, sub_key: str) -> dict | None:
     sql = """
-    SELECT TOP 1 snapshot_date, value, unit, source
+    SELECT snapshot_date, value, unit, source
     FROM market_snapshots
-    WHERE data_type = ? AND sub_key = ?
+    WHERE data_type = %s AND sub_key = %s
     ORDER BY snapshot_date DESC
+    LIMIT 1
     """
     with db_cursor() as (_, cursor):
         cursor.execute(sql, [data_type, sub_key])
@@ -287,3 +323,48 @@ def get_latest_market_value(data_type: str, sub_key: str) -> dict | None:
         if row is None:
             return None
         return {"date": row[0], "value": row[1], "unit": row[2], "source": row[3]}
+
+
+def get_all_tax_rules() -> list[dict]:
+    """Retrieve all current active tax rules."""
+    sql = """
+    SELECT asset_type, income_type, min_amount, max_amount, tax_rate, local_tax_rate, deduction_limit, description, legal_basis
+    FROM tax_rules
+    """
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in rows]
+
+
+def get_latest_market_snapshots() -> list[dict]:
+    """Retrieve the latest snapshot value for every unique (data_type, sub_key) pair."""
+    sql = """
+    WITH RankedSnapshots AS (
+        SELECT snapshot_date, data_type, sub_key, value, unit, source,
+               ROW_NUMBER() OVER (PARTITION BY data_type, sub_key ORDER BY snapshot_date DESC) as rn
+        FROM market_snapshots
+    )
+    SELECT snapshot_date, data_type, sub_key, value, unit, source
+    FROM RankedSnapshots
+    WHERE rn = 1
+    """
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in rows]
+
+
+def search_similar_personas_db(embedding: list[float], top_k: int = 3) -> list[dict]:
+    """Search similar personas in our PostgreSQL database using the custom pgvector search function."""
+    sql = """
+    SELECT azure_user_uuid, persona_text, similarity
+    FROM search_similar_personas(%s::vector, %s)
+    """
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql, (embedding, top_k))
+        rows = cursor.fetchall()
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in rows]

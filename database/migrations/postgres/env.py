@@ -17,13 +17,19 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import models metadata
-from src.db.models.supabase_models import SupabaseBase
-target_metadata = SupabaseBase.metadata
+from src.db.models.postgres_models import PostgresBase
+target_metadata = PostgresBase.metadata
 
 
-def get_supabase_url() -> str:
-    url = os.environ.get("SUPABASE_DB_URL", "")
-    # Support connection pooler (Session/Transaction mode) or direct URL
+def get_database_url() -> str:
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        host = os.environ.get("POSTGRES_HOST", "localhost")
+        port = os.environ.get("POSTGRES_PORT", "5432")
+        user = os.environ.get("POSTGRES_USER", "postgres")
+        password = os.environ.get("POSTGRES_PASSWORD", "postgres")
+        database = os.environ.get("POSTGRES_DB", "postgres")
+        url = f"postgresql://{user}:{password}@{host}:{port}/{database}"
     return url
 
 
@@ -39,7 +45,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = get_supabase_url()
+    url = get_database_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -58,7 +64,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    url = get_supabase_url()
+    url = get_database_url()
     connectable = create_engine(
         url,
         poolclass=pool.NullPool,
@@ -67,6 +73,7 @@ def run_migrations_online() -> None:
     with connectable.connect() as connection:
         # Automatically make sure vector extension exists
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+        connection.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
         connection.commit()
 
         context.configure(
