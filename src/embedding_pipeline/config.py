@@ -35,8 +35,12 @@ class NIMConfig:
     )
     base_url: str = "https://integrate.api.nvidia.com/v1"
 
-    # 쿼리 합성에 사용할 생성 모델
-    generation_model: str = "meta/llama-3.1-70b-instruct"
+    # 쿼리 합성에 사용할 생성 모델 (NIM_GENERATION_MODEL 환경변수로 override 가능)
+    generation_model: str = field(
+        default_factory=lambda: os.environ.get(
+            "NIM_GENERATION_MODEL", "meta/llama-3.1-70b-instruct"
+        )
+    )
 
     # 요청 타임아웃(초) / 동시 요청 수 상한
     request_timeout: int = 60
@@ -61,7 +65,12 @@ TeacherModelName = Literal[
 class TeacherModelConfig:
     """하드 네거티브 마이닝에 사용할 교사 임베딩 모델 설정."""
 
-    model_name: TeacherModelName = "nlpai-lab/KURE-v1"
+    # 교사 임베딩 모델 (TEACHER_EMBEDDING_MODEL 환경변수로 override 가능)
+    model_name: TeacherModelName = field(
+        default_factory=lambda: os.environ.get(
+            "TEACHER_EMBEDDING_MODEL", "nlpai-lab/KURE-v1"
+        )
+    )
     device: str = field(
         default_factory=lambda: os.environ.get("EMBEDDING_DEVICE", "cpu")
     )
@@ -137,8 +146,12 @@ class QuerySynthesisConfig:
 class TrainingConfig:
     """KURE-v1 파인튜닝 하이퍼파라미터."""
 
-    # 학생(파인튜닝 대상) 모델
-    student_model_name: str = "nlpai-lab/KURE-v1"
+    # 학생(파인튜닝 대상) 모델 (STUDENT_EMBEDDING_MODEL 환경변수로 override 가능)
+    student_model_name: str = field(
+        default_factory=lambda: os.environ.get(
+            "STUDENT_EMBEDDING_MODEL", "nlpai-lab/KURE-v1"
+        )
+    )
 
     # 학습에 적용할 Loss 함수 타입 ("mnrl" = MultipleNegativesRankingLoss, "margin_mse" = MarginMSELoss)
     loss_type: Literal["mnrl", "margin_mse"] = "margin_mse"

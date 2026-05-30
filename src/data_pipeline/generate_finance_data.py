@@ -37,7 +37,7 @@ client = AsyncOpenAI(
     timeout=300.0
 )
 
-MODEL_NAME = "deepseek-ai/deepseek-v4-flash" # 또는 사용할 텍스트 생성 모델 지정
+MODEL_NAME = os.environ.get("PERSONA_GENERATION_MODEL", "deepseek-ai/deepseek-v4-flash")
 
 # 사용할 기존 컬럼
 SELECTED_COLUMNS = [

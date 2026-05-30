@@ -23,8 +23,8 @@ from db.connector import (
 class MidasAdviser:
     _embedding_model: SentenceTransformer | None = None
     _llm_client: OpenAI | None = None
-    EMBEDDING_MODEL_NAME = "nlpai-lab/KURE-v1"
-    LLM_MODEL_NAME = "meta/llama-3.3-70b-instruct"
+    EMBEDDING_MODEL_NAME = os.environ.get("AGENT_EMBEDDING_MODEL", "nlpai-lab/KURE-v1")
+    LLM_MODEL_NAME = os.environ.get("AGENT_LLM_MODEL", "meta/llama-3.3-70b-instruct")
     LLM_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
     def __init__(self) -> None:

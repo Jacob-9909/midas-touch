@@ -10,6 +10,9 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- 기존 테이블이 존재할 경우 삭제 (순서 준수)
+DROP TABLE IF EXISTS emb_training_triplets CASCADE;
+DROP TABLE IF EXISTS emb_synthetic_queries CASCADE;
+DROP TABLE IF EXISTS emb_passages CASCADE;
 DROP TABLE IF EXISTS news_embeddings CASCADE;
 DROP TABLE IF EXISTS strategy_docs CASCADE;
 DROP TABLE IF EXISTS macro_indicators CASCADE;
@@ -288,6 +291,59 @@ CREATE TABLE persona_embeddings (
 CREATE INDEX idx_persona_embedding_hnsw
     ON persona_embeddings USING hnsw (embedding vector_cosine_ops)
     WITH (m = 16, ef_construction = 64);
+
+
+-- ============================================================
+-- 11. EMB_PASSAGES — 임베딩 파인튜닝용 금융 문서 단락
+-- ============================================================
+CREATE TABLE emb_passages (
+    passage_id  TEXT            PRIMARY KEY,
+    text        TEXT            NOT NULL,
+    source      TEXT            NOT NULL,
+    metadata    JSONB           NULL,
+    created_at  TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IX_emb_passages_source ON emb_passages (source);
+
+
+-- ============================================================
+-- 12. EMB_SYNTHETIC_QUERIES — LLM 합성 쿼리
+-- ============================================================
+CREATE TABLE emb_synthetic_queries (
+    query_id        TEXT        PRIMARY KEY,
+    passage_id      TEXT        NOT NULL REFERENCES emb_passages (passage_id) ON DELETE CASCADE,
+    query_text      TEXT        NOT NULL,
+    query_type      TEXT        NOT NULL,   -- keyword/question/vague_intent/comparison/regulatory
+    source_passage  TEXT        NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IX_emb_queries_passage_id ON emb_synthetic_queries (passage_id);
+CREATE INDEX IX_emb_queries_type       ON emb_synthetic_queries (query_type);
+
+
+-- ============================================================
+-- 13. EMB_TRAINING_TRIPLETS — (Query, Positive, Negative) 삼중쌍
+-- ============================================================
+CREATE TABLE emb_training_triplets (
+    triplet_id                TEXT            PRIMARY KEY,
+    query_id                  TEXT            NOT NULL,
+    query_text                TEXT            NOT NULL,
+    positive_passage_id       TEXT            NOT NULL,
+    positive_text             TEXT            NOT NULL,
+    negative_passage_id       TEXT            NOT NULL,
+    negative_text             TEXT            NOT NULL,
+    query_type                TEXT            NOT NULL,
+    negative_similarity_score NUMERIC(8, 6)   NOT NULL,
+    positive_similarity_score NUMERIC(8, 6)   NOT NULL,
+    margin                    NUMERIC(8, 6)   NOT NULL,
+    split                     TEXT            NOT NULL CHECK (split IN ('train', 'eval')),
+    created_at                TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IX_emb_triplets_split      ON emb_training_triplets (split);
+CREATE INDEX IX_emb_triplets_query_type ON emb_training_triplets (query_type, split);
 
 
 -- ============================================================

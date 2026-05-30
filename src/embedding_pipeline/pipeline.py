@@ -211,9 +211,13 @@ class EmbeddingDatasetPipeline:
     async def run(
         self,
         force_rerun_stages: list[str] | None = None,
+        persist_db: bool = True,
     ) -> dict:
         """
         전체 파이프라인 실행.
+
+        Args:
+            persist_db: True이면 각 단계 결과를 PostgreSQL에도 적재.
         """
         force = set(force_rerun_stages or [])
         total_start = time.perf_counter()
@@ -228,11 +232,17 @@ class EmbeddingDatasetPipeline:
             logger.warning("로드된 금융 단락이 전혀 없습니다. 데이터를 raw_documents 에 배치해 주세요.")
             return {"error": "No data found"}
 
+        if persist_db:
+            self._db_persist_passages(passages)
+
         # ── 2단계: 쿼리 합성 및 2차 검증 (비동기) ───────────────────
         queries = await self._run_stage_query_synthesis(passages, force)
         if not queries:
             logger.error("합성된 유효 쿼리가 전혀 없습니다. NIM 설정을 확인해 주세요.")
             return {"error": "Query synthesis failed or all filtered"}
+
+        if persist_db:
+            self._db_persist_queries(queries)
 
         # ── 3단계: 하드 네거티브 마이닝 (OOM 보호 연산) ─────────────
         mining_results, mining_stats = self._run_stage_hard_negative_mining(
@@ -240,9 +250,12 @@ class EmbeddingDatasetPipeline:
         )
 
         # ── 4단계: 삼중쌍 조립 + 저장 (Margin 스코어 보존) ──────────
-        dataset_stats = self._run_stage_dataset_assembly(
+        dataset_stats, train_triplets, eval_triplets = self._run_stage_dataset_assembly(
             queries, mining_results
         )
+
+        if persist_db:
+            self._db_persist_triplets(train_triplets, eval_triplets)
 
         total_elapsed = time.perf_counter() - total_start
         summary = {
@@ -371,7 +384,7 @@ class EmbeddingDatasetPipeline:
         self,
         queries: list[SyntheticQuery],
         mining_results: list,
-    ) -> dict:
+    ) -> tuple[dict, list, list]:
         logger.info("[4/4] 삼중쌍 조립 및 저장 시작...")
         stage_start = time.perf_counter()
 
@@ -379,7 +392,7 @@ class EmbeddingDatasetPipeline:
         triplets = assembler.assemble(
             queries=queries,
             mining_results=mining_results,
-            use_in_batch_fallback=True, # 데이터 충분성 강화를 위해 True
+            use_in_batch_fallback=True,
         )
 
         splitter = DatasetSplitter(self._cfg)
@@ -394,7 +407,40 @@ class EmbeddingDatasetPipeline:
             len(train_triplets), len(eval_triplets),
             time.perf_counter() - stage_start,
         )
-        return stats
+        return stats, train_triplets, eval_triplets
+
+    # ------------------------------------------------------------------
+    # DB 적재 헬퍼
+    # ------------------------------------------------------------------
+    def _db_persist_passages(self, passages: list[Passage]) -> None:
+        try:
+            from db.connector import bulk_upsert_emb_passages
+            rows = [{"passage_id": p.passage_id, "text": p.text, "source": p.source, "metadata": p.metadata} for p in passages]
+            count = bulk_upsert_emb_passages(rows)
+            logger.info("[DB] emb_passages 적재 완료: %d건", count)
+        except Exception as exc:
+            logger.warning("[DB] emb_passages 적재 실패 (파이프라인은 계속): %s", exc)
+
+    def _db_persist_queries(self, queries: list[SyntheticQuery]) -> None:
+        try:
+            from db.connector import bulk_upsert_emb_queries
+            rows = [{"query_id": q.query_id, "passage_id": q.passage_id, "query_text": q.query_text, "query_type": q.query_type, "source_passage": q.source_passage} for q in queries]
+            count = bulk_upsert_emb_queries(rows)
+            logger.info("[DB] emb_synthetic_queries 적재 완료: %d건", count)
+        except Exception as exc:
+            logger.warning("[DB] emb_synthetic_queries 적재 실패 (파이프라인은 계속): %s", exc)
+
+    def _db_persist_triplets(self, train_triplets: list, eval_triplets: list) -> None:
+        try:
+            from db.connector import bulk_upsert_emb_triplets
+            from dataclasses import asdict
+            train_rows = [asdict(t) for t in train_triplets]
+            eval_rows = [asdict(t) for t in eval_triplets]
+            t_count = bulk_upsert_emb_triplets(train_rows, "train")
+            e_count = bulk_upsert_emb_triplets(eval_rows, "eval")
+            logger.info("[DB] emb_training_triplets 적재 완료: train=%d, eval=%d", t_count, e_count)
+        except Exception as exc:
+            logger.warning("[DB] emb_training_triplets 적재 실패 (파이프라인은 계속): %s", exc)
 
     # ------------------------------------------------------------------
     # 직렬화 / 역직렬화 헬퍼
