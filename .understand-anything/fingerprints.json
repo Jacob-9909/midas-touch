@@ -1,0 +1,2735 @@
+{
+  "version": "1.0.0",
+  "gitCommitHash": "363b2259554ad188a6f57e5560b5d0ee6c37d369",
+  "generatedAt": "2026-06-01T10:53:06.189Z",
+  "files": {
+    "alembic.ini": {
+      "filePath": "alembic.ini",
+      "contentHash": "28d0393743dc01817aea464f6056a32e5d5a86f69249f4f48ae24587fb2a329f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 50,
+      "hasStructuralAnalysis": false
+    },
+    "database/migrations/postgres/env.py": {
+      "filePath": "database/migrations/postgres/env.py",
+      "contentHash": "9ec2cdfd75f3cd50f43b5da1145c5009f603b8050645d341c63df169b25a1c06",
+      "functions": [
+        {
+          "name": "get_database_url",
+          "params": [],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "run_migrations_offline",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "run_migrations_online",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 26
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "logging.config",
+          "specifiers": [
+            "fileConfig"
+          ]
+        },
+        {
+          "source": "sqlalchemy",
+          "specifiers": [
+            "create_engine",
+            "pool",
+            "text"
+          ]
+        },
+        {
+          "source": "alembic",
+          "specifiers": [
+            "context"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        },
+        {
+          "source": "src.db.models.postgres_models",
+          "specifiers": [
+            "PostgresBase"
+          ]
+        }
+      ],
+      "exports": [
+        "get_database_url",
+        "run_migrations_offline",
+        "run_migrations_online"
+      ],
+      "totalLines": 92,
+      "hasStructuralAnalysis": true
+    },
+    "database/migrations/postgres/README": {
+      "filePath": "database/migrations/postgres/README",
+      "contentHash": "dde012ef4e914fd57458a860ab0dc11fdffde05469ed2a8399ea45097ef9087a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": false
+    },
+    "database/migrations/postgres/script.py.mako": {
+      "filePath": "database/migrations/postgres/script.py.mako",
+      "contentHash": "1382434dd2e2e915c4f8c6cf7e012411df8b02027ec39bf81d5bd43c940743b8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 27,
+      "hasStructuralAnalysis": false
+    },
+    "database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py": {
+      "filePath": "database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "contentHash": "358aa72ce72228d186e2e2cb1e87d2daf96d1bb2546a56013a638854c1a97b27",
+      "functions": [
+        {
+          "name": "upgrade",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 73
+        },
+        {
+          "name": "downgrade",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 7
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "typing",
+          "specifiers": [
+            "Sequence",
+            "Union"
+          ]
+        },
+        {
+          "source": "sqlalchemy",
+          "specifiers": [
+            "sa"
+          ]
+        },
+        {
+          "source": "alembic",
+          "specifiers": [
+            "op"
+          ]
+        }
+      ],
+      "exports": [
+        "upgrade",
+        "downgrade"
+      ],
+      "totalLines": 101,
+      "hasStructuralAnalysis": true
+    },
+    "database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py": {
+      "filePath": "database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "contentHash": "a0e927efa81c16c8b13602ccdfffb31a32f46272a1612500a9dd90107a7c3875",
+      "functions": [
+        {
+          "name": "upgrade",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "downgrade",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 30
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "typing",
+          "specifiers": [
+            "Sequence",
+            "Union"
+          ]
+        },
+        {
+          "source": "alembic",
+          "specifiers": [
+            "op"
+          ]
+        },
+        {
+          "source": "sqlalchemy",
+          "specifiers": [
+            "sa"
+          ]
+        }
+      ],
+      "exports": [
+        "upgrade",
+        "downgrade"
+      ],
+      "totalLines": 83,
+      "hasStructuralAnalysis": true
+    },
+    "database/schema/postgres_schema.sql": {
+      "filePath": "database/schema/postgres_schema.sql",
+      "contentHash": "86f2426283770f0936fba199d4d628214b4458e7beefdfdce16a1a967cbd4f51",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 433,
+      "hasStructuralAnalysis": true
+    },
+    "database/seeds/seed_tax_rules.sql": {
+      "filePath": "database/seeds/seed_tax_rules.sql",
+      "contentHash": "08228d60cf80b1d0fbc8be2b38437e926d213836e83e8be0c7420265ac354964",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 258,
+      "hasStructuralAnalysis": true
+    },
+    "docker-compose.yml": {
+      "filePath": "docker-compose.yml",
+      "contentHash": "328732926f8c2cda0f621dd3dce025281eeb865ed9d7f6d9dc2a01a2fc19f380",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 17,
+      "hasStructuralAnalysis": true
+    },
+    "notebooks/exploration.ipynb": {
+      "filePath": "notebooks/exploration.ipynb",
+      "contentHash": "45cf32409e9e56168fa202c7a204823508e815dc7f321f98375d3fc9dbeaafa5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 66,
+      "hasStructuralAnalysis": false
+    },
+    "pyproject.toml": {
+      "filePath": "pyproject.toml",
+      "contentHash": "a6b104a04782b3603aefa5fcc267cc87b7a0b2f847caa9cc3c7a9b88609598d3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 31,
+      "hasStructuralAnalysis": true
+    },
+    "README.md": {
+      "filePath": "README.md",
+      "contentHash": "a66fb9e463ef8fb6ab65af7e94d8bb72cbe10596a3bbe0520bdeec91fd2d44ec",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 65,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/db_init.sh": {
+      "filePath": "scripts/db_init.sh",
+      "contentHash": "e51babf993778203ebefe750104603e1c95692a19c79b4f1ccd5098f3b9c1bc1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 31,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/migrate_data.py": {
+      "filePath": "scripts/migrate_data.py",
+      "contentHash": "5f158cbef0f92cdcb785850bdefef2ae9959fd9a22557137e5adc40b4c0ef19c",
+      "functions": [
+        {
+          "name": "get_azure_connection",
+          "params": [],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "get_supabase_db_connection",
+          "params": [],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "get_target_connection",
+          "params": [],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "bootstrap_schema",
+          "params": [
+            "target_conn"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "migrate_users",
+          "params": [
+            "azure_conn",
+            "target_conn"
+          ],
+          "exported": true,
+          "lineCount": 104
+        },
+        {
+          "name": "migrate_tax_rules",
+          "params": [
+            "azure_conn",
+            "target_conn"
+          ],
+          "exported": true,
+          "lineCount": 51
+        },
+        {
+          "name": "migrate_market_snapshots",
+          "params": [
+            "azure_conn",
+            "target_conn"
+          ],
+          "exported": true,
+          "lineCount": 47
+        },
+        {
+          "name": "migrate_persona_embeddings",
+          "params": [
+            "supabase_conn",
+            "target_conn"
+          ],
+          "exported": true,
+          "lineCount": 44
+        },
+        {
+          "name": "verify_migration",
+          "params": [
+            "target_conn"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 42
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        },
+        {
+          "source": "psycopg2",
+          "specifiers": [
+            "psycopg2"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        }
+      ],
+      "exports": [
+        "get_azure_connection",
+        "get_supabase_db_connection",
+        "get_target_connection",
+        "bootstrap_schema",
+        "migrate_users",
+        "migrate_tax_rules",
+        "migrate_market_snapshots",
+        "migrate_persona_embeddings",
+        "verify_migration",
+        "main"
+      ],
+      "totalLines": 392,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/oracle_macro.sh": {
+      "filePath": "scripts/oracle_macro.sh",
+      "contentHash": "e3c4845ada0a5fe2aa8b6de449b13d72ff9f8e8df992d92d82ac4776385ef260",
+      "functions": [
+        {
+          "name": "load_env",
+          "params": [],
+          "exported": false,
+          "lineCount": 17
+        },
+        {
+          "name": "run_oci_query_with_retry",
+          "params": [],
+          "exported": false,
+          "lineCount": 18
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 261,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/run_agent.py": {
+      "filePath": "scripts/run_agent.py",
+      "contentHash": "4084b7096c07f7276dc8bd0a01d828b7dfedc5865a49da43031bbc45c536e3eb",
+      "functions": [
+        {
+          "name": "print_banner",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "interactive_mode",
+          "params": [],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "main",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 69
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        },
+        {
+          "source": "agent.recommender",
+          "specifiers": [
+            "MidasAdviser"
+          ]
+        }
+      ],
+      "exports": [
+        "print_banner",
+        "interactive_mode",
+        "main"
+      ],
+      "totalLines": 130,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/run_market_pipeline.py": {
+      "filePath": "scripts/run_market_pipeline.py",
+      "contentHash": "2d04fc4aab78d4956b05fdb3a54dcb79005bad8b5c78e64f1caa8d9efa803008",
+      "functions": [
+        {
+          "name": "main",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 93
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime",
+            "timedelta"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "Counter"
+          ]
+        },
+        {
+          "source": "db.connector",
+          "specifiers": [
+            "bulk_upsert_market_snapshots"
+          ]
+        },
+        {
+          "source": "data_pipeline.fetch_market_data",
+          "specifiers": [
+            "MarketDataPipeline"
+          ]
+        }
+      ],
+      "exports": [
+        "main"
+      ],
+      "totalLines": 119,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/run_persona_pipeline.py": {
+      "filePath": "scripts/run_persona_pipeline.py",
+      "contentHash": "79610a3f4398998a37ec96a31ea9c0d0c3c3104f05302099a10c32c51fbe2401",
+      "functions": [
+        {
+          "name": "bootstrap_supabase_schema",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "main",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 108
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "pandas",
+          "specifiers": [
+            "pd"
+          ]
+        },
+        {
+          "source": "tqdm",
+          "specifiers": [
+            "tqdm"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        },
+        {
+          "source": "psycopg2",
+          "specifiers": [
+            "psycopg2"
+          ]
+        },
+        {
+          "source": "sentence_transformers",
+          "specifiers": [
+            "SentenceTransformer"
+          ]
+        }
+      ],
+      "exports": [
+        "bootstrap_supabase_schema",
+        "main"
+      ],
+      "totalLines": 167,
+      "hasStructuralAnalysis": true
+    },
+    "src/agent/recommender.py": {
+      "filePath": "src/agent/recommender.py",
+      "contentHash": "cf91331706b66248fd2ed439ec0e3446aa02dc74f8e12c45aaddbd217f81c937",
+      "functions": [],
+      "classes": [
+        {
+          "name": "MidasAdviser",
+          "methods": [
+            "__init__",
+            "_get_embedding",
+            "get_recommendation",
+            "_format_rag_context"
+          ],
+          "properties": [
+            "_embedding_model",
+            "_llm_client"
+          ],
+          "exported": true,
+          "lineCount": 187
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any",
+            "Dict",
+            "List"
+          ]
+        },
+        {
+          "source": "openai",
+          "specifiers": [
+            "OpenAI"
+          ]
+        },
+        {
+          "source": "sentence_transformers",
+          "specifiers": [
+            "SentenceTransformer"
+          ]
+        },
+        {
+          "source": "db.connector",
+          "specifiers": [
+            "get_all_tax_rules",
+            "get_latest_market_snapshots",
+            "get_user_by_uuid",
+            "search_similar_personas_db"
+          ]
+        }
+      ],
+      "exports": [
+        "MidasAdviser"
+      ],
+      "totalLines": 210,
+      "hasStructuralAnalysis": true
+    },
+    "src/data_pipeline/export_csv.py": {
+      "filePath": "src/data_pipeline/export_csv.py",
+      "contentHash": "7463eaeb0d500675b21ef4ab5a10f67fecfc61505a44bee11780d23b069e5dc7",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "pandas",
+          "specifiers": [
+            "pd"
+          ]
+        },
+        {
+          "source": "datasets",
+          "specifiers": [
+            "load_dataset"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 26,
+      "hasStructuralAnalysis": true
+    },
+    "src/data_pipeline/fetch_market_data.py": {
+      "filePath": "src/data_pipeline/fetch_market_data.py",
+      "contentHash": "4879cd7e7a4e953307f523a87bae6f6a0ebd6e92e926745fd490711cabbbd2b0",
+      "functions": [
+        {
+          "name": "_is_valid_key",
+          "params": [
+            "key_name"
+          ],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "fetch_yfinance_data",
+          "params": [
+            "symbol",
+            "start_date",
+            "end_date"
+          ],
+          "returnType": "list[dict]",
+          "exported": true,
+          "lineCount": 45
+        },
+        {
+          "name": "fetch_fred_data",
+          "params": [
+            "series_id",
+            "start_date",
+            "end_date"
+          ],
+          "returnType": "list[dict]",
+          "exported": true,
+          "lineCount": 36
+        },
+        {
+          "name": "fetch_ecos_data",
+          "params": [
+            "stat_code",
+            "cycle",
+            "item_code",
+            "start_date",
+            "end_date"
+          ],
+          "returnType": "list[dict]",
+          "exported": true,
+          "lineCount": 43
+        },
+        {
+          "name": "fetch_realtime_stock",
+          "params": [
+            "symbol"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 55
+        }
+      ],
+      "classes": [
+        {
+          "name": "MarketDataPipeline",
+          "methods": [
+            "__init__",
+            "fetch_target",
+            "fetch_all"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 81
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime",
+            "timedelta"
+          ]
+        },
+        {
+          "source": "requests",
+          "specifiers": [
+            "requests"
+          ]
+        },
+        {
+          "source": "pandas",
+          "specifiers": [
+            "pd"
+          ]
+        },
+        {
+          "source": "yfinance",
+          "specifiers": [
+            "yf"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        }
+      ],
+      "exports": [
+        "_is_valid_key",
+        "fetch_yfinance_data",
+        "fetch_fred_data",
+        "fetch_ecos_data",
+        "MarketDataPipeline",
+        "fetch_realtime_stock"
+      ],
+      "totalLines": 319,
+      "hasStructuralAnalysis": true
+    },
+    "src/data_pipeline/generate_finance_data.py": {
+      "filePath": "src/data_pipeline/generate_finance_data.py",
+      "contentHash": "19bd5a4b84a138abe776b612567c502906c13460ca256d1ce3aa0e241b9d672c",
+      "functions": [
+        {
+          "name": "extract_json",
+          "params": [
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "generate_finance_data",
+          "params": [
+            "row",
+            "semaphore"
+          ],
+          "exported": true,
+          "lineCount": 62
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 98
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "pandas",
+          "specifiers": [
+            "pd"
+          ]
+        },
+        {
+          "source": "datasets",
+          "specifiers": [
+            "load_dataset"
+          ]
+        },
+        {
+          "source": "huggingface_hub",
+          "specifiers": [
+            "HfApi"
+          ]
+        },
+        {
+          "source": "openai",
+          "specifiers": [
+            "AsyncOpenAI"
+          ]
+        },
+        {
+          "source": "tqdm",
+          "specifiers": [
+            "sync_tqdm"
+          ]
+        },
+        {
+          "source": "tqdm.asyncio",
+          "specifiers": [
+            "tqdm"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        },
+        {
+          "source": "db.connector",
+          "specifiers": [
+            "bulk_upsert_users"
+          ]
+        }
+      ],
+      "exports": [
+        "extract_json",
+        "generate_finance_data",
+        "main"
+      ],
+      "totalLines": 274,
+      "hasStructuralAnalysis": true
+    },
+    "src/db/connector.py": {
+      "filePath": "src/db/connector.py",
+      "contentHash": "39e476956b625d0d1625ecf5d808c1ac7b2fbd8a157fa99b561fd19c62093ce0",
+      "functions": [
+        {
+          "name": "_get_database_url",
+          "params": [],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "get_connection",
+          "params": [],
+          "returnType": "psycopg2.extensions.connection",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "db_cursor",
+          "params": [],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "apply_schema",
+          "params": [
+            "schema_path"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "upsert_user",
+          "params": [
+            "row"
+          ],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 63
+        },
+        {
+          "name": "bulk_upsert_users",
+          "params": [
+            "rows"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 68
+        },
+        {
+          "name": "_user_params",
+          "params": [
+            "row"
+          ],
+          "returnType": "list",
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "upsert_market_snapshot",
+          "params": [
+            "date",
+            "data_type",
+            "sub_key",
+            "value",
+            "unit",
+            "source"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "bulk_upsert_market_snapshots",
+          "params": [
+            "rows"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "get_user_by_uuid",
+          "params": [
+            "uuid"
+          ],
+          "returnType": "dict | None",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "get_latest_market_value",
+          "params": [
+            "data_type",
+            "sub_key"
+          ],
+          "returnType": "dict | None",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "get_all_tax_rules",
+          "params": [],
+          "returnType": "list[dict]",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "get_latest_market_snapshots",
+          "params": [],
+          "returnType": "list[dict]",
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "search_similar_personas_db",
+          "params": [
+            "embedding",
+            "top_k"
+          ],
+          "returnType": "list[dict]",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "bulk_upsert_emb_passages",
+          "params": [
+            "passages"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "bulk_upsert_emb_queries",
+          "params": [
+            "queries"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "bulk_upsert_emb_triplets",
+          "params": [
+            "triplets",
+            "split"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 36
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "contextlib",
+          "specifiers": [
+            "contextmanager"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any"
+          ]
+        },
+        {
+          "source": "psycopg2",
+          "specifiers": [
+            "psycopg2"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        }
+      ],
+      "exports": [
+        "_get_database_url",
+        "get_connection",
+        "db_cursor",
+        "apply_schema",
+        "upsert_user",
+        "bulk_upsert_users",
+        "_user_params",
+        "upsert_market_snapshot",
+        "bulk_upsert_market_snapshots",
+        "get_user_by_uuid",
+        "get_latest_market_value",
+        "get_all_tax_rules",
+        "get_latest_market_snapshots",
+        "search_similar_personas_db",
+        "bulk_upsert_emb_passages",
+        "bulk_upsert_emb_queries",
+        "bulk_upsert_emb_triplets"
+      ],
+      "totalLines": 463,
+      "hasStructuralAnalysis": true
+    },
+    "src/db/models/__init__.py": {
+      "filePath": "src/db/models/__init__.py",
+      "contentHash": "17d7a0abbcf89d69fc04694cd9f63d65a3bd4b725c7c52061e766b5e6ccd4d6a",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "src.db.models.postgres_models",
+          "specifiers": [
+            "PostgresBase",
+            "User",
+            "Portfolio",
+            "PortfolioItem",
+            "TaxRule",
+            "MarketSnapshot",
+            "LegalReference",
+            "NewsEmbedding",
+            "StrategyDoc",
+            "MacroIndicator",
+            "PersonaEmbedding"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 16,
+      "hasStructuralAnalysis": true
+    },
+    "src/db/models/postgres_models.py": {
+      "filePath": "src/db/models/postgres_models.py",
+      "contentHash": "64c7b07f592fe95aeccd997abdc5129d311506f6b51f31ab00b659a676deac90",
+      "functions": [],
+      "classes": [
+        {
+          "name": "User",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 69
+        },
+        {
+          "name": "Portfolio",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 38
+        },
+        {
+          "name": "PortfolioItem",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "TaxRule",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "MarketSnapshot",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "LegalReference",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "NewsEmbedding",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "StrategyDoc",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "MacroIndicator",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "PersonaEmbedding",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 26
+        }
+      ],
+      "imports": [
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        },
+        {
+          "source": "sqlalchemy",
+          "specifiers": [
+            "Column",
+            "Integer",
+            "SmallInteger",
+            "BigInteger",
+            "String",
+            "Text",
+            "Numeric",
+            "Boolean",
+            "DateTime",
+            "Date",
+            "ForeignKey",
+            "text"
+          ]
+        },
+        {
+          "source": "sqlalchemy.dialects.postgresql",
+          "specifiers": [
+            "UUID"
+          ]
+        },
+        {
+          "source": "sqlalchemy.orm",
+          "specifiers": [
+            "declarative_base",
+            "relationship"
+          ]
+        },
+        {
+          "source": "pgvector.sqlalchemy",
+          "specifiers": [
+            "Vector"
+          ]
+        }
+      ],
+      "exports": [
+        "User",
+        "Portfolio",
+        "PortfolioItem",
+        "TaxRule",
+        "MarketSnapshot",
+        "LegalReference",
+        "NewsEmbedding",
+        "StrategyDoc",
+        "MacroIndicator",
+        "PersonaEmbedding"
+      ],
+      "totalLines": 311,
+      "hasStructuralAnalysis": true
+    },
+    "src/db/supabase_connector.py": {
+      "filePath": "src/db/supabase_connector.py",
+      "contentHash": "3ae1c66cd64dc0f2c676284b37cc57018d7a95b5e59e5395fe0049d1347bc885",
+      "functions": [
+        {
+          "name": "get_client",
+          "params": [],
+          "returnType": "Any",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "upsert_news",
+          "params": [
+            "client",
+            "title",
+            "content",
+            "published_at",
+            "source",
+            "embedding",
+            "source_url",
+            "language",
+            "category",
+            "sentiment_score"
+          ],
+          "returnType": "Dict[str, Any]",
+          "exported": true,
+          "lineCount": 37
+        },
+        {
+          "name": "search_news",
+          "params": [
+            "client",
+            "query_embedding",
+            "top_k",
+            "category",
+            "days_back"
+          ],
+          "returnType": "List[Dict[str, Any]]",
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "upsert_strategy_doc",
+          "params": [
+            "client",
+            "title",
+            "chunk_text",
+            "embedding",
+            "author",
+            "published_year",
+            "strategy_type",
+            "chunk_index",
+            "source_url",
+            "azure_legal_id"
+          ],
+          "returnType": "Dict[str, Any]",
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "search_strategies",
+          "params": [
+            "client",
+            "query_embedding",
+            "top_k",
+            "strategy_type"
+          ],
+          "returnType": "List[Dict[str, Any]]",
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "upsert_macro_indicator",
+          "params": [
+            "client",
+            "indicator_name",
+            "indicator_date",
+            "numeric_value",
+            "unit",
+            "source",
+            "analysis_text",
+            "embedding"
+          ],
+          "returnType": "Dict[str, Any]",
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "upsert_persona_embedding",
+          "params": [
+            "client",
+            "azure_user_uuid",
+            "persona_text",
+            "embedding"
+          ],
+          "returnType": "Dict[str, Any]",
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "search_similar_personas",
+          "params": [
+            "client",
+            "query_embedding",
+            "top_k"
+          ],
+          "returnType": "List[Dict[str, Any]]",
+          "exported": true,
+          "lineCount": 14
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any",
+            "List",
+            "Dict"
+          ]
+        },
+        {
+          "source": "db.connector",
+          "specifiers": [
+            "db_cursor"
+          ]
+        }
+      ],
+      "exports": [
+        "get_client",
+        "upsert_news",
+        "search_news",
+        "upsert_strategy_doc",
+        "search_strategies",
+        "upsert_macro_indicator",
+        "upsert_persona_embedding",
+        "search_similar_personas"
+      ],
+      "totalLines": 211,
+      "hasStructuralAnalysis": true
+    },
+    "src/embedding_pipeline/__init__.py": {
+      "filePath": "src/embedding_pipeline/__init__.py",
+      "contentHash": "e5714686ba1308f913efb35153bbcffbf23519dafe1ee139a8533443bf255e31",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": ".config",
+          "specifiers": [
+            "PipelineConfig",
+            "DEFAULT_CONFIG"
+          ]
+        },
+        {
+          "source": ".pipeline",
+          "specifiers": [
+            "EmbeddingDatasetPipeline"
+          ]
+        },
+        {
+          "source": ".document_parser",
+          "specifiers": [
+            "DocumentParser",
+            "Passage"
+          ]
+        },
+        {
+          "source": ".query_synthesizer",
+          "specifiers": [
+            "QuerySynthesizer",
+            "SyntheticQuery"
+          ]
+        },
+        {
+          "source": ".hard_negative_miner",
+          "specifiers": [
+            "HardNegativeMiner",
+            "MiningResult"
+          ]
+        },
+        {
+          "source": ".dataset_builder",
+          "specifiers": [
+            "TripletAssembler",
+            "Triplet"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 27,
+      "hasStructuralAnalysis": true
+    },
+    "src/embedding_pipeline/config.py": {
+      "filePath": "src/embedding_pipeline/config.py",
+      "contentHash": "d926118ab07f34c80dc20c596e1d22cabaf947700f4c813f6d301c8950bd5f8a",
+      "functions": [],
+      "classes": [
+        {
+          "name": "NIMConfig",
+          "methods": [],
+          "properties": [
+            "api_key",
+            "base_url",
+            "generation_model",
+            "request_timeout",
+            "max_concurrent_requests",
+            "temperature",
+            "top_p",
+            "max_tokens"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "TeacherModelConfig",
+          "methods": [],
+          "properties": [
+            "model_name",
+            "device",
+            "batch_size",
+            "normalize_embeddings",
+            "max_seq_length"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "HardNegativeConfig",
+          "methods": [],
+          "properties": [
+            "margin_ratio",
+            "similarity_floor",
+            "top_k_candidates",
+            "num_hard_negatives_per_query",
+            "mining_batch_size"
+          ],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "QuerySynthesisConfig",
+          "methods": [],
+          "properties": [
+            "queries_per_passage",
+            "query_type_distribution",
+            "min_query_length",
+            "max_query_length",
+            "enable_validation"
+          ],
+          "exported": true,
+          "lineCount": 24
+        },
+        {
+          "name": "LoraConfig",
+          "methods": [],
+          "properties": [
+            "r",
+            "lora_alpha",
+            "lora_dropout",
+            "target_modules",
+            "bias",
+            "merge_on_save"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "TrainingConfig",
+          "methods": [],
+          "properties": [
+            "student_model_name",
+            "loss_type",
+            "learning_rate",
+            "num_epochs",
+            "train_batch_size",
+            "eval_batch_size",
+            "warmup_ratio",
+            "mnrl_scale",
+            "eval_steps",
+            "save_steps",
+            "fp16",
+            "bf16",
+            "output_dir"
+          ],
+          "exported": true,
+          "lineCount": 61
+        },
+        {
+          "name": "PathConfig",
+          "methods": [
+            "ensure_dirs"
+          ],
+          "properties": [
+            "raw_documents_dir",
+            "passages_jsonl",
+            "synthetic_queries_jsonl",
+            "train_dataset_jsonl",
+            "eval_dataset_jsonl",
+            "checkpoint_dir"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "PromptTemplates",
+          "methods": [],
+          "properties": [
+            "query_synthesis_system",
+            "query_synthesis_user",
+            "query_validation_system",
+            "query_validation_user"
+          ],
+          "exported": true,
+          "lineCount": 51
+        },
+        {
+          "name": "PipelineConfig",
+          "methods": [
+            "validate"
+          ],
+          "properties": [
+            "nim",
+            "teacher_model",
+            "hard_negative",
+            "query_synthesis",
+            "training",
+            "lora",
+            "paths",
+            "prompts",
+            "log_level",
+            "seed",
+            "eval_split_ratio"
+          ],
+          "exported": true,
+          "lineCount": 34
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass",
+            "field"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Literal"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        }
+      ],
+      "exports": [
+        "NIMConfig",
+        "TeacherModelConfig",
+        "HardNegativeConfig",
+        "QuerySynthesisConfig",
+        "LoraConfig",
+        "TrainingConfig",
+        "PathConfig",
+        "PromptTemplates",
+        "PipelineConfig"
+      ],
+      "totalLines": 370,
+      "hasStructuralAnalysis": true
+    },
+    "src/embedding_pipeline/dataset_builder.py": {
+      "filePath": "src/embedding_pipeline/dataset_builder.py",
+      "contentHash": "11179a2c99ac006a542670b5bd12f5a985758117dccda2c21e98fc5d72c20f75",
+      "functions": [
+        {
+          "name": "compute_dataset_stats",
+          "params": [
+            "triplets"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 32
+        }
+      ],
+      "classes": [
+        {
+          "name": "Triplet",
+          "methods": [
+            "to_sentence_transformer_dict",
+            "to_margin_mse_dict",
+            "to_dict"
+          ],
+          "properties": [
+            "triplet_id",
+            "query_id",
+            "query_text",
+            "positive_passage_id",
+            "positive_text",
+            "negative_passage_id",
+            "negative_text",
+            "query_type",
+            "negative_similarity_score",
+            "positive_similarity_score",
+            "margin"
+          ],
+          "exported": true,
+          "lineCount": 36
+        },
+        {
+          "name": "TripletAssembler",
+          "methods": [
+            "__init__",
+            "assemble",
+            "_sample_random_negative"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 100
+        },
+        {
+          "name": "DatasetSplitter",
+          "methods": [
+            "__init__",
+            "split"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 38
+        },
+        {
+          "name": "DatasetIO",
+          "methods": [
+            "save_jsonl",
+            "load_jsonl",
+            "iter_sentence_transformer_format"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 43
+        }
+      ],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass",
+            "asdict"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Iterator"
+          ]
+        },
+        {
+          "source": ".config",
+          "specifiers": [
+            "PipelineConfig"
+          ]
+        },
+        {
+          "source": ".hard_negative_miner",
+          "specifiers": [
+            "MiningResult"
+          ]
+        },
+        {
+          "source": ".query_synthesizer",
+          "specifiers": [
+            "SyntheticQuery"
+          ]
+        }
+      ],
+      "exports": [
+        "Triplet",
+        "TripletAssembler",
+        "DatasetSplitter",
+        "DatasetIO",
+        "compute_dataset_stats"
+      ],
+      "totalLines": 301,
+      "hasStructuralAnalysis": true
+    },
+    "src/embedding_pipeline/document_parser.py": {
+      "filePath": "src/embedding_pipeline/document_parser.py",
+      "contentHash": "62f2f9a22f19c098c530ee1e6bc5b0b75716a09d9b8b544325339ea0888e59b4",
+      "functions": [],
+      "classes": [
+        {
+          "name": "Passage",
+          "methods": [],
+          "properties": [
+            "passage_id",
+            "text",
+            "source",
+            "metadata"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "FinancialChunker",
+          "methods": [
+            "__init__",
+            "split_text",
+            "_split_recursive"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 101
+        },
+        {
+          "name": "DocumentParser",
+          "methods": [
+            "__init__",
+            "parse_file",
+            "_parse_pdf",
+            "_parse_markdown",
+            "_parse_text"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 123
+        }
+      ],
+      "imports": [
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass",
+            "field"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": ".config",
+          "specifiers": [
+            "PipelineConfig"
+          ]
+        }
+      ],
+      "exports": [
+        "Passage",
+        "FinancialChunker",
+        "DocumentParser"
+      ],
+      "totalLines": 274,
+      "hasStructuralAnalysis": true
+    },
+    "src/embedding_pipeline/hard_negative_miner.py": {
+      "filePath": "src/embedding_pipeline/hard_negative_miner.py",
+      "contentHash": "141adb615ebe508714e949b8b909dce6e1fbed7bcf4a4519b28637198fc18f57",
+      "functions": [
+        {
+          "name": "compute_mining_stats",
+          "params": [
+            "results"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 27
+        }
+      ],
+      "classes": [
+        {
+          "name": "SimilarityScore",
+          "methods": [],
+          "properties": [
+            "passage_id",
+            "score"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "HardNegativeCandidate",
+          "methods": [],
+          "properties": [
+            "query_id",
+            "passage_id",
+            "passage_text",
+            "similarity_score",
+            "positive_score",
+            "margin"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "MiningResult",
+          "methods": [],
+          "properties": [
+            "query_id",
+            "passage_id",
+            "hard_negatives",
+            "rejected_too_similar",
+            "rejected_too_dissimilar"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "TeacherEmbedder",
+          "methods": [
+            "__init__",
+            "encode",
+            "similarity_matrix"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 45
+        },
+        {
+          "name": "NVRetrieverMarginFilter",
+          "methods": [
+            "__init__",
+            "filter"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 42
+        },
+        {
+          "name": "HardNegativeMiner",
+          "methods": [
+            "__init__",
+            "index_passages",
+            "mine",
+            "_mine_single",
+            "save_embeddings_cache",
+            "load_embeddings_cache"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 159
+        }
+      ],
+      "imports": [
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "NamedTuple"
+          ]
+        },
+        {
+          "source": "numpy",
+          "specifiers": [
+            "np"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "sentence_transformers",
+          "specifiers": [
+            "SentenceTransformer"
+          ]
+        },
+        {
+          "source": ".config",
+          "specifiers": [
+            "PipelineConfig"
+          ]
+        },
+        {
+          "source": ".document_parser",
+          "specifiers": [
+            "Passage"
+          ]
+        },
+        {
+          "source": ".query_synthesizer",
+          "specifiers": [
+            "SyntheticQuery"
+          ]
+        }
+      ],
+      "exports": [
+        "SimilarityScore",
+        "HardNegativeCandidate",
+        "MiningResult",
+        "TeacherEmbedder",
+        "NVRetrieverMarginFilter",
+        "HardNegativeMiner",
+        "compute_mining_stats"
+      ],
+      "totalLines": 356,
+      "hasStructuralAnalysis": true
+    },
+    "src/embedding_pipeline/pipeline.py": {
+      "filePath": "src/embedding_pipeline/pipeline.py",
+      "contentHash": "2711bfbacc578f0288436317718c71ed5491078010dc58a52574cf216a1eba35",
+      "functions": [
+        {
+          "name": "setup_logging",
+          "params": [
+            "level"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "main",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 36
+        }
+      ],
+      "classes": [
+        {
+          "name": "PassageLoader",
+          "methods": [
+            "__init__",
+            "load",
+            "_load_jsonl",
+            "_save_jsonl"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 105
+        },
+        {
+          "name": "CheckpointManager",
+          "methods": [
+            "__init__",
+            "save",
+            "load",
+            "exists"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "EmbeddingDatasetPipeline",
+          "methods": [
+            "__init__",
+            "run",
+            "_run_stage_passage_loading",
+            "_run_stage_query_synthesis",
+            "_run_stage_hard_negative_mining",
+            "_run_stage_dataset_assembly",
+            "_db_persist_passages",
+            "_db_persist_queries",
+            "_db_persist_triplets",
+            "_serialize_mining_results",
+            "_deserialize_mining_results"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 295
+        }
+      ],
+      "imports": [
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any"
+          ]
+        },
+        {
+          "source": ".config",
+          "specifiers": [
+            "PipelineConfig",
+            "DEFAULT_CONFIG"
+          ]
+        },
+        {
+          "source": ".document_parser",
+          "specifiers": [
+            "DocumentParser",
+            "Passage"
+          ]
+        },
+        {
+          "source": ".dataset_builder",
+          "specifiers": [
+            "DatasetIO",
+            "DatasetSplitter",
+            "TripletAssembler",
+            "compute_dataset_stats"
+          ]
+        },
+        {
+          "source": ".hard_negative_miner",
+          "specifiers": [
+            "HardNegativeMiner",
+            "compute_mining_stats"
+          ]
+        },
+        {
+          "source": ".query_synthesizer",
+          "specifiers": [
+            "QuerySynthesizer",
+            "SyntheticQuery",
+            "synthesis_results_to_jsonl"
+          ]
+        }
+      ],
+      "exports": [
+        "setup_logging",
+        "PassageLoader",
+        "CheckpointManager",
+        "EmbeddingDatasetPipeline",
+        "main"
+      ],
+      "totalLines": 541,
+      "hasStructuralAnalysis": true
+    },
+    "src/embedding_pipeline/query_synthesizer.py": {
+      "filePath": "src/embedding_pipeline/query_synthesizer.py",
+      "contentHash": "048870e7c08b25904815ba3cd97752938ad630cea3478bbc1e1d5cb02095fb5d",
+      "functions": [
+        {
+          "name": "_classify_query_type",
+          "params": [
+            "query_text"
+          ],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "synthesis_results_to_jsonl",
+          "params": [
+            "results"
+          ],
+          "returnType": "list[dict]",
+          "exported": true,
+          "lineCount": 16
+        }
+      ],
+      "classes": [
+        {
+          "name": "SyntheticQuery",
+          "methods": [],
+          "properties": [
+            "query_id",
+            "passage_id",
+            "query_text",
+            "query_type",
+            "source_passage"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "SynthesisResult",
+          "methods": [],
+          "properties": [
+            "passage_id",
+            "queries",
+            "elapsed_sec",
+            "error"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "NIMClient",
+          "methods": [
+            "__init__",
+            "__aenter__",
+            "__aexit__",
+            "chat_completion"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 82
+        },
+        {
+          "name": "QuerySynthesizer",
+          "methods": [
+            "__init__",
+            "__aenter__",
+            "__aexit__",
+            "synthesize_batch",
+            "synthesize_stream",
+            "_synthesize_single",
+            "_call_llm_synthesis",
+            "_validate_queries_batch",
+            "_validate_single_query",
+            "_extract_json_list",
+            "_parse_and_filter"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 238
+        }
+      ],
+      "imports": [
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "dataclasses",
+          "specifiers": [
+            "dataclass",
+            "field"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "AsyncIterator"
+          ]
+        },
+        {
+          "source": "httpx",
+          "specifiers": [
+            "httpx"
+          ]
+        },
+        {
+          "source": ".config",
+          "specifiers": [
+            "PipelineConfig"
+          ]
+        },
+        {
+          "source": ".document_parser",
+          "specifiers": [
+            "Passage"
+          ]
+        }
+      ],
+      "exports": [
+        "SyntheticQuery",
+        "SynthesisResult",
+        "_classify_query_type",
+        "NIMClient",
+        "QuerySynthesizer",
+        "synthesis_results_to_jsonl"
+      ],
+      "totalLines": 421,
+      "hasStructuralAnalysis": true
+    },
+    "src/embedding_pipeline/train.py": {
+      "filePath": "src/embedding_pipeline/train.py",
+      "contentHash": "6b4bdf973ae22918e5bf843651bc4edebf5ebe6a4b4831e0cc6d259902c9feec",
+      "functions": [
+        {
+          "name": "set_seed",
+          "params": [
+            "seed"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "load_train_eval_datasets",
+          "params": [
+            "config"
+          ],
+          "returnType": "tuple[Dataset, list[Triplet]]",
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "build_ir_evaluator",
+          "params": [
+            "eval_triplets",
+            "name"
+          ],
+          "returnType": "InformationRetrievalEvaluator",
+          "exported": true,
+          "lineCount": 31
+        },
+        {
+          "name": "apply_lora",
+          "params": [
+            "model",
+            "config"
+          ],
+          "returnType": "SentenceTransformer",
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "save_model",
+          "params": [
+            "model",
+            "output_dir",
+            "config"
+          ],
+          "returnType": "Path",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "train",
+          "params": [
+            "config"
+          ],
+          "returnType": "SentenceTransformer",
+          "exported": true,
+          "lineCount": 83
+        },
+        {
+          "name": "quick_inference_test",
+          "params": [
+            "model",
+            "test_queries",
+            "test_passages"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "main",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 46
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "numpy",
+          "specifiers": [
+            "np"
+          ]
+        },
+        {
+          "source": "torch",
+          "specifiers": [
+            "torch"
+          ]
+        },
+        {
+          "source": "datasets",
+          "specifiers": [
+            "Dataset"
+          ]
+        },
+        {
+          "source": "peft",
+          "specifiers": [
+            "TaskType",
+            "get_peft_model",
+            "PeftLoraConfig"
+          ]
+        },
+        {
+          "source": "sentence_transformers",
+          "specifiers": [
+            "SentenceTransformer",
+            "SentenceTransformerTrainer",
+            "SentenceTransformerTrainingArguments",
+            "losses"
+          ]
+        },
+        {
+          "source": "sentence_transformers.evaluation",
+          "specifiers": [
+            "InformationRetrievalEvaluator"
+          ]
+        },
+        {
+          "source": ".config",
+          "specifiers": [
+            "PipelineConfig",
+            "DEFAULT_CONFIG"
+          ]
+        },
+        {
+          "source": ".dataset_builder",
+          "specifiers": [
+            "DatasetIO",
+            "Triplet"
+          ]
+        },
+        {
+          "source": ".pipeline",
+          "specifiers": [
+            "setup_logging"
+          ]
+        }
+      ],
+      "exports": [
+        "set_seed",
+        "load_train_eval_datasets",
+        "build_ir_evaluator",
+        "apply_lora",
+        "save_model",
+        "train",
+        "quick_inference_test",
+        "main"
+      ],
+      "totalLines": 320,
+      "hasStructuralAnalysis": true
+    },
+    "tests/test_agent.py": {
+      "filePath": "tests/test_agent.py",
+      "contentHash": "7dce83823b95776fec22d1128c85d84e29ad2471a68638ff4349ec2f0b7cccc7",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestMidasAgent",
+          "methods": [
+            "setUpClass",
+            "test_get_all_tax_rules",
+            "test_get_latest_market_snapshots",
+            "test_supabase_vector_search",
+            "test_end_to_end_adviser_flow"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 83
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "unittest",
+          "specifiers": [
+            "unittest"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        },
+        {
+          "source": "agent.recommender",
+          "specifiers": [
+            "MidasAdviser"
+          ]
+        },
+        {
+          "source": "db.connector",
+          "specifiers": [
+            "get_all_tax_rules",
+            "get_latest_market_snapshots",
+            "get_user_by_uuid",
+            "search_similar_personas_db"
+          ]
+        }
+      ],
+      "exports": [
+        "TestMidasAgent"
+      ],
+      "totalLines": 114,
+      "hasStructuralAnalysis": true
+    },
+    "tests/test_document_parser.py": {
+      "filePath": "tests/test_document_parser.py",
+      "contentHash": "b3ffe9864ce1d9327e4d1bcf04f59b874dc126a8722c3537e0ea390551372f05",
+      "functions": [
+        {
+          "name": "test_financial_chunker",
+          "params": [],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "test_document_parser_txt_md",
+          "params": [],
+          "exported": true,
+          "lineCount": 36
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "tempfile",
+          "specifiers": [
+            "tempfile"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "src.embedding_pipeline.config",
+          "specifiers": [
+            "DEFAULT_CONFIG"
+          ]
+        },
+        {
+          "source": "src.embedding_pipeline.document_parser",
+          "specifiers": [
+            "DocumentParser",
+            "FinancialChunker"
+          ]
+        }
+      ],
+      "exports": [
+        "test_financial_chunker",
+        "test_document_parser_txt_md"
+      ],
+      "totalLines": 79,
+      "hasStructuralAnalysis": true
+    }
+  }
+}

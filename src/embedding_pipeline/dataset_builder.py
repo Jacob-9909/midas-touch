@@ -18,9 +18,9 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Iterator
 
-from .config import PipelineConfig
-from .hard_negative_miner import MiningResult
-from .query_synthesizer import SyntheticQuery
+from src.embedding_pipeline.config import PipelineConfig
+from src.embedding_pipeline.hard_negative_miner import MiningResult
+from src.embedding_pipeline.query_synthesizer import SyntheticQuery
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ class TripletAssembler:
                 # 하드 네거티브 존재 → 삼중쌍 직접 구성
                 for hn in result.hard_negatives:
                     triplet = Triplet(
-                        triplet_id=f"{query_id}_hn_{hn.passage_id[:8]}",
+                        triplet_id=f"{query_id}_hn_{hn.passage_id}",
                         query_id=query_id,
                         query_text=query.query_text,
                         positive_passage_id=query.passage_id,
@@ -136,7 +136,7 @@ class TripletAssembler:
                 if fallback_neg:
                     neg_pid, neg_text = fallback_neg
                     triplet = Triplet(
-                        triplet_id=f"{query_id}_rand_{neg_pid[:8]}",
+                        triplet_id=f"{query_id}_rand_{neg_pid}",
                         query_id=query_id,
                         query_text=query.query_text,
                         positive_passage_id=query.passage_id,

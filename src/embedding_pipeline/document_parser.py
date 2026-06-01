@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -173,7 +174,8 @@ class DocumentParser:
             return []
 
         suffix = path.suffix.lower()
-        source_name = path.stem
+        # Mac 환경에서의 한글 자모 분리 방지를 위해 NFC 정규화 적용
+        source_name = unicodedata.normalize('NFC', path.stem)
 
         logger.info("문서 파싱 중: %s (형식: %s)", path.name, suffix)
 
@@ -187,6 +189,9 @@ class DocumentParser:
             else:
                 logger.warning("지원하지 않는 파일 형식입니다. 건너뜁니다: %s", path.name)
                 return []
+
+            # 한글 인코딩 및 임베딩 퀄리티를 위해 본문도 NFC 정규화 적용
+            raw_text = unicodedata.normalize('NFC', raw_text)
 
             # 텍스트 청킹 실행
             chunks = self._chunker.split_text(raw_text)
@@ -230,6 +235,9 @@ class DocumentParser:
             if not text:
                 continue
 
+            # 한글 인코딩 자모 분리 교정
+            text = unicodedata.normalize('NFC', text)
+
             cleaned_lines: list[str] = []
             for line in text.splitlines():
                 line = line.strip()
@@ -248,7 +256,18 @@ class DocumentParser:
             page_refined = re.sub(r"\n{3,}", "\n\n", page_refined)
             pages_text.append(page_refined)
 
-        return "\n\n".join(pages_text)
+        final_pdf_text = "\n\n".join(pages_text)
+
+        # 텍스트 추출 검증 안전장치 (스캔 이미지 PDF 인지여부 경고 로깅)
+        if len(final_pdf_text.strip()) < 50:
+            logger.warning(
+                "[PDF 텍스트 추출 경고] '%s' 파일에서 텍스트가 거의 추출되지 않았습니다 (추출량: %d자). "
+                "이 PDF는 이미지 스캔본이거나 텍스트 레이어가 없어 OCR 처리가 필요할 수 있습니다. "
+                "안정적인 데이터셋 생성을 위해 원천 문서를 일반 텍스트가 들어 있는 PDF로 교체해 주세요.",
+                path.name, len(final_pdf_text.strip())
+            )
+
+        return final_pdf_text
 
     def _parse_markdown(self, path: Path) -> str:
         """마크다운 파일 읽기 및 가벼운 문법 노이즈(코드블럭 기호 등) 정제."""

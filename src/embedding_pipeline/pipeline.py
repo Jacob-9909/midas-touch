@@ -19,16 +19,16 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .config import PipelineConfig, DEFAULT_CONFIG
-from .document_parser import DocumentParser, Passage
-from .dataset_builder import (
+from src.embedding_pipeline.config import PipelineConfig, DEFAULT_CONFIG
+from src.embedding_pipeline.document_parser import DocumentParser, Passage
+from src.embedding_pipeline.dataset_builder import (
     DatasetIO,
     DatasetSplitter,
     TripletAssembler,
     compute_dataset_stats,
 )
-from .hard_negative_miner import HardNegativeMiner, compute_mining_stats
-from .query_synthesizer import (
+from src.embedding_pipeline.hard_negative_miner import HardNegativeMiner, compute_mining_stats
+from src.embedding_pipeline.query_synthesizer import (
     QuerySynthesizer,
     SyntheticQuery,
     synthesis_results_to_jsonl,
@@ -339,7 +339,7 @@ class EmbeddingDatasetPipeline:
         queries: list[SyntheticQuery],
         force: set[str],
     ) -> tuple[list, dict]:
-        from .hard_negative_miner import MiningResult
+        from src.embedding_pipeline.hard_negative_miner import MiningResult
 
         logger.info("[3/4] 하드 네거티브 마이닝 시작...")
         stage = "hard_negative_mining"
@@ -350,7 +350,6 @@ class EmbeddingDatasetPipeline:
                 logger.info("[3/4] 체크포인트에서 마이닝 결과 로드: %d 행", len(raw_rows))
                 # 체크포인트 데이터를 MiningResult로 복원
                 mining_results = self._deserialize_mining_results(raw_rows)
-                from .hard_negative_miner import compute_mining_stats
                 stats = compute_mining_stats(mining_results)
                 return mining_results, stats
 
@@ -414,7 +413,7 @@ class EmbeddingDatasetPipeline:
     # ------------------------------------------------------------------
     def _db_persist_passages(self, passages: list[Passage]) -> None:
         try:
-            from db.connector import bulk_upsert_emb_passages
+            from src.db.connector import bulk_upsert_emb_passages
             rows = [{"passage_id": p.passage_id, "text": p.text, "source": p.source, "metadata": p.metadata} for p in passages]
             count = bulk_upsert_emb_passages(rows)
             logger.info("[DB] emb_passages 적재 완료: %d건", count)
@@ -423,7 +422,7 @@ class EmbeddingDatasetPipeline:
 
     def _db_persist_queries(self, queries: list[SyntheticQuery]) -> None:
         try:
-            from db.connector import bulk_upsert_emb_queries
+            from src.db.connector import bulk_upsert_emb_queries
             rows = [{"query_id": q.query_id, "passage_id": q.passage_id, "query_text": q.query_text, "query_type": q.query_type, "source_passage": q.source_passage} for q in queries]
             count = bulk_upsert_emb_queries(rows)
             logger.info("[DB] emb_synthetic_queries 적재 완료: %d건", count)
@@ -432,7 +431,7 @@ class EmbeddingDatasetPipeline:
 
     def _db_persist_triplets(self, train_triplets: list, eval_triplets: list) -> None:
         try:
-            from db.connector import bulk_upsert_emb_triplets
+            from src.db.connector import bulk_upsert_emb_triplets
             from dataclasses import asdict
             train_rows = [asdict(t) for t in train_triplets]
             eval_rows = [asdict(t) for t in eval_triplets]
@@ -465,7 +464,7 @@ class EmbeddingDatasetPipeline:
 
     @staticmethod
     def _deserialize_mining_results(rows: list[dict]) -> list:
-        from .hard_negative_miner import MiningResult, HardNegativeCandidate
+        from src.embedding_pipeline.hard_negative_miner import MiningResult, HardNegativeCandidate
         from collections import defaultdict
 
         grouped: dict[str, list] = defaultdict(list)

@@ -1,0 +1,342 @@
+{
+  "scriptCompleted": true,
+  "files": [
+    {
+      "path": "alembic.ini",
+      "language": "config",
+      "sizeLines": 49,
+      "fileCategory": "config"
+    },
+    {
+      "path": "database/migrations/postgres/env.py",
+      "language": "python",
+      "sizeLines": 91,
+      "fileCategory": "code"
+    },
+    {
+      "path": "database/migrations/postgres/README",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "database/migrations/postgres/script.py.mako",
+      "language": "mako",
+      "sizeLines": 26,
+      "fileCategory": "code"
+    },
+    {
+      "path": "database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "language": "python",
+      "sizeLines": 100,
+      "fileCategory": "code"
+    },
+    {
+      "path": "database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "language": "python",
+      "sizeLines": 82,
+      "fileCategory": "code"
+    },
+    {
+      "path": "database/schema/postgres_schema.sql",
+      "language": "sql",
+      "sizeLines": 432,
+      "fileCategory": "data"
+    },
+    {
+      "path": "database/seeds/seed_tax_rules.sql",
+      "language": "sql",
+      "sizeLines": 257,
+      "fileCategory": "data"
+    },
+    {
+      "path": "docker-compose.yml",
+      "language": "yaml",
+      "sizeLines": 16,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "notebooks/exploration.ipynb",
+      "language": "ipynb",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "pyproject.toml",
+      "language": "toml",
+      "sizeLines": 30,
+      "fileCategory": "config"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 64,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "scripts/db_init.sh",
+      "language": "shell",
+      "sizeLines": 30,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/migrate_data.py",
+      "language": "python",
+      "sizeLines": 391,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/oracle_macro.sh",
+      "language": "shell",
+      "sizeLines": 260,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/run_agent.py",
+      "language": "python",
+      "sizeLines": 129,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/run_market_pipeline.py",
+      "language": "python",
+      "sizeLines": 118,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/run_persona_pipeline.py",
+      "language": "python",
+      "sizeLines": 166,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/agent/recommender.py",
+      "language": "python",
+      "sizeLines": 209,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/data_pipeline/export_csv.py",
+      "language": "python",
+      "sizeLines": 25,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/data_pipeline/fetch_market_data.py",
+      "language": "python",
+      "sizeLines": 318,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/data_pipeline/generate_finance_data.py",
+      "language": "python",
+      "sizeLines": 273,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/db/connector.py",
+      "language": "python",
+      "sizeLines": 462,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/db/models/__init__.py",
+      "language": "python",
+      "sizeLines": 15,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/db/models/postgres_models.py",
+      "language": "python",
+      "sizeLines": 310,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/db/supabase_connector.py",
+      "language": "python",
+      "sizeLines": 210,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/embedding_pipeline/__init__.py",
+      "language": "python",
+      "sizeLines": 26,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/embedding_pipeline/config.py",
+      "language": "python",
+      "sizeLines": 369,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/embedding_pipeline/dataset_builder.py",
+      "language": "python",
+      "sizeLines": 300,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/embedding_pipeline/document_parser.py",
+      "language": "python",
+      "sizeLines": 273,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/embedding_pipeline/hard_negative_miner.py",
+      "language": "python",
+      "sizeLines": 355,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/embedding_pipeline/pipeline.py",
+      "language": "python",
+      "sizeLines": 540,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/embedding_pipeline/query_synthesizer.py",
+      "language": "python",
+      "sizeLines": 420,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/embedding_pipeline/train.py",
+      "language": "python",
+      "sizeLines": 319,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_agent.py",
+      "language": "python",
+      "sizeLines": 113,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/test_document_parser.py",
+      "language": "python",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    }
+  ],
+  "totalFiles": 36,
+  "filteredByIgnore": 0,
+  "estimatedComplexity": "moderate",
+  "stats": {
+    "filesScanned": 36,
+    "byCategory": {
+      "config": 2,
+      "code": 28,
+      "data": 2,
+      "infra": 1,
+      "docs": 1,
+      "script": 2
+    },
+    "byLanguage": {
+      "config": 1,
+      "python": 25,
+      "unknown": 1,
+      "mako": 1,
+      "sql": 2,
+      "yaml": 1,
+      "ipynb": 1,
+      "toml": 1,
+      "markdown": 1,
+      "shell": 2
+    }
+  },
+  "importMap": {
+    "alembic.ini": [],
+    "database/migrations/postgres/env.py": [
+      "src/db/models/postgres_models.py"
+    ],
+    "database/migrations/postgres/README": [],
+    "database/migrations/postgres/script.py.mako": [],
+    "database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py": [],
+    "database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py": [],
+    "database/schema/postgres_schema.sql": [],
+    "database/seeds/seed_tax_rules.sql": [],
+    "docker-compose.yml": [],
+    "notebooks/exploration.ipynb": [],
+    "pyproject.toml": [],
+    "README.md": [],
+    "scripts/db_init.sh": [],
+    "scripts/migrate_data.py": [],
+    "scripts/oracle_macro.sh": [],
+    "scripts/run_agent.py": [],
+    "scripts/run_market_pipeline.py": [],
+    "scripts/run_persona_pipeline.py": [],
+    "src/agent/recommender.py": [
+      "src/db/connector.py"
+    ],
+    "src/data_pipeline/export_csv.py": [],
+    "src/data_pipeline/fetch_market_data.py": [],
+    "src/data_pipeline/generate_finance_data.py": [
+      "src/db/connector.py"
+    ],
+    "src/db/connector.py": [],
+    "src/db/models/__init__.py": [
+      "src/db/models/postgres_models.py"
+    ],
+    "src/db/models/postgres_models.py": [],
+    "src/db/supabase_connector.py": [
+      "src/db/connector.py"
+    ],
+    "src/embedding_pipeline/__init__.py": [
+      "src/embedding_pipeline/config.py",
+      "src/embedding_pipeline/dataset_builder.py",
+      "src/embedding_pipeline/document_parser.py",
+      "src/embedding_pipeline/hard_negative_miner.py",
+      "src/embedding_pipeline/pipeline.py",
+      "src/embedding_pipeline/query_synthesizer.py"
+    ],
+    "src/embedding_pipeline/config.py": [],
+    "src/embedding_pipeline/dataset_builder.py": [
+      "src/embedding_pipeline/config.py",
+      "src/embedding_pipeline/hard_negative_miner.py",
+      "src/embedding_pipeline/query_synthesizer.py"
+    ],
+    "src/embedding_pipeline/document_parser.py": [
+      "src/embedding_pipeline/config.py"
+    ],
+    "src/embedding_pipeline/hard_negative_miner.py": [
+      "src/embedding_pipeline/config.py",
+      "src/embedding_pipeline/document_parser.py",
+      "src/embedding_pipeline/query_synthesizer.py"
+    ],
+    "src/embedding_pipeline/pipeline.py": [
+      "src/embedding_pipeline/config.py",
+      "src/embedding_pipeline/dataset_builder.py",
+      "src/embedding_pipeline/document_parser.py",
+      "src/embedding_pipeline/hard_negative_miner.py",
+      "src/embedding_pipeline/query_synthesizer.py"
+    ],
+    "src/embedding_pipeline/query_synthesizer.py": [
+      "src/embedding_pipeline/config.py",
+      "src/embedding_pipeline/document_parser.py"
+    ],
+    "src/embedding_pipeline/train.py": [
+      "src/embedding_pipeline/config.py",
+      "src/embedding_pipeline/dataset_builder.py",
+      "src/embedding_pipeline/pipeline.py"
+    ],
+    "tests/test_agent.py": [],
+    "tests/test_document_parser.py": [
+      "src/embedding_pipeline/config.py",
+      "src/embedding_pipeline/document_parser.py"
+    ]
+  },
+  "projectName": "midas-touch",
+  "languages": [
+    "config",
+    "python",
+    "unknown",
+    "mako",
+    "sql",
+    "yaml",
+    "ipynb",
+    "toml",
+    "markdown",
+    "shell"
+  ],
+  "frameworks": []
+}

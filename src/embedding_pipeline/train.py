@@ -18,6 +18,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from datasets import Dataset
+from peft import LoraConfig as PeftLoraConfig, TaskType, get_peft_model
 from sentence_transformers import (
     SentenceTransformer,
     SentenceTransformerTrainer,
@@ -26,9 +27,9 @@ from sentence_transformers import (
 )
 from sentence_transformers.evaluation import InformationRetrievalEvaluator
 
-from .config import PipelineConfig, DEFAULT_CONFIG
-from .dataset_builder import DatasetIO, Triplet
-from .pipeline import setup_logging
+from src.embedding_pipeline.config import PipelineConfig, DEFAULT_CONFIG
+from src.embedding_pipeline.dataset_builder import DatasetIO, Triplet
+from src.embedding_pipeline.pipeline import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -120,33 +121,72 @@ def build_ir_evaluator(
 # ---------------------------------------------------------------------------
 # 학습 실행
 # ---------------------------------------------------------------------------
+def apply_lora(model: SentenceTransformer, config: PipelineConfig) -> SentenceTransformer:
+    """SentenceTransformer의 transformer backbone에 LoRA adapter를 적용."""
+    lora_cfg = config.lora
+    peft_config = PeftLoraConfig(
+        task_type=TaskType.FEATURE_EXTRACTION,
+        r=lora_cfg.r,
+        lora_alpha=lora_cfg.lora_alpha,
+        lora_dropout=lora_cfg.lora_dropout,
+        target_modules=list(lora_cfg.target_modules),
+        bias=lora_cfg.bias,
+    )
+    # SentenceTransformer[0] = Transformer 레이어, auto_model = HuggingFace backbone
+    transformer_layer = model[0]
+    transformer_layer.auto_model = get_peft_model(transformer_layer.auto_model, peft_config)
+    transformer_layer.auto_model.print_trainable_parameters()
+    return model
+
+
+def save_model(model: SentenceTransformer, output_dir: str, config: PipelineConfig) -> Path:
+    """학습 완료 모델 저장. merge_on_save=True면 adapter를 base에 머지 후 저장."""
+    final_path = Path(output_dir) / "final"
+
+    if config.lora.merge_on_save:
+        logger.info("LoRA adapter를 base model에 머지 중...")
+        transformer_layer = model[0]
+        transformer_layer.auto_model = transformer_layer.auto_model.merge_and_unload()
+        logger.info("머지 완료 → 단일 모델로 저장: %s", final_path)
+    else:
+        logger.info("adapter 분리 저장: %s", final_path)
+
+    model.save(str(final_path))
+    return final_path
+
+
 def train(config: PipelineConfig) -> SentenceTransformer:
-    """파인튜닝 학습 실행."""
+    """LoRA 파인튜닝 학습 실행."""
     set_seed(config.seed)
     train_cfg = config.training
+    lora_cfg = config.lora
 
-    logger.info("모델 로드 중: %s", train_cfg.student_model_name)
+    logger.info("베이스 모델 로드 중: %s", train_cfg.student_model_name)
     model = SentenceTransformer(train_cfg.student_model_name)
+
+    # LoRA adapter 적용
+    logger.info(
+        "LoRA 적용: r=%d, alpha=%d, dropout=%.2f, target=%s",
+        lora_cfg.r, lora_cfg.lora_alpha, lora_cfg.lora_dropout,
+        lora_cfg.target_modules,
+    )
+    model = apply_lora(model, config)
 
     # 데이터셋 로드
     train_dataset, eval_triplets = load_train_eval_datasets(config)
 
-    # 지정된 Loss 타입으로 동적 분기
+    # 손실 함수
     loss_type = train_cfg.loss_type
     if loss_type == "margin_mse":
-        logger.info("손실 함수 활성화: MarginMSELoss (지식 증류 모드)")
+        logger.info("손실 함수: MarginMSELoss (지식 증류)")
         loss = losses.MarginMSELoss(model=model)
     else:
-        logger.info("손실 함수 활성화: MultipleNegativesRankingLoss (대조 학습 모드)")
-        loss = losses.MultipleNegativesRankingLoss(
-            model=model,
-            scale=train_cfg.mnrl_scale,
-        )
+        logger.info("손실 함수: MultipleNegativesRankingLoss (대조 학습)")
+        loss = losses.MultipleNegativesRankingLoss(model=model, scale=train_cfg.mnrl_scale)
 
-    # 평가기 구성
+    # 평가기
     evaluator = build_ir_evaluator(eval_triplets)
 
-    # 학습 인자
     output_dir = str(train_cfg.output_dir)
     training_args = SentenceTransformerTrainingArguments(
         output_dir=output_dir,
@@ -166,17 +206,15 @@ def train(config: PipelineConfig) -> SentenceTransformer:
         metric_for_best_model="eval_finance-ir-eval_cosine_ndcg@10",
         greater_is_better=True,
         logging_steps=50,
-        report_to="none",       # wandb 연동 시 "wandb"로 변경
+        report_to="none",
         seed=config.seed,
         dataloader_drop_last=True,
     )
 
     logger.info(
-        "학습 시작 (%s): epochs=%d, batch=%d, lr=%.2e",
-        loss_type.upper(),
-        train_cfg.num_epochs,
-        train_cfg.train_batch_size,
-        train_cfg.learning_rate,
+        "학습 시작 (%s, LoRA r=%d): epochs=%d, batch=%d, lr=%.2e",
+        loss_type.upper(), lora_cfg.r,
+        train_cfg.num_epochs, train_cfg.train_batch_size, train_cfg.learning_rate,
     )
 
     trainer = SentenceTransformerTrainer(
@@ -189,12 +227,11 @@ def train(config: PipelineConfig) -> SentenceTransformer:
 
     trainer.train()
 
-    # 최종 모델 저장
-    final_model_path = Path(output_dir) / "final"
-    model.save(str(final_model_path))
-    logger.info("최종 모델 저장 완료: %s", final_model_path)
+    # 최종 저장 (merge_on_save 여부에 따라 분기)
+    final_path = save_model(model, output_dir, config)
+    logger.info("최종 모델 저장 완료: %s", final_path)
 
-    # 최종 평가 점수 출력
+    # 최종 평가
     final_scores = evaluator(model)
     logger.info("최종 평가 결과:")
     for metric, score in final_scores.items():

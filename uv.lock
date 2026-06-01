@@ -11,6 +11,24 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "accelerate"
+version = "1.13.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "huggingface-hub" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "psutil" },
+    { name = "pyyaml" },
+    { name = "safetensors" },
+    { name = "torch" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ca/14/787e5498cd062640f0f3d92ef4ae4063174f76f9afd29d13fc52a319daae/accelerate-1.13.0.tar.gz", hash = "sha256:d631b4e0f5b3de4aff2d7e9e6857d164810dfc3237d54d017f075122d057b236", size = 402835, upload-time = "2026-03-04T19:34:12.359Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/46/02ac5e262d4af18054b3e922b2baedbb2a03289ee792162de60a865defc5/accelerate-1.13.0-py3-none-any.whl", hash = "sha256:cf1a3efb96c18f7b152eb0fa7490f3710b19c3f395699358f08decca2b8b62e0", size = 383744, upload-time = "2026-03-04T19:34:10.313Z" },
+]
+
+[[package]]
 name = "aiohappyeyeballs"
 version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1249,6 +1267,7 @@ dependencies = [
     { name = "ipykernel" },
     { name = "openai" },
     { name = "pandas" },
+    { name = "peft" },
     { name = "pgvector" },
     { name = "psycopg2-binary" },
     { name = "pyodbc" },
@@ -1269,6 +1288,7 @@ requires-dist = [
     { name = "ipykernel", specifier = ">=7.2.0" },
     { name = "openai", specifier = ">=2.37.0" },
     { name = "pandas", specifier = ">=3.0.3" },
+    { name = "peft", specifier = ">=0.11.0" },
     { name = "pgvector", specifier = ">=0.4.2" },
     { name = "psycopg2-binary", specifier = ">=2.9.12" },
     { name = "pyodbc", specifier = ">=5.2.0" },
@@ -1827,6 +1847,27 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9f/09/a3b2a32ce498f405dce4320267e99b1b076c1ea39ad01151a353bc7f81d7/peewee-4.0.6.tar.gz", hash = "sha256:ea2f78f24ff9e3660281dc5b0be8bc00d9a9514bdc40c98e416fcd042b66ac6a", size = 724591, upload-time = "2026-05-20T13:18:17.26Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/69/6a/e1455b94ee48f5666f2e7831b6247098794bfe9747da457111be4d0bea10/peewee-4.0.6-py3-none-any.whl", hash = "sha256:5fa665913c410f0b5faef1469ed0aa9eceb9fef262665ebbb6f29408f826eeeb", size = 146222, upload-time = "2026-05-20T13:18:15.694Z" },
+]
+
+[[package]]
+name = "peft"
+version = "0.19.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "accelerate" },
+    { name = "huggingface-hub" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "psutil" },
+    { name = "pyyaml" },
+    { name = "safetensors" },
+    { name = "torch" },
+    { name = "tqdm" },
+    { name = "transformers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/86/cf/037f1e3d5186496c05513a6754639e2dab3038a05f384284d49a9bd06a2d/peft-0.19.1.tar.gz", hash = "sha256:0d97542fe96dcdaa20d3b81c06f26f988618f416a73544ab23c3618ccb674a40", size = 763738, upload-time = "2026-04-16T15:46:45.105Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e8/b6/f54d676ed93cc2dd2234c3b172ea9c8c3d7d29361e66b1b23dec57a67465/peft-0.19.1-py3-none-any.whl", hash = "sha256:2113f72a81621b5913ef28f9022204c742df111890c5f49d812716a4a301e356", size = 680692, upload-time = "2026-04-16T15:46:42.886Z" },
 ]
 
 [[package]]

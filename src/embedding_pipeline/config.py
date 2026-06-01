@@ -42,9 +42,9 @@ class NIMConfig:
         )
     )
 
-    # 요청 타임아웃(초) / 동시 요청 수 상한
-    request_timeout: int = 60
-    max_concurrent_requests: int = 5
+    # 요청 타임아웃(초) / 동시 요청 수 상한 (40 RPM 안전 무풍지대를 위해 1로 고정 추천)
+    request_timeout: int = 100
+    max_concurrent_requests: int = 1
 
     # 생성 파라미터
     temperature: float = 0.85
@@ -117,7 +117,7 @@ class QuerySynthesisConfig:
     """LLM 기반 쿼리 합성 파라미터."""
 
     # 단락당 생성할 쿼리 수 (다양성 확보를 위해 20개 권장)
-    queries_per_passage: int = 20
+    queries_per_passage: int = 10
 
     # 합성 쿼리 유형 분포 (비율 합계 = 1.0)
     query_type_distribution: dict[str, float] = field(
@@ -135,8 +135,35 @@ class QuerySynthesisConfig:
     # 최대 쿼리 길이 (토큰)
     max_query_length: int = 80
 
-    # 2차 LLM 쿼리 검증 활성화 여부
-    enable_validation: bool = True
+    # 2차 LLM 쿼리 검증 활성화 여부 (Rate Limit 방지를 위해 기본값 False 추천)
+    enable_validation: bool = False
+
+
+# ---------------------------------------------------------------------------
+# LoRA 설정
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class LoraConfig:
+    """PEFT LoRA 파인튜닝 설정."""
+
+    # LoRA rank (높을수록 표현력↑, 파라미터↑)
+    r: int = field(default_factory=lambda: int(os.environ.get("LORA_R", "16")))
+    # LoRA scaling factor (통상 r * 2)
+    lora_alpha: int = field(default_factory=lambda: int(os.environ.get("LORA_ALPHA", "32")))
+    lora_dropout: float = field(
+        default_factory=lambda: float(os.environ.get("LORA_DROPOUT", "0.1"))
+    )
+    # BERT/RoBERTa 계열 attention 레이어 타겟 (KURE-v1 기준)
+    target_modules: list[str] = field(
+        default_factory=lambda: os.environ.get(
+            "LORA_TARGET_MODULES", "query,value"
+        ).split(",")
+    )
+    bias: str = "none"
+    # 학습 완료 후 adapter를 base model에 머지해서 저장할지 여부
+    merge_on_save: bool = field(
+        default_factory=lambda: os.environ.get("LORA_MERGE_ON_SAVE", "true").lower() == "true"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -153,28 +180,50 @@ class TrainingConfig:
         )
     )
 
-    # 학습에 적용할 Loss 함수 타입 ("mnrl" = MultipleNegativesRankingLoss, "margin_mse" = MarginMSELoss)
-    loss_type: Literal["mnrl", "margin_mse"] = "margin_mse"
+    # 손실 함수 타입 ("mnrl" = MultipleNegativesRankingLoss, "margin_mse" = MarginMSELoss)
+    loss_type: Literal["mnrl", "margin_mse"] = field(
+        default_factory=lambda: os.environ.get("TRAIN_LOSS_TYPE", "margin_mse")
+    )
 
     # 학습률 / 에폭 / 배치
-    learning_rate: float = 2e-5
-    num_epochs: int = 3
-    train_batch_size: int = 32
-    eval_batch_size: int = 64
+    learning_rate: float = field(
+        default_factory=lambda: float(os.environ.get("TRAIN_LEARNING_RATE", "2e-5"))
+    )
+    num_epochs: int = field(
+        default_factory=lambda: int(os.environ.get("TRAIN_NUM_EPOCHS", "3"))
+    )
+    train_batch_size: int = field(
+        default_factory=lambda: int(os.environ.get("TRAIN_BATCH_SIZE", "32"))
+    )
+    eval_batch_size: int = field(
+        default_factory=lambda: int(os.environ.get("TRAIN_EVAL_BATCH_SIZE", "64"))
+    )
 
     # 워밍업 비율
-    warmup_ratio: float = 0.1
+    warmup_ratio: float = field(
+        default_factory=lambda: float(os.environ.get("TRAIN_WARMUP_RATIO", "0.1"))
+    )
 
-    # 손실 함수 온도 파라미터 (MultipleNegativesRankingLoss)
-    mnrl_scale: float = 20.0
+    # MultipleNegativesRankingLoss 온도 파라미터
+    mnrl_scale: float = field(
+        default_factory=lambda: float(os.environ.get("TRAIN_MNRL_SCALE", "20.0"))
+    )
 
-    # 평가 주기 (스텝 단위)
-    eval_steps: int = 200
-    save_steps: int = 500
+    # 평가 / 저장 주기 (스텝)
+    eval_steps: int = field(
+        default_factory=lambda: int(os.environ.get("TRAIN_EVAL_STEPS", "200"))
+    )
+    save_steps: int = field(
+        default_factory=lambda: int(os.environ.get("TRAIN_SAVE_STEPS", "500"))
+    )
 
-    # 혼합 정밀도 (bf16 권장 — A100/H100)
-    fp16: bool = False
-    bf16: bool = True
+    # 혼합 정밀도 (bf16 권장 — A100/H100, fp16은 RTX 계열)
+    fp16: bool = field(
+        default_factory=lambda: os.environ.get("TRAIN_FP16", "false").lower() == "true"
+    )
+    bf16: bool = field(
+        default_factory=lambda: os.environ.get("TRAIN_BF16", "true").lower() == "true"
+    )
 
     # 출력 디렉토리
     output_dir: Path = field(
@@ -288,6 +337,7 @@ class PipelineConfig:
     hard_negative: HardNegativeConfig = field(default_factory=HardNegativeConfig)
     query_synthesis: QuerySynthesisConfig = field(default_factory=QuerySynthesisConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
+    lora: LoraConfig = field(default_factory=LoraConfig)
     paths: PathConfig = field(default_factory=PathConfig)
     prompts: PromptTemplates = field(default_factory=PromptTemplates)
 

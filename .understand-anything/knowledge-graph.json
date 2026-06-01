@@ -1,0 +1,4480 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "midas-touch",
+    "languages": [
+      "python",
+      "sql",
+      "yaml",
+      "toml",
+      "markdown"
+    ],
+    "frameworks": [
+      "SQLAlchemy",
+      "Alembic"
+    ],
+    "description": "A Python pipeline for financial/tax data: ingests/generates finance data, builds embedding training datasets (synthetic query generation, hard-negative mining), trains embedding models, and serves a RAG recommender agent backed by PostgreSQL.",
+    "analyzedAt": "2026-06-01T10:52:35.106Z",
+    "gitCommitHash": "363b2259554ad188a6f57e5560b5d0ee6c37d369"
+  },
+  "nodes": [
+    {
+      "id": "file:src/embedding_pipeline/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "src/embedding_pipeline/__init__.py",
+      "summary": "Package barrel for the embedding pipeline that re-exports config, dataset builder, document parser, hard-negative miner, pipeline, and query synthesizer public symbols.",
+      "tags": [
+        "entry-point",
+        "barrel",
+        "embedding"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Python package __init__ acting as a public API aggregator."
+    },
+    {
+      "id": "file:src/embedding_pipeline/config.py",
+      "type": "file",
+      "name": "config.py",
+      "filePath": "src/embedding_pipeline/config.py",
+      "summary": "Central dataclass-based configuration for the embedding pipeline, defining NIM client, teacher model, hard-negative mining, query synthesis, LoRA, training, paths, and prompt templates plus a composite PipelineConfig with validation.",
+      "tags": [
+        "config",
+        "data-model",
+        "embedding",
+        "settings"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Nested frozen/standard dataclasses composed into a single PipelineConfig aggregate."
+    },
+    {
+      "id": "file:src/embedding_pipeline/dataset_builder.py",
+      "type": "file",
+      "name": "dataset_builder.py",
+      "filePath": "src/embedding_pipeline/dataset_builder.py",
+      "summary": "Assembles query/positive/hard-negative triplets, splits them into train/eval sets, and handles JSONL serialization plus dataset statistics for embedding fine-tuning.",
+      "tags": [
+        "data-pipeline",
+        "serialization",
+        "embedding",
+        "dataset"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:src/embedding_pipeline/document_parser.py",
+      "type": "file",
+      "name": "document_parser.py",
+      "filePath": "src/embedding_pipeline/document_parser.py",
+      "summary": "Parses PDF, Markdown, and text financial documents into cleaned passages using a recursive financial-aware chunker with configurable size and overlap.",
+      "tags": [
+        "data-pipeline",
+        "parsing",
+        "chunking",
+        "embedding",
+        "tested"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "type": "file",
+      "name": "hard_negative_miner.py",
+      "filePath": "src/embedding_pipeline/hard_negative_miner.py",
+      "summary": "Mines hard negative passages for queries using a teacher SentenceTransformer embedder and an NV-Retriever margin filter, with embedding caching and mining statistics.",
+      "tags": [
+        "embedding",
+        "machine-learning",
+        "data-pipeline",
+        "mining"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses numpy similarity matrices and torch.no_grad encoding for teacher-model inference."
+    },
+    {
+      "id": "file:src/embedding_pipeline/pipeline.py",
+      "type": "file",
+      "name": "pipeline.py",
+      "filePath": "src/embedding_pipeline/pipeline.py",
+      "summary": "Orchestrates the end-to-end embedding dataset pipeline across passage loading, query synthesis, hard-negative mining, and triplet assembly stages with checkpointing and optional database persistence.",
+      "tags": [
+        "entry-point",
+        "data-pipeline",
+        "orchestration",
+        "embedding"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:src/embedding_pipeline/query_synthesizer.py",
+      "type": "file",
+      "name": "query_synthesizer.py",
+      "filePath": "src/embedding_pipeline/query_synthesizer.py",
+      "summary": "Generates synthetic search queries from passages via an async NVIDIA NIM LLM client, with concurrency control, query validation, JSON extraction, and filtering.",
+      "tags": [
+        "embedding",
+        "llm",
+        "async",
+        "data-pipeline"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Async/await with httpx.AsyncClient, semaphore-bounded concurrency, and async context managers."
+    },
+    {
+      "id": "file:src/embedding_pipeline/train.py",
+      "type": "file",
+      "name": "train.py",
+      "filePath": "src/embedding_pipeline/train.py",
+      "summary": "Fine-tunes a student SentenceTransformer model on assembled triplets using MarginMSE or MultipleNegativesRanking loss with optional LoRA adapters and IR evaluation.",
+      "tags": [
+        "entry-point",
+        "machine-learning",
+        "training",
+        "embedding"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Wraps sentence-transformers Trainer with PEFT LoRA application."
+    },
+    {
+      "id": "file:tests/test_document_parser.py",
+      "type": "file",
+      "name": "test_document_parser.py",
+      "filePath": "tests/test_document_parser.py",
+      "summary": "Unit tests validating the FinancialChunker splitting behavior and the DocumentParser text/markdown parsing path.",
+      "tags": [
+        "test",
+        "embedding",
+        "parsing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/embedding_pipeline/config.py:NIMConfig",
+      "type": "class",
+      "name": "NIMConfig",
+      "filePath": "src/embedding_pipeline/config.py",
+      "lineRange": [
+        27,
+        52
+      ],
+      "summary": "Configuration dataclass for the NVIDIA NIM generation endpoint, holding API key, base URL, model, concurrency, and sampling parameters.",
+      "tags": [
+        "config",
+        "data-model",
+        "llm"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/config.py:TeacherModelConfig",
+      "type": "class",
+      "name": "TeacherModelConfig",
+      "filePath": "src/embedding_pipeline/config.py",
+      "lineRange": [
+        65,
+        80
+      ],
+      "summary": "Configuration dataclass for the teacher embedding model, specifying model name, device, batch size, normalization, and sequence length.",
+      "tags": [
+        "config",
+        "data-model",
+        "machine-learning"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/config.py:HardNegativeConfig",
+      "type": "class",
+      "name": "HardNegativeConfig",
+      "filePath": "src/embedding_pipeline/config.py",
+      "lineRange": [
+        87,
+        109
+      ],
+      "summary": "Configuration dataclass governing hard-negative mining thresholds such as margin ratio, similarity floor, and candidate counts.",
+      "tags": [
+        "config",
+        "data-model",
+        "mining"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/config.py:QuerySynthesisConfig",
+      "type": "class",
+      "name": "QuerySynthesisConfig",
+      "filePath": "src/embedding_pipeline/config.py",
+      "lineRange": [
+        116,
+        139
+      ],
+      "summary": "Configuration dataclass controlling synthetic query generation including queries per passage, type distribution, length bounds, and validation toggle.",
+      "tags": [
+        "config",
+        "data-model",
+        "llm"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/config.py:LoraConfig",
+      "type": "class",
+      "name": "LoraConfig",
+      "filePath": "src/embedding_pipeline/config.py",
+      "lineRange": [
+        146,
+        166
+      ],
+      "summary": "Configuration dataclass for LoRA fine-tuning parameters such as rank, alpha, dropout, target modules, and merge-on-save behavior.",
+      "tags": [
+        "config",
+        "data-model",
+        "training"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/config.py:TrainingConfig",
+      "type": "class",
+      "name": "TrainingConfig",
+      "filePath": "src/embedding_pipeline/config.py",
+      "lineRange": [
+        173,
+        233
+      ],
+      "summary": "Configuration dataclass for the training run, covering student model, loss type, learning rate, epochs, batch sizes, precision flags, and output directory.",
+      "tags": [
+        "config",
+        "data-model",
+        "training"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/embedding_pipeline/config.py:PathConfig",
+      "type": "class",
+      "name": "PathConfig",
+      "filePath": "src/embedding_pipeline/config.py",
+      "lineRange": [
+        240,
+        268
+      ],
+      "summary": "Configuration dataclass holding filesystem paths for documents, passages, queries, datasets, and checkpoints with an ensure_dirs helper to create them.",
+      "tags": [
+        "config",
+        "data-model",
+        "filesystem"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/config.py:PromptTemplates",
+      "type": "class",
+      "name": "PromptTemplates",
+      "filePath": "src/embedding_pipeline/config.py",
+      "lineRange": [
+        275,
+        325
+      ],
+      "summary": "Configuration dataclass storing system and user prompt templates for LLM-based query synthesis and query validation.",
+      "tags": [
+        "config",
+        "data-model",
+        "llm"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/embedding_pipeline/config.py:PipelineConfig",
+      "type": "class",
+      "name": "PipelineConfig",
+      "filePath": "src/embedding_pipeline/config.py",
+      "lineRange": [
+        332,
+        365
+      ],
+      "summary": "Top-level aggregate configuration composing all sub-configs (NIM, teacher, mining, synthesis, training, LoRA, paths, prompts) with a validate method enforcing cross-field invariants.",
+      "tags": [
+        "config",
+        "data-model",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/embedding_pipeline/dataset_builder.py:Triplet",
+      "type": "class",
+      "name": "Triplet",
+      "filePath": "src/embedding_pipeline/dataset_builder.py",
+      "lineRange": [
+        32,
+        67
+      ],
+      "summary": "Dataclass representing a query/positive/negative training triplet with similarity scores and margin, plus conversion methods to SentenceTransformer and MarginMSE formats.",
+      "tags": [
+        "data-model",
+        "serialization",
+        "dataset"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/embedding_pipeline/dataset_builder.py:TripletAssembler",
+      "type": "class",
+      "name": "TripletAssembler",
+      "filePath": "src/embedding_pipeline/dataset_builder.py",
+      "lineRange": [
+        73,
+        172
+      ],
+      "summary": "Assembles training triplets from synthesized queries and mining results, falling back to random negative sampling when hard negatives are unavailable.",
+      "tags": [
+        "factory",
+        "dataset",
+        "embedding"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:src/embedding_pipeline/dataset_builder.py:DatasetSplitter",
+      "type": "class",
+      "name": "DatasetSplitter",
+      "filePath": "src/embedding_pipeline/dataset_builder.py",
+      "lineRange": [
+        178,
+        215
+      ],
+      "summary": "Splits triplets into stratified train and eval subsets by query type using a configurable ratio and random seed.",
+      "tags": [
+        "dataset",
+        "utility",
+        "embedding"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/embedding_pipeline/dataset_builder.py:DatasetIO",
+      "type": "class",
+      "name": "DatasetIO",
+      "filePath": "src/embedding_pipeline/dataset_builder.py",
+      "lineRange": [
+        221,
+        263
+      ],
+      "summary": "Static JSONL read/write helpers for triplet datasets, including a generator yielding records in the SentenceTransformer training format.",
+      "tags": [
+        "serialization",
+        "utility",
+        "dataset"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/embedding_pipeline/dataset_builder.py:compute_dataset_stats",
+      "type": "function",
+      "name": "compute_dataset_stats",
+      "filePath": "src/embedding_pipeline/dataset_builder.py",
+      "lineRange": [
+        269,
+        300
+      ],
+      "summary": "Computes aggregate statistics over a triplet dataset such as counts by query type and mean/stdev of margins and similarity scores.",
+      "tags": [
+        "utility",
+        "statistics",
+        "dataset"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/embedding_pipeline/document_parser.py:Passage",
+      "type": "class",
+      "name": "Passage",
+      "filePath": "src/embedding_pipeline/document_parser.py",
+      "lineRange": [
+        33,
+        39
+      ],
+      "summary": "Dataclass representing a parsed document passage with id, text, source, and metadata.",
+      "tags": [
+        "data-model",
+        "parsing",
+        "embedding"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/document_parser.py:FinancialChunker",
+      "type": "class",
+      "name": "FinancialChunker",
+      "filePath": "src/embedding_pipeline/document_parser.py",
+      "lineRange": [
+        45,
+        145
+      ],
+      "summary": "Recursive character-based text splitter tuned for financial documents, producing overlapping chunks within size bounds across configurable separators.",
+      "tags": [
+        "chunking",
+        "parsing",
+        "embedding"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:src/embedding_pipeline/document_parser.py:DocumentParser",
+      "type": "class",
+      "name": "DocumentParser",
+      "filePath": "src/embedding_pipeline/document_parser.py",
+      "lineRange": [
+        151,
+        273
+      ],
+      "summary": "Parses PDF, Markdown, and plain-text files into cleaned Passage objects, dispatching by file extension and applying format-specific cleanup before chunking.",
+      "tags": [
+        "parsing",
+        "factory",
+        "embedding"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:src/embedding_pipeline/hard_negative_miner.py:SimilarityScore",
+      "type": "class",
+      "name": "SimilarityScore",
+      "filePath": "src/embedding_pipeline/hard_negative_miner.py",
+      "lineRange": [
+        35,
+        39
+      ],
+      "summary": "Lightweight dataclass pairing a passage id with its similarity score.",
+      "tags": [
+        "data-model",
+        "mining"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/hard_negative_miner.py:HardNegativeCandidate",
+      "type": "class",
+      "name": "HardNegativeCandidate",
+      "filePath": "src/embedding_pipeline/hard_negative_miner.py",
+      "lineRange": [
+        43,
+        51
+      ],
+      "summary": "Dataclass describing a candidate hard negative passage with similarity, positive score, and margin relative to the query.",
+      "tags": [
+        "data-model",
+        "mining",
+        "embedding"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/hard_negative_miner.py:MiningResult",
+      "type": "class",
+      "name": "MiningResult",
+      "filePath": "src/embedding_pipeline/hard_negative_miner.py",
+      "lineRange": [
+        55,
+        62
+      ],
+      "summary": "Dataclass holding the per-query mining outcome including accepted hard negatives and rejection counts.",
+      "tags": [
+        "data-model",
+        "mining",
+        "embedding"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/hard_negative_miner.py:TeacherEmbedder",
+      "type": "class",
+      "name": "TeacherEmbedder",
+      "filePath": "src/embedding_pipeline/hard_negative_miner.py",
+      "lineRange": [
+        68,
+        112
+      ],
+      "summary": "Wraps a SentenceTransformer teacher model to encode texts and compute similarity matrices used for hard-negative scoring.",
+      "tags": [
+        "machine-learning",
+        "embedding",
+        "mining"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/embedding_pipeline/hard_negative_miner.py:NVRetrieverMarginFilter",
+      "type": "class",
+      "name": "NVRetrieverMarginFilter",
+      "filePath": "src/embedding_pipeline/hard_negative_miner.py",
+      "lineRange": [
+        118,
+        159
+      ],
+      "summary": "Applies the NV-Retriever positive-aware margin criterion to filter candidate negatives that are neither too similar nor too dissimilar.",
+      "tags": [
+        "mining",
+        "validation",
+        "embedding"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/embedding_pipeline/hard_negative_miner.py:HardNegativeMiner",
+      "type": "class",
+      "name": "HardNegativeMiner",
+      "filePath": "src/embedding_pipeline/hard_negative_miner.py",
+      "lineRange": [
+        165,
+        323
+      ],
+      "summary": "Indexes passage embeddings and mines hard negatives per query via top-k similarity search and margin filtering, with embedding cache save/load support.",
+      "tags": [
+        "mining",
+        "machine-learning",
+        "embedding"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:src/embedding_pipeline/hard_negative_miner.py:compute_mining_stats",
+      "type": "function",
+      "name": "compute_mining_stats",
+      "filePath": "src/embedding_pipeline/hard_negative_miner.py",
+      "lineRange": [
+        329,
+        355
+      ],
+      "summary": "Aggregates mining results into summary statistics such as total hard negatives, rejection counts, and margin distribution.",
+      "tags": [
+        "utility",
+        "statistics",
+        "mining"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/embedding_pipeline/pipeline.py:setup_logging",
+      "type": "function",
+      "name": "setup_logging",
+      "filePath": "src/embedding_pipeline/pipeline.py",
+      "lineRange": [
+        40,
+        45
+      ],
+      "summary": "Configures root logging format and level for the pipeline CLI.",
+      "tags": [
+        "utility",
+        "logging"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/pipeline.py:PassageLoader",
+      "type": "class",
+      "name": "PassageLoader",
+      "filePath": "src/embedding_pipeline/pipeline.py",
+      "lineRange": [
+        54,
+        158
+      ],
+      "summary": "Loads passages from a cached JSONL file or parses raw documents in a directory via DocumentParser, persisting the result back to JSONL.",
+      "tags": [
+        "data-pipeline",
+        "serialization",
+        "embedding"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:src/embedding_pipeline/pipeline.py:CheckpointManager",
+      "type": "class",
+      "name": "CheckpointManager",
+      "filePath": "src/embedding_pipeline/pipeline.py",
+      "lineRange": [
+        164,
+        195
+      ],
+      "summary": "Manages per-stage JSONL checkpoints, providing save, load, and existence checks to enable pipeline resumption.",
+      "tags": [
+        "utility",
+        "serialization",
+        "checkpoint"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/embedding_pipeline/pipeline.py:EmbeddingDatasetPipeline",
+      "type": "class",
+      "name": "EmbeddingDatasetPipeline",
+      "filePath": "src/embedding_pipeline/pipeline.py",
+      "lineRange": [
+        201,
+        495
+      ],
+      "summary": "Coordinates the four-stage embedding dataset build (passage loading, query synthesis, hard-negative mining, triplet assembly) with checkpointing, timing, and optional database persistence of passages, queries, and triplets.",
+      "tags": [
+        "orchestration",
+        "data-pipeline",
+        "embedding"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:src/embedding_pipeline/pipeline.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "src/embedding_pipeline/pipeline.py",
+      "lineRange": [
+        501,
+        536
+      ],
+      "summary": "CLI entry point that parses arguments, validates config, runs the embedding dataset pipeline, and prints a JSON summary.",
+      "tags": [
+        "entry-point",
+        "cli"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/embedding_pipeline/query_synthesizer.py:SyntheticQuery",
+      "type": "class",
+      "name": "SyntheticQuery",
+      "filePath": "src/embedding_pipeline/query_synthesizer.py",
+      "lineRange": [
+        33,
+        40
+      ],
+      "summary": "Dataclass representing a generated query with its id, source passage id, text, and classified query type.",
+      "tags": [
+        "data-model",
+        "llm",
+        "embedding"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/query_synthesizer.py:SynthesisResult",
+      "type": "class",
+      "name": "SynthesisResult",
+      "filePath": "src/embedding_pipeline/query_synthesizer.py",
+      "lineRange": [
+        44,
+        50
+      ],
+      "summary": "Dataclass capturing the queries synthesized for a passage along with elapsed time and any error.",
+      "tags": [
+        "data-model",
+        "llm",
+        "embedding"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/embedding_pipeline/query_synthesizer.py:_classify_query_type",
+      "type": "function",
+      "name": "_classify_query_type",
+      "filePath": "src/embedding_pipeline/query_synthesizer.py",
+      "lineRange": [
+        64,
+        69
+      ],
+      "summary": "Classifies a query string into a query-type category via regex pattern matching.",
+      "tags": [
+        "utility",
+        "classification",
+        "llm"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:src/embedding_pipeline/query_synthesizer.py:NIMClient",
+      "type": "class",
+      "name": "NIMClient",
+      "filePath": "src/embedding_pipeline/query_synthesizer.py",
+      "lineRange": [
+        75,
+        156
+      ],
+      "summary": "Async HTTP client for the NVIDIA NIM chat-completion API with retry/backoff logic and async context-manager lifecycle.",
+      "tags": [
+        "llm",
+        "async",
+        "api-handler"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:src/embedding_pipeline/query_synthesizer.py:QuerySynthesizer",
+      "type": "class",
+      "name": "QuerySynthesizer",
+      "filePath": "src/embedding_pipeline/query_synthesizer.py",
+      "lineRange": [
+        162,
+        399
+      ],
+      "summary": "Drives concurrent synthetic query generation over passages, calling the LLM, parsing and filtering candidates, and optionally validating queries.",
+      "tags": [
+        "llm",
+        "async",
+        "data-pipeline",
+        "embedding"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:src/embedding_pipeline/query_synthesizer.py:synthesis_results_to_jsonl",
+      "type": "function",
+      "name": "synthesis_results_to_jsonl",
+      "filePath": "src/embedding_pipeline/query_synthesizer.py",
+      "lineRange": [
+        405,
+        420
+      ],
+      "summary": "Flattens synthesis results into JSONL-serializable query rows.",
+      "tags": [
+        "utility",
+        "serialization",
+        "llm"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/embedding_pipeline/train.py:set_seed",
+      "type": "function",
+      "name": "set_seed",
+      "filePath": "src/embedding_pipeline/train.py",
+      "lineRange": [
+        40,
+        45
+      ],
+      "summary": "Seeds random, numpy, and torch (including CUDA) RNGs for reproducible training.",
+      "tags": [
+        "utility",
+        "training",
+        "reproducibility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/embedding_pipeline/train.py:load_train_eval_datasets",
+      "type": "function",
+      "name": "load_train_eval_datasets",
+      "filePath": "src/embedding_pipeline/train.py",
+      "lineRange": [
+        51,
+        82
+      ],
+      "summary": "Loads train and eval triplet JSONL files and converts them into a HuggingFace Dataset in the loss-appropriate format.",
+      "tags": [
+        "utility",
+        "dataset",
+        "training"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/embedding_pipeline/train.py:build_ir_evaluator",
+      "type": "function",
+      "name": "build_ir_evaluator",
+      "filePath": "src/embedding_pipeline/train.py",
+      "lineRange": [
+        88,
+        118
+      ],
+      "summary": "Builds a SentenceTransformers InformationRetrievalEvaluator from eval triplets by deriving queries, corpus, and relevance mappings.",
+      "tags": [
+        "machine-learning",
+        "evaluation",
+        "training"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/embedding_pipeline/train.py:apply_lora",
+      "type": "function",
+      "name": "apply_lora",
+      "filePath": "src/embedding_pipeline/train.py",
+      "lineRange": [
+        124,
+        139
+      ],
+      "summary": "Wraps the model's underlying transformer with a PEFT LoRA adapter based on the LoRA configuration.",
+      "tags": [
+        "machine-learning",
+        "training",
+        "lora"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/embedding_pipeline/train.py:save_model",
+      "type": "function",
+      "name": "save_model",
+      "filePath": "src/embedding_pipeline/train.py",
+      "lineRange": [
+        142,
+        155
+      ],
+      "summary": "Saves the trained model to the output directory, optionally merging and unloading LoRA adapters first.",
+      "tags": [
+        "utility",
+        "training",
+        "lora"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/embedding_pipeline/train.py:train",
+      "type": "function",
+      "name": "train",
+      "filePath": "src/embedding_pipeline/train.py",
+      "lineRange": [
+        158,
+        240
+      ],
+      "summary": "Runs the full fine-tuning loop: loads the student model, applies LoRA, selects MarginMSE or MNRL loss, trains with the SentenceTransformerTrainer, evaluates, and saves.",
+      "tags": [
+        "machine-learning",
+        "training",
+        "embedding"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:src/embedding_pipeline/train.py:quick_inference_test",
+      "type": "function",
+      "name": "quick_inference_test",
+      "filePath": "src/embedding_pipeline/train.py",
+      "lineRange": [
+        246,
+        264
+      ],
+      "summary": "Runs a quick sanity-check by encoding sample queries and passages and printing a similarity matrix.",
+      "tags": [
+        "utility",
+        "evaluation",
+        "embedding"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/embedding_pipeline/train.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "src/embedding_pipeline/train.py",
+      "lineRange": [
+        270,
+        315
+      ],
+      "summary": "CLI entry point that parses arguments, validates config, optionally evaluates only, and otherwise launches training plus an inference sanity check.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "training"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tests/test_document_parser.py:test_financial_chunker",
+      "type": "function",
+      "name": "test_financial_chunker",
+      "filePath": "tests/test_document_parser.py",
+      "lineRange": [
+        16,
+        34
+      ],
+      "summary": "Tests that FinancialChunker splits long text into multiple bounded chunks.",
+      "tags": [
+        "test",
+        "chunking",
+        "parsing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tests/test_document_parser.py:test_document_parser_txt_md",
+      "type": "function",
+      "name": "test_document_parser_txt_md",
+      "filePath": "tests/test_document_parser.py",
+      "lineRange": [
+        37,
+        72
+      ],
+      "summary": "Tests DocumentParser parsing of temporary text and markdown files into passages.",
+      "tags": [
+        "test",
+        "parsing",
+        "embedding"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:src/agent/recommender.py",
+      "type": "file",
+      "name": "recommender.py",
+      "filePath": "src/agent/recommender.py",
+      "summary": "Implements the MidasAdviser RAG agent that embeds user profiles, retrieves similar 'twin' personas, tax rules, and market snapshots from PostgreSQL, and asks an LLM for a financial recommendation.",
+      "tags": [
+        "service",
+        "agent",
+        "rag",
+        "recommender",
+        "llm",
+        "tested"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:src/data_pipeline/generate_finance_data.py",
+      "type": "file",
+      "name": "generate_finance_data.py",
+      "filePath": "src/data_pipeline/generate_finance_data.py",
+      "summary": "Asynchronous data-generation pipeline that uses an LLM to synthesize finance profile data from CSV rows, bulk-upserts the results into the database, and optionally uploads the dataset to the Hugging Face Hub.",
+      "tags": [
+        "data-pipeline",
+        "llm",
+        "async",
+        "synthetic-data",
+        "entry-point"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:src/db/connector.py",
+      "type": "file",
+      "name": "connector.py",
+      "filePath": "src/db/connector.py",
+      "summary": "Central PostgreSQL connector providing connection/cursor helpers plus upsert and query functions for users, market snapshots, tax rules, persona similarity search, and embedding-pipeline tables.",
+      "tags": [
+        "database",
+        "service",
+        "connector",
+        "postgres",
+        "data-access",
+        "tested"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses a contextmanager-based db_cursor for transaction handling and psycopg2 executemany for bulk upserts."
+    },
+    {
+      "id": "file:src/db/supabase_connector.py",
+      "type": "file",
+      "name": "supabase_connector.py",
+      "filePath": "src/db/supabase_connector.py",
+      "summary": "Vector-search and upsert helpers for news, strategy documents, macro indicators, and persona embeddings, backed by the shared db_cursor from connector.py.",
+      "tags": [
+        "database",
+        "service",
+        "vector-search",
+        "embeddings",
+        "data-access"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/agent/recommender.py:MidasAdviser",
+      "type": "class",
+      "name": "MidasAdviser",
+      "filePath": "src/agent/recommender.py",
+      "lineRange": [
+        23,
+        209
+      ],
+      "summary": "RAG advisor class that loads a SentenceTransformer embedding model and an OpenAI-compatible LLM client to produce personalized financial recommendations from retrieved context.",
+      "tags": [
+        "service",
+        "agent",
+        "rag",
+        "recommender"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:src/data_pipeline/generate_finance_data.py:extract_json",
+      "type": "function",
+      "name": "extract_json",
+      "filePath": "src/data_pipeline/generate_finance_data.py",
+      "lineRange": [
+        95,
+        108
+      ],
+      "summary": "Extracts a JSON object from an LLM text response, handling fenced code blocks and raw brace matching.",
+      "tags": [
+        "utility",
+        "parsing",
+        "json"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/data_pipeline/generate_finance_data.py:generate_finance_data",
+      "type": "function",
+      "name": "generate_finance_data",
+      "filePath": "src/data_pipeline/generate_finance_data.py",
+      "lineRange": [
+        110,
+        171
+      ],
+      "summary": "Async worker that prompts the LLM to synthesize finance data for a single row, with retry handling and semaphore-based concurrency control.",
+      "tags": [
+        "async",
+        "llm",
+        "data-pipeline",
+        "retry"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/data_pipeline/generate_finance_data.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "src/data_pipeline/generate_finance_data.py",
+      "lineRange": [
+        173,
+        270
+      ],
+      "summary": "Orchestrates the full pipeline: reads source CSV, schedules async generation tasks, writes output CSV, bulk-upserts users, and optionally uploads to the Hugging Face Hub.",
+      "tags": [
+        "entry-point",
+        "orchestration",
+        "async",
+        "data-pipeline"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:src/db/connector.py:_get_database_url",
+      "type": "function",
+      "name": "_get_database_url",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        13,
+        23
+      ],
+      "summary": "Resolves the PostgreSQL connection URL from environment variables, falling back to assembled host/port/credentials.",
+      "tags": [
+        "utility",
+        "config",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/db/connector.py:db_cursor",
+      "type": "function",
+      "name": "db_cursor",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        32,
+        43
+      ],
+      "summary": "Context manager yielding a database cursor that commits on success, rolls back on error, and always closes the connection.",
+      "tags": [
+        "database",
+        "context-manager",
+        "transaction"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/db/connector.py:apply_schema",
+      "type": "function",
+      "name": "apply_schema",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        50,
+        62
+      ],
+      "summary": "Reads a SQL schema file from disk and executes it against the database to bootstrap tables.",
+      "tags": [
+        "database",
+        "schema",
+        "migration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/db/connector.py:upsert_user",
+      "type": "function",
+      "name": "upsert_user",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        69,
+        131
+      ],
+      "summary": "Upserts a single user row into the users table using an ON CONFLICT statement and the shared parameter builder.",
+      "tags": [
+        "database",
+        "upsert",
+        "data-access",
+        "user"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/connector.py:bulk_upsert_users",
+      "type": "function",
+      "name": "bulk_upsert_users",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        134,
+        201
+      ],
+      "summary": "Bulk-upserts a list of user rows via executemany, returning the count of affected records.",
+      "tags": [
+        "database",
+        "upsert",
+        "bulk",
+        "user"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/connector.py:_user_params",
+      "type": "function",
+      "name": "_user_params",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        204,
+        237
+      ],
+      "summary": "Maps a user dict to the ordered parameter tuple expected by the user upsert SQL statement, coercing boolean fields.",
+      "tags": [
+        "utility",
+        "database",
+        "serialization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/connector.py:upsert_market_snapshot",
+      "type": "function",
+      "name": "upsert_market_snapshot",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        244,
+        265
+      ],
+      "summary": "Upserts a single market snapshot row keyed by date, data type, and sub-key into the market snapshots table.",
+      "tags": [
+        "database",
+        "upsert",
+        "market-data"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/connector.py:bulk_upsert_market_snapshots",
+      "type": "function",
+      "name": "bulk_upsert_market_snapshots",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        268,
+        295
+      ],
+      "summary": "Bulk-upserts a batch of market snapshot rows via executemany and returns the affected row count.",
+      "tags": [
+        "database",
+        "upsert",
+        "bulk",
+        "market-data"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/connector.py:get_user_by_uuid",
+      "type": "function",
+      "name": "get_user_by_uuid",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        302,
+        309
+      ],
+      "summary": "Fetches a single user record by UUID and returns it as a dict, or None if not found.",
+      "tags": [
+        "database",
+        "query",
+        "user"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/db/connector.py:get_latest_market_value",
+      "type": "function",
+      "name": "get_latest_market_value",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        312,
+        325
+      ],
+      "summary": "Returns the most recent value for a given market data type and sub-key.",
+      "tags": [
+        "database",
+        "query",
+        "market-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/db/connector.py:get_all_tax_rules",
+      "type": "function",
+      "name": "get_all_tax_rules",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        328,
+        338
+      ],
+      "summary": "Retrieves all tax rule records from the database as a list of dicts.",
+      "tags": [
+        "database",
+        "query",
+        "tax-rules"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/db/connector.py:get_latest_market_snapshots",
+      "type": "function",
+      "name": "get_latest_market_snapshots",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        341,
+        357
+      ],
+      "summary": "Returns the latest market snapshot records grouped/ordered for use in RAG context assembly.",
+      "tags": [
+        "database",
+        "query",
+        "market-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/db/connector.py:search_similar_personas_db",
+      "type": "function",
+      "name": "search_similar_personas_db",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        360,
+        370
+      ],
+      "summary": "Performs a vector similarity search against persona embeddings and returns the top_k closest personas.",
+      "tags": [
+        "database",
+        "vector-search",
+        "embeddings",
+        "persona"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/db/connector.py:bulk_upsert_emb_passages",
+      "type": "function",
+      "name": "bulk_upsert_emb_passages",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        377,
+        399
+      ],
+      "summary": "Bulk-upserts embedding-pipeline passage records, serializing metadata to JSON, via executemany.",
+      "tags": [
+        "database",
+        "upsert",
+        "bulk",
+        "embeddings"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/connector.py:bulk_upsert_emb_queries",
+      "type": "function",
+      "name": "bulk_upsert_emb_queries",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        402,
+        424
+      ],
+      "summary": "Bulk-upserts synthetic query records for the embedding training pipeline via executemany.",
+      "tags": [
+        "database",
+        "upsert",
+        "bulk",
+        "embeddings"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/connector.py:bulk_upsert_emb_triplets",
+      "type": "function",
+      "name": "bulk_upsert_emb_triplets",
+      "filePath": "src/db/connector.py",
+      "lineRange": [
+        427,
+        462
+      ],
+      "summary": "Bulk-upserts training triplets (query/positive/negative) for a given dataset split into the embedding pipeline tables.",
+      "tags": [
+        "database",
+        "upsert",
+        "bulk",
+        "embeddings",
+        "training-data"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/supabase_connector.py:upsert_news",
+      "type": "function",
+      "name": "upsert_news",
+      "filePath": "src/db/supabase_connector.py",
+      "lineRange": [
+        21,
+        57
+      ],
+      "summary": "Upserts a news article with its embedding and metadata, returning the stored record as a dict.",
+      "tags": [
+        "database",
+        "upsert",
+        "embeddings",
+        "news"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/supabase_connector.py:search_news",
+      "type": "function",
+      "name": "search_news",
+      "filePath": "src/db/supabase_connector.py",
+      "lineRange": [
+        60,
+        75
+      ],
+      "summary": "Performs a vector similarity search over news embeddings filtered by category and recency.",
+      "tags": [
+        "database",
+        "vector-search",
+        "embeddings",
+        "news"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/db/supabase_connector.py:upsert_strategy_doc",
+      "type": "function",
+      "name": "upsert_strategy_doc",
+      "filePath": "src/db/supabase_connector.py",
+      "lineRange": [
+        82,
+        108
+      ],
+      "summary": "Upserts a strategy document chunk with its embedding and bibliographic metadata.",
+      "tags": [
+        "database",
+        "upsert",
+        "embeddings",
+        "strategy"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/supabase_connector.py:search_strategies",
+      "type": "function",
+      "name": "search_strategies",
+      "filePath": "src/db/supabase_connector.py",
+      "lineRange": [
+        111,
+        125
+      ],
+      "summary": "Performs a vector similarity search over strategy document embeddings, optionally filtered by strategy type.",
+      "tags": [
+        "database",
+        "vector-search",
+        "embeddings",
+        "strategy"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:src/db/supabase_connector.py:upsert_macro_indicator",
+      "type": "function",
+      "name": "upsert_macro_indicator",
+      "filePath": "src/db/supabase_connector.py",
+      "lineRange": [
+        132,
+        163
+      ],
+      "summary": "Upserts a macroeconomic indicator record with optional analysis text and embedding.",
+      "tags": [
+        "database",
+        "upsert",
+        "macro",
+        "embeddings"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/supabase_connector.py:upsert_persona_embedding",
+      "type": "function",
+      "name": "upsert_persona_embedding",
+      "filePath": "src/db/supabase_connector.py",
+      "lineRange": [
+        170,
+        194
+      ],
+      "summary": "Upserts a persona embedding keyed by user UUID with its persona text and vector.",
+      "tags": [
+        "database",
+        "upsert",
+        "embeddings",
+        "persona"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/db/supabase_connector.py:search_similar_personas",
+      "type": "function",
+      "name": "search_similar_personas",
+      "filePath": "src/db/supabase_connector.py",
+      "lineRange": [
+        197,
+        210
+      ],
+      "summary": "Performs a vector similarity search over persona embeddings and returns the top_k closest personas.",
+      "tags": [
+        "database",
+        "vector-search",
+        "embeddings",
+        "persona"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:database/migrations/postgres/env.py",
+      "type": "file",
+      "name": "env.py",
+      "filePath": "database/migrations/postgres/env.py",
+      "summary": "Alembic migration environment that builds the database URL from environment variables and runs migrations in offline or online mode against the PostgreSQL target.",
+      "tags": [
+        "migration",
+        "database",
+        "entry-point",
+        "configuration",
+        "alembic"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Standard Alembic env.py wiring target_metadata to the SQLAlchemy declarative base for autogenerate support."
+    },
+    {
+      "id": "function:database/migrations/postgres/env.py:get_database_url",
+      "type": "function",
+      "name": "get_database_url",
+      "filePath": "database/migrations/postgres/env.py",
+      "lineRange": [
+        24,
+        33
+      ],
+      "summary": "Assembles the PostgreSQL connection URL from individual host, port, user, password, and database environment variables.",
+      "tags": [
+        "configuration",
+        "database",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:database/migrations/postgres/env.py:run_migrations_offline",
+      "type": "function",
+      "name": "run_migrations_offline",
+      "filePath": "database/migrations/postgres/env.py",
+      "lineRange": [
+        36,
+        57
+      ],
+      "summary": "Configures Alembic to emit migration SQL without a live database connection using the resolved database URL and target metadata.",
+      "tags": [
+        "migration",
+        "database",
+        "alembic"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:database/migrations/postgres/env.py:run_migrations_online",
+      "type": "function",
+      "name": "run_migrations_online",
+      "filePath": "database/migrations/postgres/env.py",
+      "lineRange": [
+        60,
+        85
+      ],
+      "summary": "Creates an engine, ensures required PostgreSQL extensions, and applies migrations within a live transactional connection.",
+      "tags": [
+        "migration",
+        "database",
+        "alembic"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:src/db/models/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "src/db/models/__init__.py",
+      "summary": "Package barrel that re-exports the consolidated SQLAlchemy ORM models so they can be imported from the db.models namespace.",
+      "tags": [
+        "entry-point",
+        "barrel",
+        "data-model",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:src/db/models/postgres_models.py",
+      "type": "file",
+      "name": "postgres_models.py",
+      "filePath": "src/db/models/postgres_models.py",
+      "summary": "Defines all SQLAlchemy ORM models for the PostgreSQL/pgvector schema, covering users, portfolios, tax rules, market data, legal references, and embedding tables.",
+      "tags": [
+        "data-model",
+        "database",
+        "schema-definition",
+        "orm",
+        "pgvector"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Uses SQLAlchemy declarative_base with pgvector Vector(1024) columns and relationship/ForeignKey definitions for embedding-backed financial data."
+    },
+    {
+      "id": "table:src/db/models/postgres_models.py:User",
+      "type": "table",
+      "name": "User",
+      "filePath": "src/db/models/postgres_models.py",
+      "lineRange": [
+        25,
+        93
+      ],
+      "summary": "Users table modeling investor profiles including demographics, personas, asset holdings, investment propensity, and goals.",
+      "tags": [
+        "data-model",
+        "database",
+        "user",
+        "orm"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:src/db/models/postgres_models.py:Portfolio",
+      "type": "table",
+      "name": "Portfolio",
+      "filePath": "src/db/models/postgres_models.py",
+      "lineRange": [
+        96,
+        133
+      ],
+      "summary": "Portfolios table storing per-user asset allocation ratios and strategy metadata, linked to a user via foreign key.",
+      "tags": [
+        "data-model",
+        "database",
+        "portfolio",
+        "orm"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:src/db/models/postgres_models.py:PortfolioItem",
+      "type": "table",
+      "name": "PortfolioItem",
+      "filePath": "src/db/models/postgres_models.py",
+      "lineRange": [
+        136,
+        161
+      ],
+      "summary": "Portfolio items table holding individual holdings (asset type, ticker, allocation, currency) belonging to a portfolio.",
+      "tags": [
+        "data-model",
+        "database",
+        "portfolio",
+        "orm"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:src/db/models/postgres_models.py:TaxRule",
+      "type": "table",
+      "name": "TaxRule",
+      "filePath": "src/db/models/postgres_models.py",
+      "lineRange": [
+        164,
+        178
+      ],
+      "summary": "Tax rules table capturing tax and local-tax rates, thresholds, deduction limits, and effective dates per asset and income type.",
+      "tags": [
+        "data-model",
+        "database",
+        "tax",
+        "orm"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:src/db/models/postgres_models.py:MarketSnapshot",
+      "type": "table",
+      "name": "MarketSnapshot",
+      "filePath": "src/db/models/postgres_models.py",
+      "lineRange": [
+        181,
+        195
+      ],
+      "summary": "Market snapshots table recording dated numeric market data points with type, sub-key, unit, and source.",
+      "tags": [
+        "data-model",
+        "database",
+        "market-data",
+        "orm"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:src/db/models/postgres_models.py:LegalReference",
+      "type": "table",
+      "name": "LegalReference",
+      "filePath": "src/db/models/postgres_models.py",
+      "lineRange": [
+        198,
+        212
+      ],
+      "summary": "Legal references table storing law articles, titles, and content referenced by strategy documents.",
+      "tags": [
+        "data-model",
+        "database",
+        "legal",
+        "orm"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:src/db/models/postgres_models.py:NewsEmbedding",
+      "type": "table",
+      "name": "NewsEmbedding",
+      "filePath": "src/db/models/postgres_models.py",
+      "lineRange": [
+        215,
+        234
+      ],
+      "summary": "News embeddings table holding news articles with sentiment scores and a 1024-dimensional pgvector embedding for similarity search.",
+      "tags": [
+        "data-model",
+        "database",
+        "embedding",
+        "pgvector"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:src/db/models/postgres_models.py:StrategyDoc",
+      "type": "table",
+      "name": "StrategyDoc",
+      "filePath": "src/db/models/postgres_models.py",
+      "lineRange": [
+        237,
+        262
+      ],
+      "summary": "Strategy documents table storing chunked strategy text with 1024-dim embeddings and an optional foreign key to a legal reference.",
+      "tags": [
+        "data-model",
+        "database",
+        "embedding",
+        "pgvector"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:src/db/models/postgres_models.py:MacroIndicator",
+      "type": "table",
+      "name": "MacroIndicator",
+      "filePath": "src/db/models/postgres_models.py",
+      "lineRange": [
+        265,
+        282
+      ],
+      "summary": "Macro indicators table tracking dated macroeconomic values with analysis text and an optional 1024-dim embedding.",
+      "tags": [
+        "data-model",
+        "database",
+        "embedding",
+        "market-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:src/db/models/postgres_models.py:PersonaEmbedding",
+      "type": "table",
+      "name": "PersonaEmbedding",
+      "filePath": "src/db/models/postgres_models.py",
+      "lineRange": [
+        285,
+        310
+      ],
+      "summary": "Persona embeddings table storing per-user persona text and a 1024-dim embedding, linked one-to-one to a user by UUID.",
+      "tags": [
+        "data-model",
+        "database",
+        "embedding",
+        "pgvector"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "README.md",
+      "summary": "Project overview and developer setup guide (in Korean) covering uv-based environment setup, the dual-database architecture (Azure SQL + Supabase pgvector), directory layout, .env configuration, and Alembic migration commands.",
+      "tags": [
+        "documentation",
+        "entry-point",
+        "database",
+        "migration",
+        "overview"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Documentation authored in Korean; describes a legacy Azure SQL + Supabase setup that the codebase has since consolidated onto PostgreSQL."
+    },
+    {
+      "id": "config:alembic.ini",
+      "type": "config",
+      "name": "alembic.ini",
+      "filePath": "alembic.ini",
+      "summary": "Alembic configuration for the consolidated PostgreSQL database, pointing the script location at database/migrations/postgres and delegating the actual DB URL to env.py (which reads DATABASE_URL), plus logging setup for alembic and sqlalchemy.",
+      "tags": [
+        "configuration",
+        "database",
+        "migration",
+        "alembic"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:docker-compose.yml",
+      "type": "service",
+      "name": "docker-compose.yml",
+      "filePath": "docker-compose.yml",
+      "summary": "Docker Compose definition provisioning a single PostgreSQL 16 (alpine) service named midas-postgres with a persistent named volume, env-driven credentials, and port 5432 exposed for the project's database.",
+      "tags": [
+        "orchestration",
+        "infrastructure",
+        "containerization",
+        "database",
+        "deployment"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:docker-compose.yml:postgres",
+      "type": "service",
+      "name": "postgres",
+      "filePath": "docker-compose.yml",
+      "summary": "PostgreSQL 16-alpine container (midas-postgres) exposing port 5432, configured via POSTGRES_DB/USER/PASSWORD environment variables and backed by the postgres_data named volume for persistence.",
+      "tags": [
+        "database",
+        "containerization",
+        "infrastructure",
+        "postgres"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:pyproject.toml",
+      "type": "config",
+      "name": "pyproject.toml",
+      "filePath": "pyproject.toml",
+      "summary": "Python project manifest (uv-managed) declaring the midas-touch package metadata, Python >=3.12 requirement, and runtime dependencies spanning data tooling (pandas, datasets), DB access (sqlalchemy, alembic, psycopg2, pgvector, supabase, pyodbc), market data (yfinance), and ML/embedding libraries (sentence-transformers, peft, openai).",
+      "tags": [
+        "configuration",
+        "build-system",
+        "dependencies",
+        "python"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:database/migrations/postgres/README",
+      "type": "document",
+      "name": "README",
+      "filePath": "database/migrations/postgres/README",
+      "summary": "One-line description marking the directory as the consolidated PostgreSQL and pgvector database migrations folder.",
+      "tags": [
+        "documentation",
+        "database",
+        "migration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:database/migrations/postgres/script.py.mako",
+      "type": "file",
+      "name": "script.py.mako",
+      "filePath": "database/migrations/postgres/script.py.mako",
+      "summary": "Mako template used by Alembic to scaffold new migration version files with revision identifiers and upgrade/downgrade stubs.",
+      "tags": [
+        "migration",
+        "template",
+        "build-system",
+        "database"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Alembic Mako template; placeholders like ${up_revision} are interpolated when generating revision files."
+    },
+    {
+      "id": "file:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "type": "file",
+      "name": "a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "filePath": "database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "summary": "Alembic migration (revision a1b2c3d4e5f6) that creates the embedding-pipeline dataset tables emb_passages, emb_synthetic_queries, and emb_training_triplets with their indexes and constraints.",
+      "tags": [
+        "migration",
+        "database",
+        "data-pipeline",
+        "schema-definition"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Revises d93ff1c5811e; upgrade builds tables via op.create_table, downgrade drops them in reverse order."
+    },
+    {
+      "id": "function:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "lineRange": [
+        19,
+        91
+      ],
+      "summary": "Creates the emb_passages, emb_synthetic_queries, and emb_training_triplets tables along with their primary keys, foreign keys, check constraints, and indexes.",
+      "tags": [
+        "migration",
+        "schema-definition",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "lineRange": [
+        94,
+        100
+      ],
+      "summary": "Reverses the migration by dropping the embedding-pipeline tables and their indexes in dependency-safe order.",
+      "tags": [
+        "migration",
+        "rollback",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "type": "file",
+      "name": "d93ff1c5811e_consolidated_initial_schema.py",
+      "filePath": "database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "summary": "Base Alembic migration (revision d93ff1c5811e) representing the consolidated initial schema, reconciling indexes, constraints, and column types against the autogenerated baseline.",
+      "tags": [
+        "migration",
+        "database",
+        "schema-definition",
+        "baseline"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Root migration (down_revision is None); largely composed of op.drop_index/op.alter_column reconciliation operations."
+    },
+    {
+      "id": "function:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py:upgrade",
+      "type": "function",
+      "name": "upgrade",
+      "filePath": "database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "lineRange": [
+        21,
+        50
+      ],
+      "summary": "Applies the consolidated baseline by dropping legacy indexes/constraints and altering column types (e.g. CHAR to String) across core tables.",
+      "tags": [
+        "migration",
+        "schema-definition",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py:downgrade",
+      "type": "function",
+      "name": "downgrade",
+      "filePath": "database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "lineRange": [
+        53,
+        82
+      ],
+      "summary": "Recreates the dropped indexes, unique constraints, and original column types to roll back the consolidated baseline migration.",
+      "tags": [
+        "migration",
+        "rollback",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:users",
+      "type": "table",
+      "name": "users",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Core user/persona table holding demographics, financial profile, asset holdings, and investment preferences for recommendation.",
+      "tags": [
+        "database",
+        "data-model",
+        "user"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:portfolios",
+      "type": "table",
+      "name": "portfolios",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Portfolio table linking a user to a named asset-allocation strategy with bond/deposit/real-estate/gold/cash ratios.",
+      "tags": [
+        "database",
+        "data-model",
+        "portfolio"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:portfolio_items",
+      "type": "table",
+      "name": "portfolio_items",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Per-portfolio line items recording asset type, allocation percentage, currency, and notes.",
+      "tags": [
+        "database",
+        "data-model",
+        "portfolio"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:tax_rules",
+      "type": "table",
+      "name": "tax_rules",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Tax-rule reference table keyed by asset type with expiry date and legal basis for tax-aware recommendations.",
+      "tags": [
+        "database",
+        "data-model",
+        "tax"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:market_snapshots",
+      "type": "table",
+      "name": "market_snapshots",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Time-series market snapshot table storing dated data points by type, unit, and source.",
+      "tags": [
+        "database",
+        "data-model",
+        "market-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:legal_references",
+      "type": "table",
+      "name": "legal_references",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Legal reference table cataloging law names, content, asset categories, and effective dates with a Supabase doc linkage.",
+      "tags": [
+        "database",
+        "data-model",
+        "legal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:news_embeddings",
+      "type": "table",
+      "name": "news_embeddings",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Financial news table with sentiment scores and a pgvector embedding column indexed via HNSW for semantic search.",
+      "tags": [
+        "database",
+        "vector-search",
+        "embeddings",
+        "news"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Uses pgvector embedding column with an HNSW index for approximate nearest-neighbor search."
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:strategy_docs",
+      "type": "table",
+      "name": "strategy_docs",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Chunked investment-strategy document table with pgvector embeddings for retrieval-augmented strategy lookup.",
+      "tags": [
+        "database",
+        "vector-search",
+        "embeddings",
+        "rag"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:macro_indicators",
+      "type": "table",
+      "name": "macro_indicators",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Macroeconomic indicator table pairing numeric time-series values with analysis text and pgvector embeddings.",
+      "tags": [
+        "database",
+        "vector-search",
+        "embeddings",
+        "macro"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:persona_embeddings",
+      "type": "table",
+      "name": "persona_embeddings",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "User-persona embedding table keyed by user UUID with an HNSW-indexed pgvector column for similar-persona search.",
+      "tags": [
+        "database",
+        "vector-search",
+        "embeddings",
+        "persona"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:emb_passages",
+      "type": "table",
+      "name": "emb_passages",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Embedding-training corpus table storing source passages with metadata used to generate synthetic queries and triplets.",
+      "tags": [
+        "database",
+        "data-pipeline",
+        "embeddings",
+        "training-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:emb_synthetic_queries",
+      "type": "table",
+      "name": "emb_synthetic_queries",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Synthetic query table linking generated queries to source passages by query type for embedding training.",
+      "tags": [
+        "database",
+        "data-pipeline",
+        "embeddings",
+        "training-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:database/schema/postgres_schema.sql:emb_training_triplets",
+      "type": "table",
+      "name": "emb_training_triplets",
+      "filePath": "database/schema/postgres_schema.sql",
+      "summary": "Assembled query/positive/negative training triplet table with similarity scores, margins, and train/val splits for embedding fine-tuning.",
+      "tags": [
+        "database",
+        "data-pipeline",
+        "embeddings",
+        "training-data"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:database/seeds/seed_tax_rules.sql:seed_tax_rules",
+      "type": "table",
+      "name": "seed_tax_rules.sql",
+      "filePath": "database/seeds/seed_tax_rules.sql",
+      "summary": "Seed-data script inserting baseline tax-rule rows (asset types, expiry dates, legal bases) into the tax_rules table.",
+      "tags": [
+        "database",
+        "seed-data",
+        "tax",
+        "migration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:notebooks/exploration.ipynb",
+      "type": "file",
+      "name": "exploration.ipynb",
+      "filePath": "notebooks/exploration.ipynb",
+      "summary": "Exploratory Jupyter notebook for ad-hoc data inspection and prototyping against the project's datasets.",
+      "tags": [
+        "notebook",
+        "exploration",
+        "data-pipeline"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/db_init.sh",
+      "type": "file",
+      "name": "db_init.sh",
+      "filePath": "scripts/db_init.sh",
+      "summary": "Shell script that boots the local PostgreSQL container via docker compose and exposes it through an ngrok TCP tunnel, printing the public connection details.",
+      "tags": [
+        "script",
+        "infrastructure",
+        "database",
+        "deployment"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Parses the ngrok local API (localhost:4040) to extract the public host/port for remote DB access."
+    },
+    {
+      "id": "file:scripts/migrate_data.py",
+      "type": "file",
+      "name": "migrate_data.py",
+      "filePath": "scripts/migrate_data.py",
+      "summary": "Data-migration entrypoint that copies users, tax rules, market snapshots, and persona embeddings from legacy Azure SQL and Supabase sources into the target PostgreSQL database.",
+      "tags": [
+        "entry-point",
+        "data-pipeline",
+        "migration",
+        "database"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/migrate_data.py:bootstrap_schema",
+      "type": "function",
+      "name": "bootstrap_schema",
+      "filePath": "scripts/migrate_data.py",
+      "lineRange": [
+        66,
+        77
+      ],
+      "summary": "Reads the PostgreSQL schema SQL file and executes it against the target connection to create the destination tables.",
+      "tags": [
+        "migration",
+        "schema-definition",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:scripts/migrate_data.py:migrate_users",
+      "type": "function",
+      "name": "migrate_users",
+      "filePath": "scripts/migrate_data.py",
+      "lineRange": [
+        80,
+        183
+      ],
+      "summary": "Fetches user rows from Azure SQL, normalizes types and booleans, and batch-inserts them into the target users table.",
+      "tags": [
+        "migration",
+        "etl",
+        "database"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:scripts/migrate_data.py:migrate_tax_rules",
+      "type": "function",
+      "name": "migrate_tax_rules",
+      "filePath": "scripts/migrate_data.py",
+      "lineRange": [
+        186,
+        236
+      ],
+      "summary": "Reads tax-rule rows from the legacy source and batch-inserts them into the target tax_rules table.",
+      "tags": [
+        "migration",
+        "etl",
+        "tax"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/migrate_data.py:migrate_market_snapshots",
+      "type": "function",
+      "name": "migrate_market_snapshots",
+      "filePath": "scripts/migrate_data.py",
+      "lineRange": [
+        239,
+        285
+      ],
+      "summary": "Copies market-snapshot rows from Azure SQL into the target market_snapshots table with timestamp normalization.",
+      "tags": [
+        "migration",
+        "etl",
+        "market-data"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/migrate_data.py:migrate_persona_embeddings",
+      "type": "function",
+      "name": "migrate_persona_embeddings",
+      "filePath": "scripts/migrate_data.py",
+      "lineRange": [
+        288,
+        331
+      ],
+      "summary": "Pulls persona embedding rows from Supabase and batch-inserts them into the target persona_embeddings table.",
+      "tags": [
+        "migration",
+        "etl",
+        "embeddings"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/migrate_data.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "scripts/migrate_data.py",
+      "lineRange": [
+        346,
+        387
+      ],
+      "summary": "CLI driver that opens source/target connections, optionally bootstraps the schema, runs each migration step, verifies counts, and closes connections.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "orchestration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/oracle_macro.sh",
+      "type": "file",
+      "name": "oracle_macro.sh",
+      "filePath": "scripts/oracle_macro.sh",
+      "summary": "Shell script that loads environment config and queries Oracle Cloud (OCI) macro data with retry logic.",
+      "tags": [
+        "script",
+        "data-pipeline",
+        "macro",
+        "infrastructure"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Implements an OCI query retry wrapper for resilience against transient cloud API failures."
+    },
+    {
+      "id": "function:scripts/oracle_macro.sh:load_env",
+      "type": "function",
+      "name": "load_env",
+      "filePath": "scripts/oracle_macro.sh",
+      "lineRange": [
+        26,
+        42
+      ],
+      "summary": "Loads environment variables from the project .env file to configure OCI credentials and parameters.",
+      "tags": [
+        "script",
+        "configuration",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:scripts/oracle_macro.sh:run_oci_query_with_retry",
+      "type": "function",
+      "name": "run_oci_query_with_retry",
+      "filePath": "scripts/oracle_macro.sh",
+      "lineRange": [
+        110,
+        127
+      ],
+      "summary": "Executes an OCI query and retries on failure with bounded attempts to handle transient errors.",
+      "tags": [
+        "script",
+        "retry",
+        "resilience"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:scripts/run_agent.py",
+      "type": "file",
+      "name": "run_agent.py",
+      "filePath": "scripts/run_agent.py",
+      "summary": "CLI entrypoint that runs the Midas Touch RAG adviser, supporting a one-shot --query mode and an interactive questionnaire mode that builds the user profile.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "agent",
+        "orchestration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/run_agent.py:interactive_mode",
+      "type": "function",
+      "name": "interactive_mode",
+      "filePath": "scripts/run_agent.py",
+      "lineRange": [
+        28,
+        54
+      ],
+      "summary": "Collects user inputs (age, occupation, income, goals, risk preference) through prompts and assembles them into a query string for the adviser.",
+      "tags": [
+        "cli",
+        "user-input",
+        "interactive"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/run_agent.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "scripts/run_agent.py",
+      "lineRange": [
+        57,
+        125
+      ],
+      "summary": "Parses CLI arguments, validates required API keys, instantiates MidasAdviser, runs the recommendation, and optionally writes the report to a file.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "orchestration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/run_market_pipeline.py",
+      "type": "file",
+      "name": "run_market_pipeline.py",
+      "filePath": "scripts/run_market_pipeline.py",
+      "summary": "CLI entrypoint that runs the MarketDataPipeline over a date range and bulk-upserts the fetched market snapshots into the database.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "data-pipeline",
+        "market-data"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/run_market_pipeline.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "scripts/run_market_pipeline.py",
+      "lineRange": [
+        22,
+        114
+      ],
+      "summary": "Resolves the date range (including backfill), runs MarketDataPipeline.fetch_all, summarizes counts, and bulk-upserts snapshots into the database.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "orchestration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/run_persona_pipeline.py",
+      "type": "file",
+      "name": "run_persona_pipeline.py",
+      "filePath": "scripts/run_persona_pipeline.py",
+      "summary": "CLI entrypoint that bootstraps the Supabase persona schema, encodes persona CSV rows with a SentenceTransformer model, and batch-inserts the resulting embeddings.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "data-pipeline",
+        "embeddings"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:scripts/run_persona_pipeline.py:bootstrap_supabase_schema",
+      "type": "function",
+      "name": "bootstrap_supabase_schema",
+      "filePath": "scripts/run_persona_pipeline.py",
+      "lineRange": [
+        27,
+        52
+      ],
+      "summary": "Reads the persona embedding schema SQL and executes it against the Supabase/Postgres connection to ensure the target table exists.",
+      "tags": [
+        "schema-definition",
+        "database",
+        "bootstrap"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:scripts/run_persona_pipeline.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "scripts/run_persona_pipeline.py",
+      "lineRange": [
+        55,
+        162
+      ],
+      "summary": "Loads persona CSV data, generates sentence embeddings per row, and batch-inserts them into the persona embeddings table with progress reporting.",
+      "tags": [
+        "entry-point",
+        "cli",
+        "embeddings",
+        "orchestration"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:src/data_pipeline/export_csv.py",
+      "type": "file",
+      "name": "export_csv.py",
+      "filePath": "src/data_pipeline/export_csv.py",
+      "summary": "Standalone script that loads the Nemotron-Personas-Korea dataset, selects relevant persona columns, and exports them to a base_personas CSV file.",
+      "tags": [
+        "script",
+        "data-pipeline",
+        "export",
+        "dataset"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:src/data_pipeline/fetch_market_data.py",
+      "type": "file",
+      "name": "fetch_market_data.py",
+      "filePath": "src/data_pipeline/fetch_market_data.py",
+      "summary": "Market data ingestion module providing fetchers for yfinance, FRED, and ECOS sources plus a MarketDataPipeline orchestrator and a real-time stock-quote helper.",
+      "tags": [
+        "data-pipeline",
+        "market-data",
+        "service",
+        "api-handler"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:src/data_pipeline/fetch_market_data.py:fetch_yfinance_data",
+      "type": "function",
+      "name": "fetch_yfinance_data",
+      "filePath": "src/data_pipeline/fetch_market_data.py",
+      "lineRange": [
+        47,
+        91
+      ],
+      "summary": "Downloads historical OHLC data for a symbol from yfinance and normalizes it into dated market-snapshot records.",
+      "tags": [
+        "data-pipeline",
+        "market-data",
+        "fetcher"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/data_pipeline/fetch_market_data.py:fetch_fred_data",
+      "type": "function",
+      "name": "fetch_fred_data",
+      "filePath": "src/data_pipeline/fetch_market_data.py",
+      "lineRange": [
+        94,
+        129
+      ],
+      "summary": "Fetches a FRED economic time series via the REST API and converts observations into market-snapshot records.",
+      "tags": [
+        "data-pipeline",
+        "market-data",
+        "fetcher"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/data_pipeline/fetch_market_data.py:fetch_ecos_data",
+      "type": "function",
+      "name": "fetch_ecos_data",
+      "filePath": "src/data_pipeline/fetch_market_data.py",
+      "lineRange": [
+        132,
+        174
+      ],
+      "summary": "Queries the Bank of Korea ECOS API for a statistic series and maps the response rows into market-snapshot records.",
+      "tags": [
+        "data-pipeline",
+        "market-data",
+        "fetcher"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:src/data_pipeline/fetch_market_data.py:fetch_realtime_stock",
+      "type": "function",
+      "name": "fetch_realtime_stock",
+      "filePath": "src/data_pipeline/fetch_market_data.py",
+      "lineRange": [
+        263,
+        317
+      ],
+      "summary": "Retrieves a real-time stock quote (price, change, currency) for a symbol via yfinance with fallback fields and error handling.",
+      "tags": [
+        "data-pipeline",
+        "market-data",
+        "realtime"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:src/data_pipeline/fetch_market_data.py:MarketDataPipeline",
+      "type": "class",
+      "name": "MarketDataPipeline",
+      "filePath": "src/data_pipeline/fetch_market_data.py",
+      "lineRange": [
+        180,
+        260
+      ],
+      "summary": "Orchestrator class that dispatches per-target fetches across yfinance/FRED/ECOS sources and aggregates all market snapshots for a date range.",
+      "tags": [
+        "service",
+        "data-pipeline",
+        "orchestration",
+        "market-data"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:tests/test_agent.py",
+      "type": "file",
+      "name": "test_agent.py",
+      "filePath": "tests/test_agent.py",
+      "summary": "Unit and end-to-end test suite exercising database helper functions (tax rules, market snapshots, persona vector search) and the MidasAdviser recommendation flow.",
+      "tags": [
+        "test",
+        "agent",
+        "database",
+        "integration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/test_agent.py:TestMidasAgent",
+      "type": "class",
+      "name": "TestMidasAgent",
+      "filePath": "tests/test_agent.py",
+      "lineRange": [
+        27,
+        109
+      ],
+      "summary": "unittest TestCase covering tax-rule retrieval, market-snapshot queries, Supabase persona vector search, and a full MidasAdviser recommendation flow.",
+      "tags": [
+        "test",
+        "integration",
+        "agent"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:src/embedding_pipeline/__init__.py",
+      "target": "file:src/embedding_pipeline/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/__init__.py",
+      "target": "file:src/embedding_pipeline/dataset_builder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/__init__.py",
+      "target": "file:src/embedding_pipeline/document_parser.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/__init__.py",
+      "target": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/__init__.py",
+      "target": "file:src/embedding_pipeline/pipeline.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/__init__.py",
+      "target": "file:src/embedding_pipeline/query_synthesizer.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/dataset_builder.py",
+      "target": "file:src/embedding_pipeline/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/dataset_builder.py",
+      "target": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/dataset_builder.py",
+      "target": "file:src/embedding_pipeline/query_synthesizer.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/document_parser.py",
+      "target": "file:src/embedding_pipeline/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "target": "file:src/embedding_pipeline/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "target": "file:src/embedding_pipeline/document_parser.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "target": "file:src/embedding_pipeline/query_synthesizer.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/pipeline.py",
+      "target": "file:src/embedding_pipeline/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/pipeline.py",
+      "target": "file:src/embedding_pipeline/dataset_builder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/pipeline.py",
+      "target": "file:src/embedding_pipeline/document_parser.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/pipeline.py",
+      "target": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/pipeline.py",
+      "target": "file:src/embedding_pipeline/query_synthesizer.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/query_synthesizer.py",
+      "target": "file:src/embedding_pipeline/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/query_synthesizer.py",
+      "target": "file:src/embedding_pipeline/document_parser.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/train.py",
+      "target": "file:src/embedding_pipeline/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/train.py",
+      "target": "file:src/embedding_pipeline/dataset_builder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/train.py",
+      "target": "file:src/embedding_pipeline/pipeline.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_document_parser.py",
+      "target": "file:src/embedding_pipeline/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_document_parser.py",
+      "target": "file:src/embedding_pipeline/document_parser.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/embedding_pipeline/config.py",
+      "target": "class:src/embedding_pipeline/config.py:NIMConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/config.py",
+      "target": "class:src/embedding_pipeline/config.py:TeacherModelConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/config.py",
+      "target": "class:src/embedding_pipeline/config.py:HardNegativeConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/config.py",
+      "target": "class:src/embedding_pipeline/config.py:QuerySynthesisConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/config.py",
+      "target": "class:src/embedding_pipeline/config.py:LoraConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/config.py",
+      "target": "class:src/embedding_pipeline/config.py:TrainingConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/config.py",
+      "target": "class:src/embedding_pipeline/config.py:PathConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/config.py",
+      "target": "class:src/embedding_pipeline/config.py:PromptTemplates",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/config.py",
+      "target": "class:src/embedding_pipeline/config.py:PipelineConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/dataset_builder.py",
+      "target": "class:src/embedding_pipeline/dataset_builder.py:Triplet",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/dataset_builder.py",
+      "target": "class:src/embedding_pipeline/dataset_builder.py:TripletAssembler",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/dataset_builder.py",
+      "target": "class:src/embedding_pipeline/dataset_builder.py:DatasetSplitter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/dataset_builder.py",
+      "target": "class:src/embedding_pipeline/dataset_builder.py:DatasetIO",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/dataset_builder.py",
+      "target": "function:src/embedding_pipeline/dataset_builder.py:compute_dataset_stats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/document_parser.py",
+      "target": "class:src/embedding_pipeline/document_parser.py:Passage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/document_parser.py",
+      "target": "class:src/embedding_pipeline/document_parser.py:FinancialChunker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/document_parser.py",
+      "target": "class:src/embedding_pipeline/document_parser.py:DocumentParser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "target": "class:src/embedding_pipeline/hard_negative_miner.py:SimilarityScore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "target": "class:src/embedding_pipeline/hard_negative_miner.py:HardNegativeCandidate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "target": "class:src/embedding_pipeline/hard_negative_miner.py:MiningResult",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "target": "class:src/embedding_pipeline/hard_negative_miner.py:TeacherEmbedder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "target": "class:src/embedding_pipeline/hard_negative_miner.py:NVRetrieverMarginFilter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "target": "class:src/embedding_pipeline/hard_negative_miner.py:HardNegativeMiner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/hard_negative_miner.py",
+      "target": "function:src/embedding_pipeline/hard_negative_miner.py:compute_mining_stats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/pipeline.py",
+      "target": "function:src/embedding_pipeline/pipeline.py:setup_logging",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/pipeline.py",
+      "target": "class:src/embedding_pipeline/pipeline.py:PassageLoader",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/pipeline.py",
+      "target": "class:src/embedding_pipeline/pipeline.py:CheckpointManager",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/pipeline.py",
+      "target": "class:src/embedding_pipeline/pipeline.py:EmbeddingDatasetPipeline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/pipeline.py",
+      "target": "function:src/embedding_pipeline/pipeline.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/query_synthesizer.py",
+      "target": "class:src/embedding_pipeline/query_synthesizer.py:SyntheticQuery",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/query_synthesizer.py",
+      "target": "class:src/embedding_pipeline/query_synthesizer.py:SynthesisResult",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/query_synthesizer.py",
+      "target": "function:src/embedding_pipeline/query_synthesizer.py:_classify_query_type",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/query_synthesizer.py",
+      "target": "class:src/embedding_pipeline/query_synthesizer.py:NIMClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/query_synthesizer.py",
+      "target": "class:src/embedding_pipeline/query_synthesizer.py:QuerySynthesizer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/query_synthesizer.py",
+      "target": "function:src/embedding_pipeline/query_synthesizer.py:synthesis_results_to_jsonl",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/train.py",
+      "target": "function:src/embedding_pipeline/train.py:set_seed",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/train.py",
+      "target": "function:src/embedding_pipeline/train.py:load_train_eval_datasets",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/train.py",
+      "target": "function:src/embedding_pipeline/train.py:build_ir_evaluator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/train.py",
+      "target": "function:src/embedding_pipeline/train.py:apply_lora",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/train.py",
+      "target": "function:src/embedding_pipeline/train.py:save_model",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/train.py",
+      "target": "function:src/embedding_pipeline/train.py:train",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/train.py",
+      "target": "function:src/embedding_pipeline/train.py:quick_inference_test",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/train.py",
+      "target": "function:src/embedding_pipeline/train.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_document_parser.py",
+      "target": "function:tests/test_document_parser.py:test_financial_chunker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_document_parser.py",
+      "target": "function:tests/test_document_parser.py:test_document_parser_txt_md",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/embedding_pipeline/document_parser.py",
+      "target": "file:tests/test_document_parser.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "class:src/embedding_pipeline/document_parser.py:DocumentParser",
+      "target": "class:src/embedding_pipeline/document_parser.py:FinancialChunker",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "class:src/embedding_pipeline/hard_negative_miner.py:HardNegativeMiner",
+      "target": "class:src/embedding_pipeline/hard_negative_miner.py:TeacherEmbedder",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "class:src/embedding_pipeline/hard_negative_miner.py:HardNegativeMiner",
+      "target": "class:src/embedding_pipeline/hard_negative_miner.py:NVRetrieverMarginFilter",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "class:src/embedding_pipeline/query_synthesizer.py:QuerySynthesizer",
+      "target": "class:src/embedding_pipeline/query_synthesizer.py:NIMClient",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "class:src/embedding_pipeline/pipeline.py:PassageLoader",
+      "target": "class:src/embedding_pipeline/document_parser.py:DocumentParser",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "class:src/embedding_pipeline/pipeline.py:EmbeddingDatasetPipeline",
+      "target": "class:src/embedding_pipeline/query_synthesizer.py:QuerySynthesizer",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "class:src/embedding_pipeline/pipeline.py:EmbeddingDatasetPipeline",
+      "target": "class:src/embedding_pipeline/hard_negative_miner.py:HardNegativeMiner",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "class:src/embedding_pipeline/pipeline.py:EmbeddingDatasetPipeline",
+      "target": "class:src/embedding_pipeline/dataset_builder.py:TripletAssembler",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "function:src/embedding_pipeline/train.py:train",
+      "target": "function:src/embedding_pipeline/train.py:apply_lora",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:src/embedding_pipeline/train.py:train",
+      "target": "function:src/embedding_pipeline/train.py:load_train_eval_datasets",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:src/embedding_pipeline/train.py:load_train_eval_datasets",
+      "target": "class:src/embedding_pipeline/dataset_builder.py:DatasetIO",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/agent/recommender.py",
+      "target": "file:src/db/connector.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/data_pipeline/generate_finance_data.py",
+      "target": "file:src/db/connector.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "file:src/db/connector.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/agent/recommender.py",
+      "target": "class:src/agent/recommender.py:MidasAdviser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/agent/recommender.py",
+      "target": "class:src/agent/recommender.py:MidasAdviser",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/data_pipeline/generate_finance_data.py",
+      "target": "function:src/data_pipeline/generate_finance_data.py:extract_json",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/data_pipeline/generate_finance_data.py",
+      "target": "function:src/data_pipeline/generate_finance_data.py:extract_json",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/data_pipeline/generate_finance_data.py",
+      "target": "function:src/data_pipeline/generate_finance_data.py:generate_finance_data",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/data_pipeline/generate_finance_data.py",
+      "target": "function:src/data_pipeline/generate_finance_data.py:generate_finance_data",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/data_pipeline/generate_finance_data.py",
+      "target": "function:src/data_pipeline/generate_finance_data.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/data_pipeline/generate_finance_data.py",
+      "target": "function:src/data_pipeline/generate_finance_data.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:_get_database_url",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:_get_database_url",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:db_cursor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:db_cursor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:apply_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:apply_schema",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:upsert_user",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:upsert_user",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:bulk_upsert_users",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:bulk_upsert_users",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:_user_params",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:_user_params",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:upsert_market_snapshot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:upsert_market_snapshot",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:bulk_upsert_market_snapshots",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:bulk_upsert_market_snapshots",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:get_user_by_uuid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:get_user_by_uuid",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:get_latest_market_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:get_latest_market_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:get_all_tax_rules",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:get_all_tax_rules",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:get_latest_market_snapshots",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:get_latest_market_snapshots",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:search_similar_personas_db",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:search_similar_personas_db",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:bulk_upsert_emb_passages",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:bulk_upsert_emb_passages",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:bulk_upsert_emb_queries",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:bulk_upsert_emb_queries",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:bulk_upsert_emb_triplets",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "function:src/db/connector.py:bulk_upsert_emb_triplets",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:upsert_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:upsert_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:search_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:search_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:upsert_strategy_doc",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:upsert_strategy_doc",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:search_strategies",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:search_strategies",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:upsert_macro_indicator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:upsert_macro_indicator",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:upsert_persona_embedding",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:upsert_persona_embedding",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:search_similar_personas",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/supabase_connector.py",
+      "target": "function:src/db/supabase_connector.py:search_similar_personas",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:src/agent/recommender.py:MidasAdviser",
+      "target": "function:src/db/connector.py:search_similar_personas_db",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:src/agent/recommender.py:MidasAdviser",
+      "target": "function:src/db/connector.py:get_user_by_uuid",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:src/agent/recommender.py:MidasAdviser",
+      "target": "function:src/db/connector.py:get_all_tax_rules",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:src/agent/recommender.py:MidasAdviser",
+      "target": "function:src/db/connector.py:get_latest_market_snapshots",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:src/data_pipeline/generate_finance_data.py:main",
+      "target": "function:src/db/connector.py:bulk_upsert_users",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:src/db/supabase_connector.py:upsert_news",
+      "target": "function:src/db/connector.py:db_cursor",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:src/db/supabase_connector.py:search_news",
+      "target": "function:src/db/connector.py:db_cursor",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:src/db/supabase_connector.py:upsert_strategy_doc",
+      "target": "function:src/db/connector.py:db_cursor",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:src/db/supabase_connector.py:search_strategies",
+      "target": "function:src/db/connector.py:db_cursor",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:src/db/supabase_connector.py:upsert_macro_indicator",
+      "target": "function:src/db/connector.py:db_cursor",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:src/db/supabase_connector.py:upsert_persona_embedding",
+      "target": "function:src/db/connector.py:db_cursor",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:src/db/supabase_connector.py:search_similar_personas",
+      "target": "function:src/db/connector.py:db_cursor",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:database/migrations/postgres/env.py",
+      "target": "file:src/db/models/postgres_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:database/migrations/postgres/env.py",
+      "target": "function:database/migrations/postgres/env.py:get_database_url",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:database/migrations/postgres/env.py",
+      "target": "function:database/migrations/postgres/env.py:run_migrations_offline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:database/migrations/postgres/env.py",
+      "target": "function:database/migrations/postgres/env.py:run_migrations_online",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:database/migrations/postgres/env.py",
+      "target": "function:database/migrations/postgres/env.py:get_database_url",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:database/migrations/postgres/env.py",
+      "target": "function:database/migrations/postgres/env.py:run_migrations_offline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:database/migrations/postgres/env.py",
+      "target": "function:database/migrations/postgres/env.py:run_migrations_online",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/db/models/__init__.py",
+      "target": "file:src/db/models/postgres_models.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/db/models/postgres_models.py",
+      "target": "table:src/db/models/postgres_models.py:User",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/models/postgres_models.py",
+      "target": "table:src/db/models/postgres_models.py:Portfolio",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/models/postgres_models.py",
+      "target": "table:src/db/models/postgres_models.py:PortfolioItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/models/postgres_models.py",
+      "target": "table:src/db/models/postgres_models.py:TaxRule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/models/postgres_models.py",
+      "target": "table:src/db/models/postgres_models.py:MarketSnapshot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/models/postgres_models.py",
+      "target": "table:src/db/models/postgres_models.py:LegalReference",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/models/postgres_models.py",
+      "target": "table:src/db/models/postgres_models.py:NewsEmbedding",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/models/postgres_models.py",
+      "target": "table:src/db/models/postgres_models.py:StrategyDoc",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/models/postgres_models.py",
+      "target": "table:src/db/models/postgres_models.py:MacroIndicator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/db/models/postgres_models.py",
+      "target": "table:src/db/models/postgres_models.py:PersonaEmbedding",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "table:src/db/models/postgres_models.py:Portfolio",
+      "target": "table:src/db/models/postgres_models.py:User",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "table:src/db/models/postgres_models.py:PortfolioItem",
+      "target": "table:src/db/models/postgres_models.py:Portfolio",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "table:src/db/models/postgres_models.py:StrategyDoc",
+      "target": "table:src/db/models/postgres_models.py:LegalReference",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "table:src/db/models/postgres_models.py:PersonaEmbedding",
+      "target": "table:src/db/models/postgres_models.py:User",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:alembic.ini",
+      "target": "file:database/migrations/postgres/env.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:pyproject.toml",
+      "target": "file:src/db/connector.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "document:README.md",
+      "target": "file:src/db/connector.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "file:src/db/models/postgres_models.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:README.md",
+      "target": "config:alembic.ini",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "service:docker-compose.yml",
+      "target": "service:docker-compose.yml:postgres",
+      "type": "deploys",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "service:docker-compose.yml:postgres",
+      "target": "file:src/db/connector.py",
+      "type": "serves",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "document:database/migrations/postgres/README",
+      "target": "file:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:database/migrations/postgres/README",
+      "target": "file:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "target": "function:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "target": "function:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "target": "table:database/schema/postgres_schema.sql:emb_passages",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "target": "table:database/schema/postgres_schema.sql:emb_synthetic_queries",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "target": "table:database/schema/postgres_schema.sql:emb_training_triplets",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "target": "file:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "target": "function:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py:upgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "target": "function:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py:downgrade",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "target": "table:database/schema/postgres_schema.sql:users",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+      "target": "table:database/schema/postgres_schema.sql:tax_rules",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:database/migrations/postgres/script.py.mako",
+      "target": "file:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "table:database/seeds/seed_tax_rules.sql:seed_tax_rules",
+      "target": "table:database/schema/postgres_schema.sql:tax_rules",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:scripts/migrate_data.py",
+      "target": "function:scripts/migrate_data.py:bootstrap_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/migrate_data.py",
+      "target": "function:scripts/migrate_data.py:migrate_users",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/migrate_data.py",
+      "target": "function:scripts/migrate_data.py:migrate_tax_rules",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/migrate_data.py",
+      "target": "function:scripts/migrate_data.py:migrate_market_snapshots",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/migrate_data.py",
+      "target": "function:scripts/migrate_data.py:migrate_persona_embeddings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/migrate_data.py",
+      "target": "function:scripts/migrate_data.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:scripts/migrate_data.py:migrate_users",
+      "target": "table:database/schema/postgres_schema.sql:users",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:scripts/migrate_data.py:migrate_tax_rules",
+      "target": "table:database/schema/postgres_schema.sql:tax_rules",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:scripts/migrate_data.py:migrate_market_snapshots",
+      "target": "table:database/schema/postgres_schema.sql:market_snapshots",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:scripts/migrate_data.py:migrate_persona_embeddings",
+      "target": "table:database/schema/postgres_schema.sql:persona_embeddings",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:scripts/oracle_macro.sh",
+      "target": "function:scripts/oracle_macro.sh:load_env",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/oracle_macro.sh",
+      "target": "function:scripts/oracle_macro.sh:run_oci_query_with_retry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/run_agent.py",
+      "target": "function:scripts/run_agent.py:interactive_mode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/run_agent.py",
+      "target": "function:scripts/run_agent.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/run_agent.py",
+      "target": "file:src/agent/recommender.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:scripts/run_agent.py:main",
+      "target": "class:src/agent/recommender.py:MidasAdviser",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:scripts/run_market_pipeline.py",
+      "target": "function:scripts/run_market_pipeline.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/run_market_pipeline.py",
+      "target": "file:src/data_pipeline/fetch_market_data.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:scripts/run_market_pipeline.py",
+      "target": "file:src/db/connector.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:scripts/run_market_pipeline.py:main",
+      "target": "class:src/data_pipeline/fetch_market_data.py:MarketDataPipeline",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/run_persona_pipeline.py",
+      "target": "function:scripts/run_persona_pipeline.py:bootstrap_supabase_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/run_persona_pipeline.py",
+      "target": "function:scripts/run_persona_pipeline.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:scripts/run_persona_pipeline.py:main",
+      "target": "table:database/schema/postgres_schema.sql:persona_embeddings",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/data_pipeline/fetch_market_data.py",
+      "target": "function:src/data_pipeline/fetch_market_data.py:fetch_yfinance_data",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/data_pipeline/fetch_market_data.py",
+      "target": "function:src/data_pipeline/fetch_market_data.py:fetch_fred_data",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/data_pipeline/fetch_market_data.py",
+      "target": "function:src/data_pipeline/fetch_market_data.py:fetch_ecos_data",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/data_pipeline/fetch_market_data.py",
+      "target": "function:src/data_pipeline/fetch_market_data.py:fetch_realtime_stock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/data_pipeline/fetch_market_data.py",
+      "target": "class:src/data_pipeline/fetch_market_data.py:MarketDataPipeline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/data_pipeline/fetch_market_data.py",
+      "target": "function:src/data_pipeline/fetch_market_data.py:fetch_yfinance_data",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/data_pipeline/fetch_market_data.py",
+      "target": "function:src/data_pipeline/fetch_market_data.py:fetch_fred_data",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/data_pipeline/fetch_market_data.py",
+      "target": "function:src/data_pipeline/fetch_market_data.py:fetch_ecos_data",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/data_pipeline/fetch_market_data.py",
+      "target": "function:src/data_pipeline/fetch_market_data.py:fetch_realtime_stock",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/data_pipeline/fetch_market_data.py",
+      "target": "class:src/data_pipeline/fetch_market_data.py:MarketDataPipeline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:src/data_pipeline/fetch_market_data.py:MarketDataPipeline",
+      "target": "function:src/data_pipeline/fetch_market_data.py:fetch_yfinance_data",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:src/data_pipeline/fetch_market_data.py:MarketDataPipeline",
+      "target": "function:src/data_pipeline/fetch_market_data.py:fetch_fred_data",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:src/data_pipeline/fetch_market_data.py:MarketDataPipeline",
+      "target": "function:src/data_pipeline/fetch_market_data.py:fetch_ecos_data",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/test_agent.py",
+      "target": "class:tests/test_agent.py:TestMidasAgent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/test_agent.py",
+      "target": "file:src/agent/recommender.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/test_agent.py",
+      "target": "file:src/db/connector.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/agent/recommender.py",
+      "target": "file:tests/test_agent.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:src/db/connector.py",
+      "target": "file:tests/test_agent.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:embedding-pipeline",
+      "name": "Embedding Pipeline",
+      "description": "End-to-end embedding fine-tuning pipeline: document parsing/chunking, synthetic query synthesis, hard-negative mining, triplet dataset assembly, and SentenceTransformer/LoRA training.",
+      "nodeIds": [
+        "file:src/embedding_pipeline/__init__.py",
+        "file:src/embedding_pipeline/config.py",
+        "file:src/embedding_pipeline/dataset_builder.py",
+        "file:src/embedding_pipeline/document_parser.py",
+        "file:src/embedding_pipeline/hard_negative_miner.py",
+        "file:src/embedding_pipeline/pipeline.py",
+        "file:src/embedding_pipeline/query_synthesizer.py",
+        "file:src/embedding_pipeline/train.py"
+      ]
+    },
+    {
+      "id": "layer:data-pipeline",
+      "name": "Data Pipeline",
+      "description": "Finance data acquisition and synthesis: LLM-driven synthetic profile generation, persona CSV export, and market data ingestion from yfinance/FRED/ECOS into the database.",
+      "nodeIds": [
+        "file:src/data_pipeline/generate_finance_data.py",
+        "file:src/data_pipeline/export_csv.py",
+        "file:src/data_pipeline/fetch_market_data.py"
+      ]
+    },
+    {
+      "id": "layer:agent",
+      "name": "Recommender Agent",
+      "description": "MidasAdviser RAG agent that embeds user profiles, retrieves twin personas, tax rules, and market snapshots from PostgreSQL, and asks an LLM for a financial recommendation.",
+      "nodeIds": [
+        "file:src/agent/recommender.py"
+      ]
+    },
+    {
+      "id": "layer:data",
+      "name": "Data Access & Models",
+      "description": "PostgreSQL/pgvector data layer: connectors with upsert and vector-search helpers, SQLAlchemy ORM models, and the table definitions for users, portfolios, tax rules, market data, and embedding tables.",
+      "nodeIds": [
+        "file:src/db/connector.py",
+        "file:src/db/supabase_connector.py",
+        "file:src/db/models/__init__.py",
+        "file:src/db/models/postgres_models.py",
+        "table:src/db/models/postgres_models.py:User",
+        "table:src/db/models/postgres_models.py:Portfolio",
+        "table:src/db/models/postgres_models.py:PortfolioItem",
+        "table:src/db/models/postgres_models.py:TaxRule",
+        "table:src/db/models/postgres_models.py:MarketSnapshot",
+        "table:src/db/models/postgres_models.py:LegalReference",
+        "table:src/db/models/postgres_models.py:NewsEmbedding",
+        "table:src/db/models/postgres_models.py:StrategyDoc",
+        "table:src/db/models/postgres_models.py:MacroIndicator",
+        "table:src/db/models/postgres_models.py:PersonaEmbedding"
+      ]
+    },
+    {
+      "id": "layer:database-schema",
+      "name": "Database Schema & Migrations",
+      "description": "Alembic migration environment, version scripts, the consolidated SQL schema tables, and seed data defining the PostgreSQL/pgvector database structure.",
+      "nodeIds": [
+        "file:database/migrations/postgres/env.py",
+        "file:database/migrations/postgres/script.py.mako",
+        "file:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+        "file:database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py",
+        "document:database/migrations/postgres/README",
+        "table:database/schema/postgres_schema.sql:users",
+        "table:database/schema/postgres_schema.sql:portfolios",
+        "table:database/schema/postgres_schema.sql:portfolio_items",
+        "table:database/schema/postgres_schema.sql:tax_rules",
+        "table:database/schema/postgres_schema.sql:market_snapshots",
+        "table:database/schema/postgres_schema.sql:legal_references",
+        "table:database/schema/postgres_schema.sql:news_embeddings",
+        "table:database/schema/postgres_schema.sql:strategy_docs",
+        "table:database/schema/postgres_schema.sql:macro_indicators",
+        "table:database/schema/postgres_schema.sql:persona_embeddings",
+        "table:database/schema/postgres_schema.sql:emb_passages",
+        "table:database/schema/postgres_schema.sql:emb_synthetic_queries",
+        "table:database/schema/postgres_schema.sql:emb_training_triplets",
+        "table:database/seeds/seed_tax_rules.sql:seed_tax_rules"
+      ]
+    },
+    {
+      "id": "layer:entrypoints",
+      "name": "Scripts & Entrypoints",
+      "description": "Runnable CLI entrypoints and shell scripts that drive the adviser, market/persona pipelines, data migration, local DB bootstrap, macro fetching, and exploratory notebooks.",
+      "nodeIds": [
+        "file:scripts/db_init.sh",
+        "file:scripts/migrate_data.py",
+        "file:scripts/oracle_macro.sh",
+        "file:scripts/run_agent.py",
+        "file:scripts/run_market_pipeline.py",
+        "file:scripts/run_persona_pipeline.py",
+        "file:notebooks/exploration.ipynb"
+      ]
+    },
+    {
+      "id": "layer:test",
+      "name": "Tests",
+      "description": "Unit and integration tests covering the document parser/chunker and the database helpers and MidasAdviser recommendation flow.",
+      "nodeIds": [
+        "file:tests/test_document_parser.py",
+        "file:tests/test_agent.py"
+      ]
+    },
+    {
+      "id": "layer:infrastructure-config",
+      "name": "Infrastructure & Configuration",
+      "description": "Project configuration, build manifest, Alembic config, Docker Compose PostgreSQL provisioning, and the top-level project README.",
+      "nodeIds": [
+        "document:README.md",
+        "config:alembic.ini",
+        "config:pyproject.toml",
+        "service:docker-compose.yml",
+        "service:docker-compose.yml:postgres"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "Project Overview",
+      "description": "Start with the README to understand what Midas Touch is: a Python financial/tax pipeline that fine-tunes embeddings and powers a recommendation agent, backed by PostgreSQL with pgvector. The document walks through the uv-based environment setup, the directory layout separating raw SQL schema, reusable DB connectors, and runnable scripts, and the Alembic migration workflow. Read this first to get the roadmap before diving into code.",
+      "nodeIds": [
+        "document:README.md",
+        "config:pyproject.toml"
+      ],
+      "languageLesson": "pyproject.toml is the modern Python project manifest. Here it is uv-managed: uv reads the [project] dependencies to build a locked, reproducible virtual environment, replacing requirements.txt."
+    },
+    {
+      "order": 2,
+      "title": "The Data Model",
+      "description": "Everything in the project rests on the SQLAlchemy ORM models, the highest fan-out file in the graph. It defines every table in the PostgreSQL/pgvector schema: investor Users and Portfolios, TaxRules and MarketSnapshots, plus the embedding tables (NewsEmbedding, StrategyDoc, PersonaEmbedding) that carry 1024-dimensional vectors. These classes are the shared vocabulary that the connectors, pipelines, and agent all speak.",
+      "nodeIds": [
+        "file:src/db/models/postgres_models.py",
+        "table:src/db/models/postgres_models.py:User",
+        "table:src/db/models/postgres_models.py:PersonaEmbedding",
+        "file:src/db/models/__init__.py"
+      ],
+      "languageLesson": "SQLAlchemy ORM models map Python classes to database tables via a declarative Base. The pgvector Vector column type stores embeddings natively so similarity search runs inside the database."
+    },
+    {
+      "order": 3,
+      "title": "The SQL Schema and Seeds",
+      "description": "Building on the ORM models from Step 2, the raw SQL schema is the ground truth the database is provisioned from. It declares the same users, portfolios, tax_rules and market tables, plus the vector tables whose embedding columns are HNSW-indexed for fast semantic search. The tax-rule seed file loads the baseline reference rows the recommender later relies on.",
+      "nodeIds": [
+        "table:database/schema/postgres_schema.sql:users",
+        "table:database/schema/postgres_schema.sql:persona_embeddings",
+        "table:database/schema/postgres_schema.sql:tax_rules",
+        "table:database/seeds/seed_tax_rules.sql:seed_tax_rules"
+      ],
+      "languageLesson": "An HNSW index (Hierarchical Navigable Small World) makes approximate nearest-neighbor search over pgvector columns fast, trading a small amount of recall for large speed gains on similarity queries."
+    },
+    {
+      "order": 4,
+      "title": "Database Connectors",
+      "description": "The connector module is the most depended-upon piece of plumbing in the project, tying for highest fan-in. It centralizes the PostgreSQL connection and cursor helpers and exposes upsert/query functions for users, market snapshots, tax rules, persona similarity search, and the embedding-pipeline tables. The Supabase connector reuses the same shared cursor to add vector-search helpers for news, strategy docs, and macro indicators.",
+      "nodeIds": [
+        "file:src/db/connector.py",
+        "file:src/db/supabase_connector.py"
+      ]
+    },
+    {
+      "order": 5,
+      "title": "Data Ingestion Pipelines",
+      "description": "With the data model and connectors in place, these modules fill the database. fetch_market_data pulls from yfinance, FRED, and ECOS via a MarketDataPipeline orchestrator, while generate_finance_data uses an LLM to synthesize investor profiles from CSV rows and bulk-upserts them. export_csv prepares the persona source data that downstream embedding steps consume.",
+      "nodeIds": [
+        "file:src/data_pipeline/fetch_market_data.py",
+        "file:src/data_pipeline/generate_finance_data.py",
+        "file:src/data_pipeline/export_csv.py"
+      ]
+    },
+    {
+      "order": 6,
+      "title": "Embedding Pipeline Configuration",
+      "description": "Now we reach the heart of the project. config.py is the most depended-upon file in the embedding pipeline, a set of dataclasses defining the NIM client, teacher model, hard-negative mining, query synthesis, LoRA, training, and paths, composed into one validated PipelineConfig. Every pipeline stage imports it, so understanding these knobs unlocks the rest.",
+      "nodeIds": [
+        "file:src/embedding_pipeline/config.py",
+        "file:src/embedding_pipeline/__init__.py"
+      ],
+      "languageLesson": "Python dataclasses generate boilerplate (init, repr, eq) from typed field declarations, making them ideal for layered configuration objects that are validated once and passed by reference."
+    },
+    {
+      "order": 7,
+      "title": "From Documents to Queries",
+      "description": "The first two pipeline stages turn raw text into training signal. document_parser chunks PDF, Markdown, and text financial documents into clean passages with a financial-aware recursive splitter, and query_synthesizer asks an async NVIDIA NIM LLM to generate realistic search queries for each passage, with concurrency control and validation. Together they produce the (query, positive passage) pairs that anchor the dataset.",
+      "nodeIds": [
+        "file:src/embedding_pipeline/document_parser.py",
+        "file:src/embedding_pipeline/query_synthesizer.py",
+        "file:tests/test_document_parser.py"
+      ],
+      "languageLesson": "Python async/await with bounded concurrency (e.g. a semaphore) lets the query synthesizer fire many LLM calls in flight at once while capping load on the NIM endpoint."
+    },
+    {
+      "order": 8,
+      "title": "Hard Negatives and Dataset Assembly",
+      "description": "Building on the queries from Step 7, hard_negative_miner uses a teacher SentenceTransformer plus an NV-Retriever margin filter to find tricky negative passages that are similar but wrong, with embedding caching for speed. dataset_builder then assembles query/positive/hard-negative triplets, splits them into train/eval, and serializes JSONL. These are the contrastive examples that make the fine-tuned model discriminative.",
+      "nodeIds": [
+        "file:src/embedding_pipeline/hard_negative_miner.py",
+        "file:src/embedding_pipeline/dataset_builder.py"
+      ]
+    },
+    {
+      "order": 9,
+      "title": "Pipeline Orchestration and Training",
+      "description": "pipeline.py is the conductor that runs passage loading, query synthesis, hard-negative mining, and triplet assembly end-to-end with checkpointing and optional database persistence into the emb_ tables. train.py then fine-tunes a student SentenceTransformer on the assembled triplets using MarginMSE or MultipleNegativesRanking loss, optionally with LoRA adapters, evaluated by IR metrics. This is where the embedding model is actually produced.",
+      "nodeIds": [
+        "file:src/embedding_pipeline/pipeline.py",
+        "file:src/embedding_pipeline/train.py"
+      ],
+      "languageLesson": "LoRA (Low-Rank Adaptation) freezes the base model and trains small adapter matrices, cutting the trainable parameter count by orders of magnitude so a large embedding model can be fine-tuned cheaply."
+    },
+    {
+      "order": 10,
+      "title": "The RAG Recommender Agent",
+      "description": "This is the payoff that ties the whole system together. The MidasAdviser agent embeds a user's profile, retrieves similar 'twin' personas, applicable tax rules, and market snapshots from PostgreSQL using the connectors from Step 4 and the vectors produced by the embedding pipeline, then asks an LLM for a tailored financial recommendation. The test suite exercises both the DB helpers and the full recommendation flow.",
+      "nodeIds": [
+        "file:src/agent/recommender.py",
+        "file:tests/test_agent.py"
+      ]
+    },
+    {
+      "order": 11,
+      "title": "Runnable Entry Points",
+      "description": "These CLI scripts are how a user actually drives the system. run_agent launches the MidasAdviser in one-shot or interactive questionnaire mode, run_market_pipeline and run_persona_pipeline trigger ingestion and persona-embedding population, and migrate_data backfills the PostgreSQL target from the legacy Azure SQL and Supabase sources. Start here when you want to run something.",
+      "nodeIds": [
+        "file:scripts/run_agent.py",
+        "file:scripts/run_market_pipeline.py",
+        "file:scripts/run_persona_pipeline.py",
+        "file:scripts/migrate_data.py"
+      ]
+    },
+    {
+      "order": 12,
+      "title": "Infrastructure and Migrations",
+      "description": "Finally, the operational layer. docker-compose provisions a single PostgreSQL 16 container with a persistent volume, while db_init.sh boots it and exposes it via an ngrok tunnel. Alembic's env.py and the versioned migration files (the consolidated initial schema plus the embedding-pipeline tables) keep the live database in sync with the ORM models from Step 2 as they evolve.",
+      "nodeIds": [
+        "service:docker-compose.yml",
+        "file:scripts/db_init.sh",
+        "file:database/migrations/postgres/env.py",
+        "file:database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py",
+        "config:alembic.ini"
+      ],
+      "languageLesson": "Alembic migrations version the database schema: each file has an upgrade and downgrade, chained by revision IDs, so the database can move forward or back in lockstep with the SQLAlchemy models."
+    }
+  ]
+}

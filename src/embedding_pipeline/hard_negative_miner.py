@@ -22,9 +22,9 @@ import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
 
-from .config import PipelineConfig
-from .document_parser import Passage
-from .query_synthesizer import SyntheticQuery
+from src.embedding_pipeline.config import PipelineConfig
+from src.embedding_pipeline.document_parser import Passage
+from src.embedding_pipeline.query_synthesizer import SyntheticQuery
 
 logger = logging.getLogger(__name__)
 

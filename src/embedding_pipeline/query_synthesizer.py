@@ -20,8 +20,8 @@ from typing import AsyncIterator
 
 import httpx
 
-from .config import PipelineConfig
-from .document_parser import Passage
+from src.embedding_pipeline.config import PipelineConfig
+from src.embedding_pipeline.document_parser import Passage
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +123,10 @@ class NIMClient:
         for attempt in range(max_retries):
             try:
                 async with self._semaphore:
+                    # NVIDIA NIM 무료 등급 40 RPM 한도(1.5초당 1회) 안전 보장을 위해
+                    # 발송 간격 2.0초 강제 지연 (Throttling) 적용
+                    await asyncio.sleep(2.0)
+                    
                     response = await self._client.post(
                         "/chat/completions", json=payload
                     )
@@ -131,17 +135,29 @@ class NIMClient:
                     return data["choices"][0]["message"]["content"]
 
             except httpx.HTTPStatusError as exc:
+                status_code = exc.response.status_code
+                
                 # 429 Rate Limit: 반드시 대기 후 재시도
-                if exc.response.status_code == 429:
+                if status_code == 429:
                     wait_sec = 2 ** (attempt + 2)
                     logger.warning(
                         "Rate limit 도달. %d초 대기 후 재시도 (%d/%d)",
                         wait_sec, attempt + 1, max_retries,
                     )
                     await asyncio.sleep(wait_sec)
+                    
+                # 500, 502, 503, 504 서버 일시 오류: 파이프라인 즉사 방지를 위해 지수 백오프 재시도 적용
+                elif status_code in (500, 502, 503, 504):
+                    wait_sec = 2 ** attempt
+                    logger.warning(
+                        "NVIDIA 서버 일시적 오류 [%d] 감지. %d초 대기 후 재시도 (%d/%d) | 메시지: %s",
+                        status_code, wait_sec, attempt + 1, max_retries, exc.response.text[:150]
+                    )
+                    await asyncio.sleep(wait_sec)
+                    
                 else:
                     logger.error(
-                        "HTTP 오류 [%d]: %s", exc.response.status_code, exc.response.text
+                        "HTTP 오류 [%d]: %s", status_code, exc.response.text
                     )
                     raise
 
@@ -188,9 +204,28 @@ class QuerySynthesizer:
         progress_callback: asyncio.Queue | None = None,
     ) -> list[SynthesisResult]:
         """단락 리스트 전체에 대해 비동기 병렬 쿼리 합성 및 검증."""
-        tasks = [
-            self._synthesize_single(p, progress_callback) for p in passages
-        ]
+        total = len(passages)
+        completed = 0
+        lock = asyncio.Lock()
+
+        async def _wrapped_synthesize(p: Passage) -> SynthesisResult:
+            nonlocal completed
+            res = await self._synthesize_single(p, progress_callback)
+            async with lock:
+                completed += 1
+                ratio = (completed / total) * 100
+                logger.info(
+                    "[Progress] 쿼리 합성: %d/%d 완료 (%.1f%%) | 단락 ID: %s | 생성 쿼리: %d개%s",
+                    completed,
+                    total,
+                    ratio,
+                    p.passage_id,
+                    len(res.queries),
+                    f" (에러: {res.error})" if res.error else "",
+                )
+            return res
+
+        tasks = [_wrapped_synthesize(p) for p in passages]
         results = await asyncio.gather(*tasks, return_exceptions=False)
         return list(results)
 
@@ -336,22 +371,71 @@ class QuerySynthesizer:
 
     @staticmethod
     def _extract_json_list(content: str) -> list[str]:
-        """LLM 응답에서 JSON 배열을 안전하게 추출."""
+        """
+        LLM 응답에서 JSON 배열을 안전하게 추출.
+        만약 max_tokens 도달 등으로 인해 문자열이 잘렸다면(Unclosed), 
+        끝자리를 보정하여 안전하게 파싱을 복구합니다.
+        """
+        content = content.strip()
+        # 마크다운 코드블록 제거
         content = re.sub(r"```(?:json)?\s*", "", content).strip()
         content = content.replace("```", "").strip()
 
-        # JSON 배열 패턴 추출 (첫 번째 매칭)
+        # 대괄호 '['가 아예 없으면 조기 반환
+        if '[' not in content:
+            logger.warning("응답에 JSON 배열 기호 '['가 없습니다: %s", content[:150])
+            return []
+
+        # 만약 max_tokens 도달 등의 사유로 대괄호가 닫히지 않고 잘렸을 경우 (예: ["A", "B)
+        if '[' in content and ']' not in content:
+            logger.warning("Unclosed JSON array 감지. 자동 보정 처리를 실행합니다.")
+            # 마지막 반점(',') 위치를 기준으로 자르고 대괄호를 인위적으로 닫음
+            last_comma = content.rfind(',')
+            if last_comma != -1:
+                content = content[:last_comma].strip() + '"]'
+            else:
+                # 반점이 아예 없으면 그냥 닫음
+                content = content + '"]'
+
+        # 만약 중간 글자 하나가 완전히 따옴표 도중 잘린 채 끝난 경우 (예: "조건은 무엇인)
+        # 짝이 맞지 않는 마지막 따옴표 및 따옴표 이후 텍스트 잘라내기
+        if content.count('"') % 2 != 0:
+            last_quote = content.rfind('"')
+            if last_quote != -1:
+                # 마지막 따옴표 직전까지 자르고 배열 닫음
+                content = content[:last_quote].strip()
+                # 잘라낸 위치에 따라 반점 복원
+                if not content.endswith(']'):
+                    content = content + ']'
+                # 혹시 괄호 균형이 완전히 깨졌으면 보완
+                content = re.sub(r',\s*$', '', content)
+                if not content.endswith(']'):
+                    content += '"]'
+
+        # 최종 JSON 배열 추출
         match = re.search(r"\[.*\]", content, re.DOTALL)
         if not match:
-            logger.warning("JSON 배열을 찾을 수 없음. 응답: %s", content[:200])
+            logger.warning("JSON 배열을 찾을 수 없음. 응답: %s", content[:150])
             return []
 
         try:
-            parsed = json.loads(match.group())
+            # 괄호 짝이나 따옴표 에러 보정용 2차 복구 시도
+            json_str = match.group().strip()
+            
+            # 혹시 마감 기호가 꼬인 케이스 정제
+            if not json_str.endswith(']'):
+                json_str += ']'
+            
+            parsed = json.loads(json_str)
             if isinstance(parsed, list):
                 return [str(q).strip() for q in parsed if isinstance(q, str)]
         except json.JSONDecodeError as exc:
-            logger.warning("JSON 파싱 실패: %s", exc)
+            logger.warning("JSON 1차 파싱 실패, 정규식 기반 수동 구문 복구를 시도합니다: %s", exc)
+            # 수동 정규식 파싱 시도 (따옴표 내 텍스트만 긁어모으기)
+            quotes_find = re.findall(r'"([^"\\]*(?:\\.[^"\\]*)*)"', json_str)
+            if quotes_find:
+                logger.info("정규식 수동 쿼리 복구 성공: %d개 추출", len(quotes_find))
+                return [q.strip() for q in quotes_find if len(q.strip()) > 3]
 
         return []
 
