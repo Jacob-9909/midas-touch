@@ -61,10 +61,21 @@ class PassageLoader:
         self._paths = config.paths
         self._parser = DocumentParser(config)
 
-    def load(self) -> list[Passage]:
+    def load(self, single_file_path: Path | None = None) -> list[Passage]:
         """
-        원천 디렉토리에서 문서를 로드하고 파싱 및 청킹.
+        원천 디렉토리 또는 특정 단일 파일에서 문서를 로드하고 파싱 및 청킹.
         """
+        # 단일 파일 모드인 경우
+        if single_file_path is not None:
+            if not single_file_path.exists():
+                raise FileNotFoundError(
+                    f"지정한 단일 금융 문서 파일을 찾을 수 없습니다: {single_file_path.absolute()}"
+                )
+            logger.info("단일 파일 모드 활성화: %s 파싱 시작", single_file_path.name)
+            passages = self._parser.parse_file(single_file_path)
+            logger.info("단일 파일 [%s] 파싱 완료: %d개 단락 수집", single_file_path.name, len(passages))
+            return passages
+
         # 이미 전처리된 단락 파일이 있으면 재사용 (체크포인트)
         if self._paths.passages_jsonl.exists():
             logger.info(
@@ -212,51 +223,53 @@ class EmbeddingDatasetPipeline:
         self,
         force_rerun_stages: list[str] | None = None,
         persist_db: bool = True,
+        single_file_path: Path | None = None,
     ) -> dict:
         """
         전체 파이프라인 실행.
-
+ 
         Args:
             persist_db: True이면 각 단계 결과를 PostgreSQL에도 적재.
+            single_file_path: 특정 단일 파일만 파싱하여 돌릴 경우 사용.
         """
         force = set(force_rerun_stages or [])
         total_start = time.perf_counter()
-
+ 
         logger.info("=" * 60)
         logger.info("금융 임베딩 데이터셋 생성 파이프라인 시작")
         logger.info("=" * 60)
-
+ 
         # ── 1단계: 단락 로드 (PDF, TXT, MD 대응) ─────────────────────
-        passages = self._run_stage_passage_loading()
+        passages = self._run_stage_passage_loading(single_file_path)
         if not passages:
             logger.warning("로드된 금융 단락이 전혀 없습니다. 데이터를 raw_documents 에 배치해 주세요.")
             return {"error": "No data found"}
-
+ 
         if persist_db:
             self._db_persist_passages(passages)
-
+ 
         # ── 2단계: 쿼리 합성 및 2차 검증 (비동기) ───────────────────
         queries = await self._run_stage_query_synthesis(passages, force)
         if not queries:
             logger.error("합성된 유효 쿼리가 전혀 없습니다. NIM 설정을 확인해 주세요.")
             return {"error": "Query synthesis failed or all filtered"}
-
+ 
         if persist_db:
             self._db_persist_queries(queries)
-
+ 
         # ── 3단계: 하드 네거티브 마이닝 (OOM 보호 연산) ─────────────
         mining_results, mining_stats = self._run_stage_hard_negative_mining(
             passages, queries, force
         )
-
+ 
         # ── 4단계: 삼중쌍 조립 + 저장 (Margin 스코어 보존) ──────────
         dataset_stats, train_triplets, eval_triplets = self._run_stage_dataset_assembly(
             queries, mining_results
         )
-
+ 
         if persist_db:
             self._db_persist_triplets(train_triplets, eval_triplets)
-
+ 
         total_elapsed = time.perf_counter() - total_start
         summary = {
             "total_passages": len(passages),
@@ -265,22 +278,22 @@ class EmbeddingDatasetPipeline:
             "dataset_stats": dataset_stats,
             "total_elapsed_sec": round(total_elapsed, 2),
         }
-
+ 
         logger.info("=" * 60)
         logger.info("파이프라인 완료! 총 소요 시간: %.1f초", total_elapsed)
         logger.info("최종 학습 데이터셋: %s", self._cfg.paths.train_dataset_jsonl.absolute())
         logger.info("최종 평가 데이터셋: %s", self._cfg.paths.eval_dataset_jsonl.absolute())
         logger.info("=" * 60)
-
+ 
         return summary
-
+ 
     # ------------------------------------------------------------------
     # 단계별 메서드
     # ------------------------------------------------------------------
-    def _run_stage_passage_loading(self) -> list[Passage]:
+    def _run_stage_passage_loading(self, single_file_path: Path | None = None) -> list[Passage]:
         logger.info("[1/4] 금융 문서 로드 및 청킹 시작...")
         loader = PassageLoader(self._cfg)
-        passages = loader.load()
+        passages = loader.load(single_file_path)
         logger.info("[1/4] 단락 로드 완료: %d개", len(passages))
         return passages
 
@@ -292,11 +305,15 @@ class EmbeddingDatasetPipeline:
         logger.info("[2/4] 쿼리 합성 및 2차 LLM 품질 검증 시작...")
         stage = "query_synthesis"
 
-        # 체크포인트 확인
+        existing_queries: list[SyntheticQuery] = []
+        completed_passage_ids: set[str] = set()
+        checkpoint_path = self._ckpt._dir / f"{stage}.jsonl"
+
+        # 체크포인트 확인 및 부분적 로드 지원
         if stage not in force and self._ckpt.exists(stage):
             raw_rows = self._ckpt.load(stage)
             if raw_rows:
-                queries = [
+                existing_queries = [
                     SyntheticQuery(
                         query_id=r["query_id"],
                         passage_id=r["passage_id"],
@@ -306,32 +323,58 @@ class EmbeddingDatasetPipeline:
                     )
                     for r in raw_rows
                 ]
-                logger.info("[2/4] 체크포인트에서 쿼리 로드: %d개", len(queries))
-                return queries
+                completed_passage_ids = {q.passage_id for q in existing_queries}
+                logger.info(
+                    "[2/4] 체크포인트 로드 완료: 기존 쿼리 %d개 (단락 %d개 완료)",
+                    len(existing_queries), len(completed_passage_ids)
+                )
 
-        # LLM 쿼리 합성 실행
+        # 전체 단락과 비교하여 아직 처리되지 않은 단락 필터링 및 현재 실행에서의 진행도 계산
+        completed_in_current_run = [p for p in passages if p.passage_id in completed_passage_ids]
+        num_completed = len(completed_in_current_run)
+        remaining_passages = [p for p in passages if p.passage_id not in completed_passage_ids]
+
+        if not remaining_passages:
+            logger.info("[2/4] 모든 단락이 이미 체크포인트에 존재하여 합성을 건너뜁니다.")
+            return existing_queries
+
+        if num_completed > 0:
+            logger.info(
+                "[2/4] 일부 진행 내역 발견: 이 문서의 총 %d개 단락 중 %d개 완료. 남은 %d개 단락에 대해 합성을 계속합니다.",
+                len(passages), num_completed, len(remaining_passages)
+            )
+        else:
+            logger.info("[2/4] 진행 내역 없음. 총 %d개 단락 전체에 대해 합성을 시작합니다.", len(passages))
+
+        # LLM 쿼리 합성 실행 (남은 단락들만 처리)
         stage_start = time.perf_counter()
         async with QuerySynthesizer(self._cfg) as synth:
-            results = await synth.synthesize_batch(passages)
+            results = await synth.synthesize_batch_incremental(
+                remaining_passages,
+                checkpoint_path=checkpoint_path,
+                start_index=num_completed,
+                total_count=len(passages),
+            )
 
         # 실패 통계 로깅
         failed = [r for r in results if r.error]
         if failed:
-            logger.warning("%d개 단락 합성 실패", len(failed))
+            logger.warning("%d개 단락 합성 실패 (재실행 시 자동으로 다시 시도됩니다)", len(failed))
 
-        queries = [
+        # 새로 생성된 쿼리 추출
+        new_queries = [
             q for result in results for q in result.queries
         ]
+        
+        # 전체 쿼리 합치기
+        all_queries = existing_queries + new_queries
+        
         logger.info(
-            "[2/4] 쿼리 합성 완료: %d개 (%.1fs)",
-            len(queries), time.perf_counter() - stage_start,
+            "[2/4] 쿼리 합성 완료: 신규 %d개 (총 %d개) | 소요 시간: %.1fs",
+            len(new_queries), len(all_queries), time.perf_counter() - stage_start,
         )
 
-        # 체크포인트 저장
-        rows = synthesis_results_to_jsonl(results)
-        self._ckpt.save(stage, rows)
-
-        return queries
+        return all_queries
 
     def _run_stage_hard_negative_mining(
         self,
@@ -499,9 +542,15 @@ class EmbeddingDatasetPipeline:
 # ---------------------------------------------------------------------------
 async def main() -> None:
     import argparse
-
+ 
     parser = argparse.ArgumentParser(
         description="금융 특화 임베딩 대조 학습 데이터셋 생성 파이프라인"
+    )
+    parser.add_argument(
+        "--file",
+        type=str,
+        default=None,
+        help="raw_documents 폴더 내의 특정 단일 파일명 (예: financial_report.pdf)",
     )
     parser.add_argument(
         "--force-rerun",
@@ -516,24 +565,37 @@ async def main() -> None:
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
     )
     args = parser.parse_args()
-
+ 
     setup_logging(args.log_level)
-
+ 
     config = DEFAULT_CONFIG
     try:
         config.validate()
     except ValueError as exc:
         logger.error("설정 검증 실패: %s", exc)
         raise SystemExit(1) from exc
-
+ 
+    single_file = None
+    if args.file:
+        raw_dir = config.paths.raw_documents_dir
+        # raw_documents_dir 내부에서 먼저 검색
+        possible_path = raw_dir / Path(args.file)
+        if possible_path.exists():
+            single_file = possible_path
+        else:
+            single_file = Path(args.file)
+ 
     pipeline = EmbeddingDatasetPipeline(config)
-    summary = await pipeline.run(force_rerun_stages=args.force_rerun)
-
+    summary = await pipeline.run(
+        force_rerun_stages=args.force_rerun,
+        single_file_path=single_file
+    )
+ 
     print("\n" + "=" * 50)
     print("파이프라인 완료 요약")
     print("=" * 50)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-
-
+ 
+ 
 if __name__ == "__main__":
     asyncio.run(main())

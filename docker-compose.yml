@@ -12,5 +12,23 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  neo4j:
+    image: neo4j:5.20.0-community
+    container_name: midas-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474" # HTTP Web Console
+      - "7687:7687" # Bolt binary protocol
+    environment:
+      - NEO4J_AUTH=neo4j/PG_develop_2026_Secure
+      - NEO4J_PLUGINS=["apoc"]
+    volumes:
+      - neo4j_data:/data
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+
 volumes:
   postgres_data:
+  neo4j_data:
+  neo4j_import:
+  neo4j_plugins:

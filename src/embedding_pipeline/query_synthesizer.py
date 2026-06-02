@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from pathlib import Path
 import re
 import time
 from dataclasses import dataclass, field
@@ -75,7 +76,7 @@ def _classify_query_type(query_text: str) -> str:
 class NIMClient:
     """
     NVIDIA NIM OpenAI-compatible API 비동기 클라이언트.
-    재시도 로직 + 지수 백오프 포함.
+    재시도 로직 + 동적 딜레이 제어 및 지수 백오프 포함.
     """
 
     def __init__(self, config: PipelineConfig) -> None:
@@ -86,6 +87,7 @@ class NIMClient:
         }
         self._client: httpx.AsyncClient | None = None
         self._semaphore = asyncio.Semaphore(self._cfg.max_concurrent_requests)
+        self.base_delay = 2.0  # 기본 강제 지연시간 초기값 (초)
 
     async def __aenter__(self) -> "NIMClient":
         self._client = httpx.AsyncClient(
@@ -105,7 +107,7 @@ class NIMClient:
         user_prompt: str,
         max_retries: int = 3,
     ) -> str:
-        """단일 chat completion 요청. 실패 시 지수 백오프 재시도."""
+        """단일 chat completion 요청. 실패 시 지수 백오프 재시도 및 동적 지연 조절."""
         if self._client is None:
             raise RuntimeError("NIMClient를 async context manager로 사용하세요.")
 
@@ -123,26 +125,37 @@ class NIMClient:
         for attempt in range(max_retries):
             try:
                 async with self._semaphore:
-                    # NVIDIA NIM 무료 등급 40 RPM 한도(1.5초당 1회) 안전 보장을 위해
-                    # 발송 간격 2.0초 강제 지연 (Throttling) 적용
-                    await asyncio.sleep(2.0)
+                    # 동적 지연 적용 (Rate Limit 발생 시 서서히 증가, 성공 시 서서히 감소)
+                    await asyncio.sleep(self.base_delay)
                     
                     response = await self._client.post(
                         "/chat/completions", json=payload
                     )
                     response.raise_for_status()
                     data = response.json()
+                    
+                    # 성공 시 지연 시간 서서히 감소 (최소 2.0초)
+                    if self.base_delay > 2.0:
+                        old_delay = self.base_delay
+                        self.base_delay = max(self.base_delay - 0.2, 2.0)
+                        logger.info(
+                            "요청 성공: 지연 시간을 %s초에서 %s초로 서서히 줄입니다.",
+                            f"{old_delay:.2f}", f"{self.base_delay:.2f}"
+                        )
+                        
                     return data["choices"][0]["message"]["content"]
 
             except httpx.HTTPStatusError as exc:
                 status_code = exc.response.status_code
                 
-                # 429 Rate Limit: 반드시 대기 후 재시도
+                # 429 Rate Limit: 지연시간 동적 증가 + 백오프 대기 후 재시도
                 if status_code == 429:
+                    old_delay = self.base_delay
+                    self.base_delay = min(self.base_delay + 2.0, 15.0)  # 최대 15초까지 증가
                     wait_sec = 2 ** (attempt + 2)
                     logger.warning(
-                        "Rate limit 도달. %d초 대기 후 재시도 (%d/%d)",
-                        wait_sec, attempt + 1, max_retries,
+                        "Rate limit (429) 감지: 요청 간 지연 시간을 %s초에서 %s초로 동적으로 늘립니다. %d초 대기 후 재시도 (%d/%d)",
+                        f"{old_delay:.2f}", f"{self.base_delay:.2f}", wait_sec, attempt + 1, max_retries
                     )
                     await asyncio.sleep(wait_sec)
                     
@@ -227,6 +240,82 @@ class QuerySynthesizer:
 
         tasks = [_wrapped_synthesize(p) for p in passages]
         results = await asyncio.gather(*tasks, return_exceptions=False)
+        return list(results)
+
+    async def synthesize_batch_incremental(
+        self,
+        passages: list[Passage],
+        checkpoint_path: Path,
+        start_index: int = 0,
+        total_count: int = 0,
+    ) -> list[SynthesisResult]:
+        """
+        단락 리스트 전체에 대해 비동기 병렬 쿼리 합성을 진행하면서, 
+        완료될 때마다 실시간으로 체크포인트 파일에 추가 저장하고 진행률을 시각화합니다.
+        """
+        total_remaining = len(passages)
+        if total_remaining == 0:
+            return []
+
+        if total_count == 0:
+            total_count = total_remaining
+
+        completed = start_index
+        success_count = 0
+        fail_count = 0
+        
+        lock = asyncio.Lock()
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+
+        from tqdm.asyncio import tqdm
+        pbar = tqdm(total=total_count, initial=start_index, desc="[LLM 쿼리 합성 진행]")
+
+        async def _wrapped_synthesize(p: Passage) -> SynthesisResult:
+            nonlocal completed, success_count, fail_count
+            res = await self._synthesize_single(p, None)
+            
+            async with lock:
+                completed += 1
+                pbar.update(1)
+                
+                if res.error:
+                    fail_count += 1
+                else:
+                    success_count += 1
+                    # 실시간 체크포인트 파일에 즉시 쿼리 추가 저장
+                    if res.queries:
+                        try:
+                            with open(checkpoint_path, "a", encoding="utf-8") as f:
+                                for q in res.queries:
+                                    row = {
+                                        "query_id": q.query_id,
+                                        "passage_id": q.passage_id,
+                                        "query_text": q.query_text,
+                                        "query_type": q.query_type,
+                                        "source_passage": q.source_passage,
+                                        "elapsed_sec": res.elapsed_sec,
+                                    }
+                                    f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                        except Exception as exc:
+                            logger.error("실시간 체크포인트 추가 기록 실패: %s", exc)
+
+                ratio = (completed / total_count) * 100
+                logger.info(
+                    "[Progress] 쿼리 합성: %d/%d 완료 (%.1f%%) | 성공: %d, 실패: %d | 단락 ID: %s | 생성 쿼리: %d개%s",
+                    completed,
+                    total_count,
+                    ratio,
+                    success_count,
+                    fail_count,
+                    p.passage_id,
+                    len(res.queries),
+                    f" (에러: {res.error})" if res.error else "",
+                )
+            return res
+
+        tasks = [_wrapped_synthesize(p) for p in passages]
+        results = await asyncio.gather(*tasks, return_exceptions=False)
+        pbar.close()
         return list(results)
 
     async def synthesize_stream(
