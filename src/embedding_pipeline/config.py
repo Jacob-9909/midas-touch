@@ -242,19 +242,33 @@ class PathConfig:
 
     # 원천 금융 문서 디렉토리
     raw_documents_dir: Path = Path("./data/raw_documents")
+    
+    # 개별 파일별 격리 폴더 명
+    sub_dir: str | None = None
 
-    # 전처리된 단락 저장 경로
-    passages_jsonl: Path = Path("./data/processed/passages.jsonl")
+    @property
+    def base_dir(self) -> Path:
+        return Path("./data") / self.sub_dir if self.sub_dir else Path("./data")
 
-    # 합성 쿼리 저장 경로
-    synthetic_queries_jsonl: Path = Path("./data/processed/synthetic_queries.jsonl")
+    @property
+    def passages_jsonl(self) -> Path:
+        return self.base_dir / "processed" / "passages.jsonl"
 
-    # 최종 학습 데이터셋 경로
-    train_dataset_jsonl: Path = Path("./data/dataset/train_triplets.jsonl")
-    eval_dataset_jsonl: Path = Path("./data/dataset/eval_triplets.jsonl")
+    @property
+    def synthetic_queries_jsonl(self) -> Path:
+        return self.base_dir / "processed" / "synthetic_queries.jsonl"
 
-    # 체크포인트 경로 (파이프라인 중단 후 재개용)
-    checkpoint_dir: Path = Path("./data/checkpoints")
+    @property
+    def train_dataset_jsonl(self) -> Path:
+        return self.base_dir / "dataset" / "train_triplets.jsonl"
+
+    @property
+    def eval_dataset_jsonl(self) -> Path:
+        return self.base_dir / "dataset" / "eval_triplets.jsonl"
+
+    @property
+    def checkpoint_dir(self) -> Path:
+        return self.base_dir / "checkpoints"
 
     def ensure_dirs(self) -> None:
         """필요한 디렉토리를 모두 생성."""

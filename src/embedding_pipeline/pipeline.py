@@ -584,6 +584,15 @@ async def main() -> None:
             single_file = possible_path
         else:
             single_file = Path(args.file)
+            
+        # 파일명 기준 개별 폴더 격리 설정을 위해 config 복사/교체
+        import unicodedata
+        from dataclasses import replace
+        from src.embedding_pipeline.config import PathConfig
+        file_stem = unicodedata.normalize('NFC', single_file.stem)
+        config = replace(config, paths=PathConfig(sub_dir=file_stem))
+        # 변경된 격리 디렉토리 생성 보장
+        config.paths.ensure_dirs()
  
     pipeline = EmbeddingDatasetPipeline(config)
     summary = await pipeline.run(

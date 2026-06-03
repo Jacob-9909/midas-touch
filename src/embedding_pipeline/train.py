@@ -51,18 +51,67 @@ def set_seed(seed: int) -> None:
 def load_train_eval_datasets(
     config: PipelineConfig,
 ) -> tuple[Dataset, list[Triplet]]:
-    """저장된 JSONL에서 학습/평가 데이터셋 로드."""
-    train_path = config.paths.train_dataset_jsonl
-    eval_path = config.paths.eval_dataset_jsonl
+    """PostgreSQL 데이터베이스(또는 저장된 JSONL)에서 학습/평가 데이터셋 로드."""
+    train_triplets = []
+    eval_triplets = []
 
-    if not train_path.exists():
-        raise FileNotFoundError(
-            f"학습 데이터셋을 찾을 수 없습니다: {train_path}\n"
-            "pipeline.py를 먼저 실행하세요."
-        )
+    # 1. PostgreSQL DB에서 직접 로드 시도 (특정 sub_dir 격리가 지정되지 않았을 때만 DB 전체 로드 수행)
+    try:
+        if config.paths.sub_dir:
+            raise ValueError("특정 파일 격리 모드이므로 로컬 JSONL 경로에서 데이터를 로드합니다.")
+            
+        from src.db.connector import db_cursor
+        logger.info("PostgreSQL 데이터베이스(emb_training_triplets)에서 학습 데이터셋 조회 시도 중...")
+        with db_cursor() as (_, cursor):
+            cursor.execute("""
+                SELECT triplet_id, query_id, query_text, 
+                       positive_passage_id, positive_text, 
+                       negative_passage_id, negative_text, 
+                       query_type, negative_similarity_score, positive_similarity_score, margin, split
+                FROM emb_training_triplets
+            """)
+            rows = cursor.fetchall()
+            
+            for row in rows:
+                triplet = Triplet(
+                    triplet_id=row[0],
+                    query_id=row[1],
+                    query_text=row[2],
+                    positive_passage_id=row[3],
+                    positive_text=row[4],
+                    negative_passage_id=row[5],
+                    negative_text=row[6],
+                    query_type=row[7],
+                    negative_similarity_score=float(row[8]),
+                    positive_similarity_score=float(row[9]),
+                    margin=float(row[10]),
+                )
+                if row[11] == "eval":
+                    eval_triplets.append(triplet)
+                else:
+                    train_triplets.append(triplet)
+            
+            logger.info("DB 로드 성공! 총 %d개 삼중쌍 획득 (train=%d, eval=%d)", 
+                        len(rows), len(train_triplets), len(eval_triplets))
+    except Exception as exc:
+        logger.warning("PostgreSQL DB에서 데이터셋 조회 실패, 로컬 JSONL 폴백 실행: %s", exc)
+        train_triplets.clear()
+        eval_triplets.clear()
 
-    train_triplets = DatasetIO.load_jsonl(train_path)
-    eval_triplets = DatasetIO.load_jsonl(eval_path)
+    # 2. DB 조회 실패 또는 비어있을 시 로컬 JSONL 파일에서 로드 (폴백)
+    if not train_triplets:
+        train_path = config.paths.train_dataset_jsonl
+        eval_path = config.paths.eval_dataset_jsonl
+
+        if not train_path.exists():
+            raise FileNotFoundError(
+                f"학습 데이터셋을 찾을 수 없습니다 (DB가 비어있고 로컬 파일도 없음): {train_path}\n"
+                "pipeline.py를 먼저 실행하세요."
+            )
+
+        logger.info("로컬 JSONL 파일에서 데이터셋 로드 중: %s", train_path)
+        train_triplets = DatasetIO.load_jsonl(train_path)
+        eval_triplets = DatasetIO.load_jsonl(eval_path)
 
     # 설정된 손실 함수 타입에 따라 적절한 딕셔너리로 학습 데이터 매핑
     loss_type = config.training.loss_type
@@ -281,6 +330,12 @@ def main() -> None:
         action="store_true",
         help="학습 없이 데이터셋 로드 및 평가기 구성만 테스트",
     )
+    parser.add_argument(
+        "--file",
+        type=str,
+        default=None,
+        help="특정 문서에 대한 로컬 데이터셋만 학습할 경우 파일명 지정",
+    )
     args = parser.parse_args()
 
     setup_logging(args.log_level)
@@ -291,6 +346,13 @@ def main() -> None:
     except ValueError as exc:
         logger.error("설정 검증 실패: %s", exc)
         raise SystemExit(1) from exc
+
+    if args.file:
+        import unicodedata
+        from dataclasses import replace
+        from src.embedding_pipeline.config import PathConfig
+        file_stem = unicodedata.normalize('NFC', Path(args.file).stem)
+        config = replace(config, paths=PathConfig(sub_dir=file_stem))
 
     if args.test_only:
         logger.info("테스트 모드: 데이터셋 로드만 수행합니다.")

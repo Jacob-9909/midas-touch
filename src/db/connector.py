@@ -377,9 +377,10 @@ def search_similar_personas_db(embedding: list[float], top_k: int = 3) -> list[d
 def bulk_upsert_emb_passages(passages: list[dict[str, Any]]) -> int:
     """Upsert parsed document passages into emb_passages. Returns count."""
     import json as _json
+    from psycopg2.extras import execute_values
     sql = """
     INSERT INTO emb_passages (passage_id, text, source, metadata)
-    VALUES (%s, %s, %s, %s)
+    VALUES %s
     ON CONFLICT (passage_id) DO UPDATE SET
         text     = EXCLUDED.text,
         source   = EXCLUDED.source,
@@ -395,15 +396,16 @@ def bulk_upsert_emb_passages(passages: list[dict[str, Any]]) -> int:
             )
             for p in passages
         ]
-        cursor.executemany(sql, params)
+        execute_values(cursor, sql, params)
     return len(passages)
 
 
 def bulk_upsert_emb_queries(queries: list[dict[str, Any]]) -> int:
     """Upsert synthetic queries into emb_synthetic_queries. Returns count."""
+    from psycopg2.extras import execute_values
     sql = """
     INSERT INTO emb_synthetic_queries (query_id, passage_id, query_text, query_type, source_passage)
-    VALUES (%s, %s, %s, %s, %s)
+    VALUES %s
     ON CONFLICT (query_id) DO UPDATE SET
         query_text     = EXCLUDED.query_text,
         query_type     = EXCLUDED.query_type,
@@ -420,12 +422,13 @@ def bulk_upsert_emb_queries(queries: list[dict[str, Any]]) -> int:
             )
             for q in queries
         ]
-        cursor.executemany(sql, params)
+        execute_values(cursor, sql, params)
     return len(queries)
 
 
 def bulk_upsert_emb_triplets(triplets: list[dict[str, Any]], split: str) -> int:
     """Upsert training/eval triplets into emb_training_triplets. Returns count."""
+    from psycopg2.extras import execute_values
     sql = """
     INSERT INTO emb_training_triplets (
         triplet_id, query_id, query_text,
@@ -433,7 +436,7 @@ def bulk_upsert_emb_triplets(triplets: list[dict[str, Any]], split: str) -> int:
         negative_passage_id, negative_text,
         query_type, negative_similarity_score, positive_similarity_score, margin,
         split
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ) VALUES %s
     ON CONFLICT (triplet_id) DO UPDATE SET
         negative_similarity_score = EXCLUDED.negative_similarity_score,
         positive_similarity_score = EXCLUDED.positive_similarity_score,
@@ -458,5 +461,5 @@ def bulk_upsert_emb_triplets(triplets: list[dict[str, Any]], split: str) -> int:
             )
             for t in triplets
         ]
-        cursor.executemany(sql, params)
+        execute_values(cursor, sql, params)
     return len(triplets)
