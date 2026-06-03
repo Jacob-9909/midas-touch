@@ -46,7 +46,7 @@ class NIMOpenAI(OpenAI):
         super().__init__(*args, **kwargs)
         # 동적 딜레이 조절을 위한 상태 변수
         self._min_delay = float(os.environ.get("NIM_GRAPH_DELAY", "2.0"))
-        self.current_delay = self._min_delay
+        self._current_delay = self._min_delay
         self._backoff_step = 2.0  # 429 발생 시 증가할 초 단위
         self._decay_step = 0.2    # 성공 시 점진적으로 감소할 초 단위
 
@@ -62,29 +62,29 @@ class NIMOpenAI(OpenAI):
         )
 
     def _apply_delay(self) -> None:
-        if self.current_delay > 0:
-            logger.info("[NIM API] 동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self.current_delay)
-            time.sleep(self.current_delay)
+        if self._current_delay > 0:
+            logger.info("[NIM API] 동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self._current_delay)
+            time.sleep(self._current_delay)
 
     async def _apply_adelay(self) -> None:
-        if self.current_delay > 0:
-            logger.info("[NIM API] 비동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self.current_delay)
-            await asyncio.sleep(self.current_delay)
+        if self._current_delay > 0:
+            logger.info("[NIM API] 비동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self._current_delay)
+            await asyncio.sleep(self._current_delay)
 
     def _handle_success(self) -> None:
         # 성공 시 딜레이를 점진적으로 최소 딜레이 방향으로 감쇠(Decay)
-        if self.current_delay > self._min_delay:
-            old_delay = self.current_delay
-            self.current_delay = max(self._min_delay, self.current_delay - self._decay_step)
-            logger.info("[NIM API] 호출 성공! 동적 딜레이 감쇠 적용: %.2f초 -> %.2f초", old_delay, self.current_delay)
+        if self._current_delay > self._min_delay:
+            old_delay = self._current_delay
+            self._current_delay = max(self._min_delay, self._current_delay - self._decay_step)
+            logger.info("[NIM API] 호출 성공! 동적 딜레이 감쇠 적용: %.2f초 -> %.2f초", old_delay, self._current_delay)
 
     def _handle_rate_limit(self) -> None:
         # 429 에러 발생 시 동적으로 딜레이를 늘림 (가산 증가)
-        old_delay = self.current_delay
-        self.current_delay = self.current_delay + self._backoff_step
+        old_delay = self._current_delay
+        self._current_delay = self._current_delay + self._backoff_step
         logger.warning(
             "⚠️ [NIM API] Rate Limit (429) 감지! 동적 딜레이를 늘립니다: %.2f초 -> %.2f초",
-            old_delay, self.current_delay
+            old_delay, self._current_delay
         )
 
     # 동기 메소드 오버라이딩 인터셉트

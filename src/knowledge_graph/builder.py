@@ -53,7 +53,7 @@ class NIMOpenAI(OpenAI):
         super().__init__(*args, **kwargs)
         # 동적 딜레이 조절을 위한 상태 변수
         self._min_delay = float(os.environ.get("NIM_GRAPH_DELAY", "2.0"))
-        self.current_delay = self._min_delay
+        self._current_delay = self._min_delay
         self._backoff_step = 2.0  # 429 발생 시 증가할 초 단위
         self._decay_step = 0.2    # 성공 시 점진적으로 감소할 초 단위
 
@@ -69,29 +69,29 @@ class NIMOpenAI(OpenAI):
         )
 
     def _apply_delay(self) -> None:
-        if self.current_delay > 0:
-            logger.info("[NIM API] 동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self.current_delay)
-            time.sleep(self.current_delay)
+        if self._current_delay > 0:
+            logger.info("[NIM API] 동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self._current_delay)
+            time.sleep(self._current_delay)
 
     async def _apply_adelay(self) -> None:
-        if self.current_delay > 0:
-            logger.info("[NIM API] 비동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self.current_delay)
-            await asyncio.sleep(self.current_delay)
+        if self._current_delay > 0:
+            logger.info("[NIM API] 비동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self._current_delay)
+            await asyncio.sleep(self._current_delay)
 
     def _handle_success(self) -> None:
         # 성공 시 딜레이를 점진적으로 최소 딜레이 방향으로 감쇠(Decay)
-        if self.current_delay > self._min_delay:
-            old_delay = self.current_delay
-            self.current_delay = max(self._min_delay, self.current_delay - self._decay_step)
-            logger.info("[NIM API] 호출 성공! 동적 딜레이 감쇠 적용: %.2f초 -> %.2f초", old_delay, self.current_delay)
+        if self._current_delay > self._min_delay:
+            old_delay = self._current_delay
+            self._current_delay = max(self._min_delay, self._current_delay - self._decay_step)
+            logger.info("[NIM API] 호출 성공! 동적 딜레이 감쇠 적용: %.2f초 -> %.2f초", old_delay, self._current_delay)
 
     def _handle_rate_limit(self) -> None:
         # 429 에러 발생 시 동적으로 딜레이를 늘림 (가산 증가)
-        old_delay = self.current_delay
-        self.current_delay = self.current_delay + self._backoff_step
+        old_delay = self._current_delay
+        self._current_delay = self._current_delay + self._backoff_step
         logger.warning(
             "⚠️ [NIM API] Rate Limit (429) 감지! 동적 딜레이를 늘립니다: %.2f초 -> %.2f초",
-            old_delay, self.current_delay
+            old_delay, self._current_delay
         )
 
     # 동기 메소드 오버라이딩 인터셉트
@@ -201,41 +201,45 @@ def setup_llamaindex_settings() -> tuple[NIMOpenAI, HuggingFaceEmbedding]:
 
 
 def load_passages_as_documents() -> list[Document]:
-    """processed/passages.jsonl에서 금융 지침서 단락들을 읽어 LlamaIndex Document로 변환."""
-    passages_path = project_root / "data" / "processed" / "passages.jsonl"
-    if not passages_path.exists():
-        raise FileNotFoundError(
-            f"전처리된 금융 단락 파일을 찾을 수 없습니다: {passages_path.absolute()}\n"
-            "먼저 'uv run python -m src.embedding_pipeline.pipeline'을 실행해 단락들을 수집하세요."
-        )
-
-    logger.info("전처리된 금융 단락 파일 로드 중: %s", passages_path)
+    """PostgreSQL 데이터베이스(emb_passages)에서 금융 지침서 단락들을 읽어 LlamaIndex Document로 변환."""
+    logger.info("PostgreSQL 데이터베이스(emb_passages)에서 금융 단락 로드 중...")
     documents = []
-    with open(passages_path, "r", encoding="utf-8") as f:
-        for line_no, line in enumerate(f, start=1):
-            line = line.strip()
-            if not line:
-                continue
-            data = json.loads(line)
+    
+    try:
+        from src.db.connector import db_cursor
+        with db_cursor() as (_, cursor):
+            cursor.execute("SELECT passage_id, text, source, metadata FROM emb_passages;")
+            rows = cursor.fetchall()
             
-            # 메타데이터 구성
-            metadata = {
-                "passage_id": data["passage_id"],
-                "source": data.get("source", "unknown"),
-                "file_type": data.get("file_type", "txt"),
-                "chunk_index": data.get("chunk_index", 0),
-            }
-            
-            # LlamaIndex Document 생성
-            doc = Document(
-                text=data["text"],
-                id_=data["passage_id"],
-                metadata=metadata,
-                excluded_embed_metadata_keys=["passage_id"],
-                excluded_llm_metadata_keys=["passage_id"],
-            )
-            documents.append(doc)
-            
+            for row in rows:
+                p_id, text, source, meta_json = row
+                
+                if isinstance(meta_json, str):
+                    meta = json.loads(meta_json)
+                else:
+                    meta = meta_json or {}
+                
+                # 메타데이터 구성
+                metadata = {
+                    "passage_id": p_id,
+                    "source": source,
+                    "file_type": meta.get("file_type", "txt"),
+                    "chunk_index": meta.get("chunk_index", 0),
+                }
+                
+                # LlamaIndex Document 생성
+                doc = Document(
+                    text=text,
+                    id_=p_id,
+                    metadata=metadata,
+                    excluded_embed_metadata_keys=["passage_id"],
+                    excluded_llm_metadata_keys=["passage_id"],
+                )
+                documents.append(doc)
+    except Exception as exc:
+        logger.error("DB에서 passages 로드 중 오류 발생: %s", exc)
+        raise
+        
     logger.info("총 %d개의 금융 문서 단락 로드 완료.", len(documents))
     return documents
 
@@ -352,24 +356,44 @@ def build_knowledge_graph(llm: OpenAI, documents: list[Document]) -> None:
     
     extractors = [schema_extractor]
 
-    # 3. PropertyGraphIndex 빌드 및 Neo4j 적재
-    logger.info("지식 그래프 구축 및 Neo4j 추가 적재 시작 (%d개 단락)...", len(documents))
-    start_time = time.perf_counter()
-    
-    # 기존 Neo4j 데이터를 초기화하지 않고 그대로 추가 적재(Append)합니다.
+    # 3. PropertyGraphIndex 빌드 및 Neo4j 적재 (루프를 돌며 순차적 처리 및 즉시 커밋)
+    total_docs = len(documents)
+    logger.info("지식 그래프 구축 및 Neo4j 추가 적재 시작 (총 %d개 단락 순차 처리)...", total_docs)
     logger.info("기존 Neo4j 데이터를 보존하고 추가 적재합니다.")
-
-    index = PropertyGraphIndex.from_documents(
-        documents,
-        property_graph_store=graph_store,
-        kg_extractors=extractors,
-        show_progress=True,
-    )
     
+    start_time = time.perf_counter()
+    success_count = 0
+    
+    for idx, doc in enumerate(documents, start=1):
+        logger.info("-" * 50)
+        logger.info("[%d / %d] passage_id: %s 처리 시작...", idx, total_docs, doc.id_)
+        # 문장 일부 출력 (로깅용)
+        snippet = doc.text[:60].replace('\n', ' ') + "..."
+        logger.info("내용 일부: %s", snippet)
+        
+        try:
+            # 단일 문서에 대해 PropertyGraphIndex 구축 수행 (Neo4j에 자동 반영)
+            PropertyGraphIndex.from_documents(
+                [doc],
+                property_graph_store=graph_store,
+                kg_extractors=extractors,
+                show_progress=False,
+            )
+            # 성공 즉시 DB 체크포인트 테이블에 기록
+            save_processed_passage_ids([doc.id_])
+            success_count += 1
+            logger.info("[%d / %d] passage_id: %s 처리 성공 및 PostgreSQL 체크포인트 기록 완료.", idx, total_docs, doc.id_)
+        except (KeyboardInterrupt, SystemExit):
+            logger.warning("⚠️ 사용자에 의해 작업이 인터럽트 되었습니다. 루프를 중단합니다.")
+            raise
+        except Exception as exc:
+            logger.error("❌ [%d / %d] passage_id: %s 처리 중 오류 발생: %s", idx, total_docs, doc.id_, exc)
+            logger.warning("안정성을 위해 작업을 중단합니다. 다음 실행 시 이 지점부터 이어서 진행됩니다.")
+            break
+            
     elapsed = time.perf_counter() - start_time
     logger.info("=" * 60)
-    logger.info("지식 그래프 구축 및 추가 적재 완료! (소요 시간: %.2f초)", elapsed)
-    logger.info("Neo4j에 데이터가 성공적으로 퍼졌습니다.")
+    logger.info("지식 그래프 구축 세션 종료 (성공: %d/%d, 소요 시간: %.2f초)", success_count, total_docs, elapsed)
     logger.info("웹 브라우저로 http://localhost:7474 에 접속하여 그래프를 확인하세요.")
     logger.info("=" * 60)
 
@@ -401,10 +425,6 @@ def main() -> None:
         logger.info("이번 실행에서 처리할 %d개의 미처리 단락으로 그래프 빌드를 시작합니다.", len(target_docs))
         
         build_knowledge_graph(llm, target_docs)
-        
-        # 6. 처리가 성공적으로 완료되면 해당 passage_id들을 PostgreSQL에 기록
-        processed_doc_ids = [doc.id_ for doc in target_docs]
-        save_processed_passage_ids(processed_doc_ids)
         
     except Exception as exc:
         logger.exception("지식 그래프 생성 도중 오류 발생: %s", exc)
