@@ -23,12 +23,10 @@ sys.path.append(str(project_root))
 load_dotenv()
 
 from llama_index.core import Settings
-from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
 from llama_index.core.indices.property_graph import PropertyGraphIndex
-from llama_index.core.llms import LLMMetadata
-from llama_index.core.base.llms.types import MessageRole
+from src.utils.nim_openai import NIMOpenAI
 
 # 로깅 설정
 logging.basicConfig(
@@ -39,140 +37,11 @@ logging.basicConfig(
 logger = logging.getLogger("test_graph_rag")
 
 
-class NIMOpenAI(OpenAI):
-    """NVIDIA NIM의 OpenAI 호환 API 연동을 위한 LlamaIndex OpenAI 모델 검증 우회 및 동적 Rate Limit 방지 딜레이 서브클래스."""
-    
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        # 동적 딜레이 조절을 위한 상태 변수
-        self._min_delay = float(os.environ.get("NIM_GRAPH_DELAY", "2.0"))
-        self._current_delay = self._min_delay
-        self._backoff_step = 2.0  # 429 발생 시 증가할 초 단위
-        self._decay_step = 0.2    # 성공 시 점진적으로 감소할 초 단위
-
-    @property
-    def metadata(self) -> LLMMetadata:
-        return LLMMetadata(
-            context_window=131072,  # Llama 3.1 70B의 128k 컨텍스트 지원
-            num_output=self.max_tokens or -1,
-            is_chat_model=True,
-            is_function_calling_model=True,
-            model_name=self.model,
-            system_role=MessageRole.SYSTEM,
-        )
-
-    def _apply_delay(self) -> None:
-        if self._current_delay > 0:
-            logger.info("[NIM API] 동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self._current_delay)
-            time.sleep(self._current_delay)
-
-    async def _apply_adelay(self) -> None:
-        if self._current_delay > 0:
-            logger.info("[NIM API] 비동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self._current_delay)
-            await asyncio.sleep(self._current_delay)
-
-    def _handle_success(self) -> None:
-        # 성공 시 딜레이를 점진적으로 최소 딜레이 방향으로 감쇠(Decay)
-        if self._current_delay > self._min_delay:
-            old_delay = self._current_delay
-            self._current_delay = max(self._min_delay, self._current_delay - self._decay_step)
-            logger.info("[NIM API] 호출 성공! 동적 딜레이 감쇠 적용: %.2f초 -> %.2f초", old_delay, self._current_delay)
-
-    def _handle_rate_limit(self) -> None:
-        # 429 에러 발생 시 동적으로 딜레이를 늘림 (가산 증가)
-        old_delay = self._current_delay
-        self._current_delay = self._current_delay + self._backoff_step
-        logger.warning(
-            "⚠️ [NIM API] Rate Limit (429) 감지! 동적 딜레이를 늘립니다: %.2f초 -> %.2f초",
-            old_delay, self._current_delay
-        )
-
-    # 동기 메소드 오버라이딩 인터셉트
-    def chat(self, *args, **kwargs):
-        from openai import RateLimitError
-        max_retries = 5
-        for attempt in range(1, max_retries + 1):
-            try:
-                self._apply_delay()
-                res = super().chat(*args, **kwargs)
-                self._handle_success()
-                return res
-            except RateLimitError:
-                self._handle_rate_limit()
-                if attempt == max_retries:
-                    raise
-                logger.info("[NIM API] %d번째 재시도 대기...", attempt)
-            except Exception as e:
-                logger.error("[NIM API] 동기 호출 중 일반 예외 발생: %s", e)
-                raise
-
-    def complete(self, *args, **kwargs):
-        from openai import RateLimitError
-        max_retries = 5
-        for attempt in range(1, max_retries + 1):
-            try:
-                self._apply_delay()
-                res = super().complete(*args, **kwargs)
-                self._handle_success()
-                return res
-            except RateLimitError:
-                self._handle_rate_limit()
-                if attempt == max_retries:
-                    raise
-                logger.info("[NIM API] %d번째 재시도 대기...", attempt)
-            except Exception as e:
-                logger.error("[NIM API] 동기 호출 중 일반 예외 발생: %s", e)
-                raise
-
-    # 비동기 메소드 오버라이딩 인터셉트
-    async def achat(self, *args, **kwargs):
-        from openai import RateLimitError
-        max_retries = 5
-        for attempt in range(1, max_retries + 1):
-            try:
-                await self._apply_adelay()
-                res = await super().achat(*args, **kwargs)
-                self._handle_success()
-                return res
-            except RateLimitError:
-                self._handle_rate_limit()
-                if attempt == max_retries:
-                    raise
-                logger.info("[NIM API] %d번째 비동기 재시도 대기...", attempt)
-            except Exception as e:
-                logger.error("[NIM API] 비동기 호출 중 일반 예외 발생: %s", e)
-                raise
-
-    async def acomplete(self, *args, **kwargs):
-        from openai import RateLimitError
-        max_retries = 5
-        for attempt in range(1, max_retries + 1):
-            try:
-                await self._apply_adelay()
-                res = await super().acomplete(*args, **kwargs)
-                self._handle_success()
-                return res
-            except RateLimitError:
-                self._handle_rate_limit()
-                if attempt == max_retries:
-                    raise
-                logger.info("[NIM API] %d번째 비동기 재시도 대기...", attempt)
-            except Exception as e:
-                logger.error("[NIM API] 비동기 호출 중 일반 예외 발생: %s", e)
-                raise
-
-
-
 def setup_llamaindex_settings() -> tuple[NIMOpenAI, HuggingFaceEmbedding]:
     """LlamaIndex의 전역 LLM 및 임베딩 모델 설정."""
-    nvidia_api_key = os.environ.get("NVIDIA_API_KEY")
-    if not nvidia_api_key:
-        raise ValueError("NVIDIA_API_KEY 환경 변수가 존재하지 않습니다.")
-
     # 1. LLM 설정 (NVIDIA NIM - Llama3-70B Instruct 활용)
     llm = NIMOpenAI(
         model=os.environ.get("NIM_GENERATION_MODEL", "meta/llama-3.1-70b-instruct"),
-        api_key=nvidia_api_key,
         api_base="https://integrate.api.nvidia.com/v1",
         temperature=0.0,  # 정확한 조언 생성을 위해 0.0 설정
     )

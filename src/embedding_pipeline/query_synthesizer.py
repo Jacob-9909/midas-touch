@@ -81,10 +81,8 @@ class NIMClient:
 
     def __init__(self, config: PipelineConfig) -> None:
         self._cfg = config.nim
-        self._headers = {
-            "Authorization": f"Bearer {self._cfg.api_key}",
-            "Content-Type": "application/json",
-        }
+        from src.utils.api_key_rotator import APIKeyRotator
+        self._rotator = APIKeyRotator()
         self._client: httpx.AsyncClient | None = None
         self._semaphore = asyncio.Semaphore(self._cfg.max_concurrent_requests)
         self.base_delay = 2.0  # 기본 강제 지연시간 초기값 (초)
@@ -92,7 +90,9 @@ class NIMClient:
     async def __aenter__(self) -> "NIMClient":
         self._client = httpx.AsyncClient(
             base_url=self._cfg.base_url,
-            headers=self._headers,
+            headers={
+                "Content-Type": "application/json",
+            },
             timeout=httpx.Timeout(self._cfg.request_timeout),
         )
         return self
@@ -105,11 +105,14 @@ class NIMClient:
         self,
         system_prompt: str,
         user_prompt: str,
-        max_retries: int = 3,
+        max_retries: int | None = None,
     ) -> str:
         """단일 chat completion 요청. 실패 시 지수 백오프 재시도 및 동적 지연 조절."""
         if self._client is None:
             raise RuntimeError("NIMClient를 async context manager로 사용하세요.")
+
+        if max_retries is None:
+            max_retries = len(self._rotator.keys) * 2
 
         payload = {
             "model": self._cfg.generation_model,
@@ -123,13 +126,19 @@ class NIMClient:
         }
 
         for attempt in range(max_retries):
+            # 매 시도마다 round-robin으로 API 키를 로테이션합니다.
+            current_key = self._rotator.rotate()
+            headers = {
+                "Authorization": f"Bearer {current_key}",
+                "Content-Type": "application/json",
+            }
             try:
                 async with self._semaphore:
                     # 동적 지연 적용 (Rate Limit 발생 시 서서히 증가, 성공 시 서서히 감소)
                     await asyncio.sleep(self.base_delay)
                     
                     response = await self._client.post(
-                        "/chat/completions", json=payload
+                        "/chat/completions", json=payload, headers=headers
                     )
                     response.raise_for_status()
                     data = response.json()
@@ -153,8 +162,13 @@ class NIMClient:
                     old_delay = self.base_delay
                     self.base_delay = min(self.base_delay + 2.0, 15.0)  # 최대 15초까지 증가
                     wait_sec = 2 ** (attempt + 2)
+                    
+                    # 키 교체 수행
+                    next_key = self._rotator.rotate()
                     logger.warning(
-                        "Rate limit (429) 감지: 요청 간 지연 시간을 %s초에서 %s초로 동적으로 늘립니다. %d초 대기 후 재시도 (%d/%d)",
+                        "⚠️ Rate limit (429) 감지: API 키를 교체합니다 (%s... -> %s...). "
+                        "요청 간 지연 시간을 %s초에서 %s초로 동적으로 늘립니다. %d초 대기 후 재시도 (%d/%d)",
+                        current_key[:10], next_key[:10],
                         f"{old_delay:.2f}", f"{self.base_delay:.2f}", wait_sec, attempt + 1, max_retries
                     )
                     await asyncio.sleep(wait_sec)

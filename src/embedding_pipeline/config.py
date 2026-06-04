@@ -368,11 +368,14 @@ class PipelineConfig:
 
     def validate(self) -> None:
         """필수 설정값 검증."""
-        if not self.nim.api_key:
+        try:
+            from src.utils.api_key_rotator import APIKeyRotator
+            APIKeyRotator()
+        except ValueError as exc:
             raise ValueError(
-                "NVIDIA_API_KEY 또는 NVIDIA_NIM_API_KEY 환경변수가 설정되지 않았습니다. "
-                ".env 파일 또는 시스템 환경변수를 확인하세요."
-            )
+                "NVIDIA API Key가 환경변수에서 감지되지 않았습니다. "
+                "NVIDIA_API_KEY 또는 NVIDIA_API_KEY_2 등을 설정해 주세요."
+            ) from exc
         if not (0.0 < self.eval_split_ratio < 0.5):
             raise ValueError(
                 f"eval_split_ratio는 0과 0.5 사이여야 합니다. 현재값: {self.eval_split_ratio}"
