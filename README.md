@@ -22,8 +22,12 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=PG_develop_2026_Secure
 POSTGRES_DB=postgres
 
-# NVIDIA NIM API (LLM/임베딩)
+# NVIDIA NIM API (임베딩 파이프라인 쿼리 합성용 LLM)
 NVIDIA_API_KEY=nvapi-xxxxxx
+
+# Google Gemini API (지식 그래프 builder LLM + 손상 PDF 비전 파싱용)
+GEMINI_API_KEY=AIzaSy-xxxxxx
+GEMINI_GENERATION_MODEL=gemini-2.5-flash
 
 # Neo4j Graph Database
 NEO4J_URL=bolt://localhost:7687
@@ -88,7 +92,12 @@ uv run python src/embedding_pipeline/pipeline.py --force-rerun query_synthesis
 
 ## 🕸️ Neo4j + LlamaIndex GraphRAG 지식 그래프 파이프라인
 
-세법 및 금융 데이터로부터 트리플(노드/관계)을 추출하여 로컬 Neo4j 지식 그래프를 증분 구축하고, 이를 탐색하여 GraphRAG 자연어 질의응답을 수행합니다.
+세법 및 금융 데이터로부터 트리플(노드/관계)을 추출하여 로컬 Neo4j 지식 그래프를 증분 구축하고, 이를 탐색하여 GraphRAG 자연어 질의응답을 수행합니다. 트리플 추출 LLM은 **Google Gemini (`gemini-2.5-flash`)** 를 사용합니다 (Neo4j 5.26 기준).
+
+> **손상 PDF 자동 처리**: 텍스트 레이어가 손상되었거나 스캔본인 PDF는 파서가 자동 감지하여 페이지를 이미지로 렌더링 후 Gemini 비전으로 전사합니다. 손상 PDF만 따로 재적재하려면:
+> ```bash
+> uv run python -m scripts.reingest_pdf data/raw_documents/<문서>.pdf
+> ```
 
 ### 🚀 실행 및 시각화 명령어
 

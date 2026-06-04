@@ -13,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   neo4j:
-    image: neo4j:5.20.0-community
+    image: neo4j:5.26-community
     container_name: midas-neo4j
     restart: unless-stopped
     ports:

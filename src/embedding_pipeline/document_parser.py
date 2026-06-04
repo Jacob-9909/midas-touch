@@ -4,6 +4,7 @@ document_parser.py
 금융 문서(PDF, TXT, MD) 통합 파서 및 청킹 엔진.
 
 1. PDF: pypdf 기반 정제 파싱 (헤더/푸터 및 연속 공백 정제)
+   - 텍스트 레이어가 손상/부재한 PDF는 자동 감지하여 Gemini 비전 전사로 폴백.
 2. MD: 마크다운 구조(헤더, 목록) 분석 파싱
 3. TXT: 개행 및 문장 경계 기준 텍스트 로드
 4. Chunker: 한글 금융 텍스트 맞춤형 Recursive Character Splitter + Overlap 지원.
@@ -12,8 +13,10 @@ document_parser.py
 from __future__ import annotations
 
 import logging
+import os
 import re
 import unicodedata
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -258,16 +261,103 @@ class DocumentParser:
 
         final_pdf_text = "\n\n".join(pages_text)
 
-        # 텍스트 추출 검증 안전장치 (스캔 이미지 PDF 인지여부 경고 로깅)
-        if len(final_pdf_text.strip()) < 50:
+        # 텍스트 레이어 품질 검증: 너무 짧거나(스캔본) 글자 깨짐(폰트 매핑 손상)이면 비전 전사로 폴백.
+        stripped = final_pdf_text.strip()
+        too_short = len(stripped) < 50
+        corrupted = self._looks_corrupted(stripped)
+        if too_short or corrupted:
+            reason = "텍스트가 거의 추출되지 않음(스캔본 추정)" if too_short else "텍스트 레이어 손상(글자 단위 깨짐) 감지"
             logger.warning(
-                "[PDF 텍스트 추출 경고] '%s' 파일에서 텍스트가 거의 추출되지 않았습니다 (추출량: %d자). "
-                "이 PDF는 이미지 스캔본이거나 텍스트 레이어가 없어 OCR 처리가 필요할 수 있습니다. "
-                "안정적인 데이터셋 생성을 위해 원천 문서를 일반 텍스트가 들어 있는 PDF로 교체해 주세요.",
-                path.name, len(final_pdf_text.strip())
+                "[PDF 텍스트 추출 경고] '%s': %s. Gemini 비전 전사로 폴백합니다.",
+                path.name, reason,
+            )
+            vision_text = self._parse_pdf_vision(path)
+            if vision_text.strip():
+                return vision_text
+            logger.error(
+                "[PDF] '%s' 비전 전사도 실패했습니다. pypdf 추출 결과를 그대로 반환합니다.", path.name
             )
 
         return final_pdf_text
+
+    @staticmethod
+    def _looks_corrupted(text: str, sample_chars: int = 4000) -> bool:
+        """텍스트 레이어 손상 감지: 공백으로 분리된 토큰 대부분이 1글자면 깨진 것으로 판단.
+
+        정상 한글 본문은 '주택임대소득' 같은 다글자 어절이 대부분이지만,
+        폰트 매핑이 손상된 PDF는 '주 택 임 대 소 득'처럼 글자마다 공백이 끼어
+        1글자 토큰 비율이 비정상적으로 높아진다.
+        """
+        sample = text[:sample_chars]
+        tokens = [t for t in sample.split() if t]
+        if len(tokens) < 20:
+            return False
+        single = sum(1 for t in tokens if len(t) == 1)
+        return (single / len(tokens)) > 0.45
+
+    def _parse_pdf_vision(self, path: Path) -> str:
+        """손상/스캔 PDF를 페이지 이미지로 렌더링한 뒤 Gemini 비전으로 전사하여 markdown 텍스트로 복원."""
+        try:
+            import pymupdf
+            from google import genai
+            from google.genai import types
+        except ImportError as exc:
+            logger.error(
+                "비전 전사를 위해 pymupdf, google-genai 가 필요합니다 (uv add pymupdf google-genai): %s", exc
+            )
+            return ""
+
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            logger.error("GEMINI_API_KEY 가 설정되지 않아 비전 전사를 진행할 수 없습니다.")
+            return ""
+
+        model = os.environ.get("GEMINI_VISION_MODEL", "gemini-2.5-flash")
+        dpi = int(os.environ.get("PDF_VISION_DPI", "150"))
+        max_workers = int(os.environ.get("PDF_VISION_WORKERS", "8"))
+        prompt = (
+            "이 이미지는 한국 주택/금융 세금 안내 책자의 한 페이지다. "
+            "페이지에 보이는 본문 텍스트를 한국어 마크다운으로 정확히 그대로 전사(transcribe)하라. "
+            "표는 마크다운 표로 변환하라. 머리글/꼬리글/페이지번호/URL/워터마크는 제외하고 본문만 출력하라. "
+            "추가 설명이나 코드펜스 없이 전사 결과 텍스트만 출력하라."
+        )
+
+        doc = pymupdf.open(path)
+        client = genai.Client(api_key=api_key)
+        n = doc.page_count
+        logger.info("[PDF 비전] '%s' %d페이지 전사 시작 (model=%s, dpi=%d, workers=%d)...",
+                    path.name, n, model, dpi, max_workers)
+
+        # 페이지 이미지를 미리 렌더링(메인 스레드에서 pymupdf 접근, 동시성은 API 호출에만 적용)
+        page_images = [doc[i].get_pixmap(dpi=dpi).tobytes("png") for i in range(n)]
+
+        def transcribe(idx_img: tuple[int, bytes]) -> tuple[int, str]:
+            idx, img = idx_img
+            for attempt in range(1, 4):
+                try:
+                    resp = client.models.generate_content(
+                        model=model,
+                        contents=[types.Part.from_bytes(data=img, mime_type="image/png"), prompt],
+                    )
+                    text = (resp.text or "").strip()
+                    # 혹시 모델이 코드펜스를 붙이면 제거
+                    text = re.sub(r"^```(?:markdown)?\s*|\s*```$", "", text).strip()
+                    return idx, text
+                except Exception as exc:  # 일시적 오류 재시도
+                    logger.warning("[PDF 비전] %d/%d 페이지 전사 실패(시도 %d/3): %s", idx + 1, n, attempt, exc)
+            logger.error("[PDF 비전] %d/%d 페이지 전사 최종 실패, 빈 텍스트로 처리.", idx + 1, n)
+            return idx, ""
+
+        results: list[str] = [""] * n
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            for idx, text in pool.map(transcribe, enumerate(page_images)):
+                results[idx] = text
+                if (idx + 1) % 20 == 0:
+                    logger.info("[PDF 비전] 진행: %d/%d 페이지 전사 완료", idx + 1, n)
+
+        ok = sum(1 for r in results if r)
+        logger.info("[PDF 비전] '%s' 전사 완료: %d/%d 페이지 성공", path.name, ok, n)
+        return "\n\n".join(r for r in results if r)
 
     def _parse_markdown(self, path: Path) -> str:
         """마크다운 파일 읽기 및 가벼운 문법 노이즈(코드블럭 기호 등) 정제."""
