@@ -46,18 +46,22 @@ logger = logging.getLogger("graph_builder")
 
 def setup_llamaindex_settings() -> tuple[GoogleGenAI, HuggingFaceEmbedding]:
     """LlamaIndex의 전역 LLM 및 임베딩 모델 설정."""
-    # 1. LLM 설정 (Google Gemini - gemini-2.5-flash 활용)
-    logger.info("Google Gemini API LLM 연동 설정 중...")
-    gemini_api_key = os.environ.get("GEMINI_API_KEY")
-    if not gemini_api_key:
+    # 1. LLM 설정 (Vertex AI 경유 Gemini - gemini-2.5-flash 활용)
+    #    AI Studio API 키 대신 Vertex AI를 사용해 GCP 무료 평가판 크레딧으로 청구되도록 함.
+    #    인증은 서비스 계정 키(GOOGLE_APPLICATION_CREDENTIALS)를 통한 ADC로 자동 처리.
+    logger.info("Vertex AI (Gemini) LLM 연동 설정 중...")
+    project = os.environ.get("GOOGLE_CLOUD_PROJECT")
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+    if not project:
         raise ValueError(
-            "GEMINI_API_KEY가 설정되지 않았습니다. .env 파일에 GEMINI_API_KEY를 추가하세요."
+            "GOOGLE_CLOUD_PROJECT가 설정되지 않았습니다. .env에 GOOGLE_CLOUD_PROJECT와 "
+            "GOOGLE_APPLICATION_CREDENTIALS(서비스 계정 키 경로)를 추가하세요."
         )
     llm = GoogleGenAI(
         model=os.environ.get("GEMINI_GENERATION_MODEL", "gemini-2.5-flash"),
-        api_key=gemini_api_key,
         temperature=0.0,  # 결정론적 지식 추출을 위해 0.0 설정
         max_tokens=4096,
+        vertexai_config={"project": project, "location": location},
     )
 
     # 2. 한국어 지원 임베딩 설정 (로컬 sentence-transformers/all-MiniLM-L6-v2 모델 사용)

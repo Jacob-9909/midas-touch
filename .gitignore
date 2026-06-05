@@ -1,6 +1,11 @@
 # Environments
 .env
 .venv
+
+# Secrets / GCP service account credentials
+secrets/
+*-sa-key.json
+*service-account*.json
 env/
 venv/
 

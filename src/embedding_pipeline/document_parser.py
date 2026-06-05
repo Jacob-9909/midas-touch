@@ -307,9 +307,14 @@ class DocumentParser:
             )
             return ""
 
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            logger.error("GEMINI_API_KEY 가 설정되지 않아 비전 전사를 진행할 수 없습니다.")
+        # Vertex AI 경유로 호출하여 GCP 무료 평가판 크레딧으로 청구되도록 함.
+        # 인증은 서비스 계정 키(GOOGLE_APPLICATION_CREDENTIALS) 기반 ADC로 자동 처리.
+        project = os.environ.get("GOOGLE_CLOUD_PROJECT")
+        location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+        if not project:
+            logger.error(
+                "GOOGLE_CLOUD_PROJECT 가 설정되지 않아 Vertex AI 비전 전사를 진행할 수 없습니다."
+            )
             return ""
 
         model = os.environ.get("GEMINI_VISION_MODEL", "gemini-2.5-flash")
@@ -323,7 +328,7 @@ class DocumentParser:
         )
 
         doc = pymupdf.open(path)
-        client = genai.Client(api_key=api_key)
+        client = genai.Client(vertexai=True, project=project, location=location)
         n = doc.page_count
         logger.info("[PDF 비전] '%s' %d페이지 전사 시작 (model=%s, dpi=%d, workers=%d)...",
                     path.name, n, model, dpi, max_workers)
