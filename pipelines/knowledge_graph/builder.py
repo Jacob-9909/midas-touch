@@ -64,10 +64,10 @@ def setup_llamaindex_settings() -> tuple[GoogleGenAI, HuggingFaceEmbedding]:
         vertexai_config={"project": project, "location": location},
     )
 
-    # 2. 한국어 지원 임베딩 설정 (로컬 sentence-transformers/all-MiniLM-L6-v2 모델 사용)
-    logger.info("로컬 sentence-transformers/all-MiniLM-L6-v2 임베딩 모델 로드 중 (CPU)...")
+    # 2. 한국어 지원 임베딩 설정 (로컬 BAAI/bge-m3 모델 사용)
+    logger.info("로컬 BAAI/bge-m3 임베딩 모델 로드 중 (CPU)...")
     embed_model = HuggingFaceEmbedding(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        model_name="BAAI/bge-m3",
         device="cpu",
     )
 
@@ -84,7 +84,7 @@ def load_passages_as_documents() -> list[Document]:
     documents = []
     
     try:
-        from src.db.connector import db_cursor
+        from shared.database.connector import db_cursor
         with db_cursor() as (_, cursor):
             cursor.execute("SELECT passage_id, text, source, metadata FROM emb_passages;")
             rows = cursor.fetchall()
@@ -131,7 +131,7 @@ def init_checkpoint_table() -> None:
     );
     """
     try:
-        from src.db.connector import db_cursor
+        from shared.database.connector import db_cursor
         with db_cursor() as (_, cursor):
             cursor.execute(sql)
         logger.info("PostgreSQL graph_checkpoints 테이블 초기화 완료.")
@@ -144,7 +144,7 @@ def get_processed_passage_ids() -> set[str]:
     """Fetch the set of already processed passage IDs from PostgreSQL."""
     sql = "SELECT passage_id FROM graph_checkpoints;"
     try:
-        from src.db.connector import db_cursor
+        from shared.database.connector import db_cursor
         with db_cursor() as (_, cursor):
             cursor.execute(sql)
             rows = cursor.fetchall()
@@ -164,7 +164,7 @@ def save_processed_passage_ids(passage_ids: list[str]) -> None:
     ON CONFLICT (passage_id) DO NOTHING;
     """
     try:
-        from src.db.connector import db_cursor
+        from shared.database.connector import db_cursor
         with db_cursor() as (_, cursor):
             params = [(pid,) for pid in passage_ids]
             cursor.executemany(sql, params)
@@ -200,11 +200,14 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document]) -> None:
     
     # 허용 엔티티 종류 (Enum 정의 - LlamaIndex 내부 검증기에서 대문자로 변환되므로 값을 대문자로 정의해야 함)
     class Entities(str, Enum):
-        AssetClass = "ASSETCLASS"       # 자산군
-        IncomeType = "INCOMETYPE"       # 소득유형
-        TaxRule = "TAXRULE"             # 세율규칙
-        LegalReference = "LEGALREFERENCE" # 근거법령
-        PortfolioItem = "PORTFOLIOITEM"   # 종목/상품
+        AssetClass = "ASSETCLASS"                 # 자산군 (예: 주식, 채권, 연금, 부동산)
+        PortfolioItem = "PORTFOLIOITEM"           # 종목/상품 (예: ISA, IRP, 일반적금, 청년도약계좌)
+        IncomeType = "INCOMETYPE"                 # 소득유형 (예: 배당소득, 이자소득, 양도소득, 연금소득)
+        TaxRule = "TAXRULE"                       # 세율/세제규칙 (예: 비과세혜택규정, 배당소득세율규칙)
+        LegalReference = "LEGALREFERENCE"         # 근거법령 (예: 소득세법 제14조, 금소법)
+        TaxExemptCondition = "TAXEXEMPTCONDITION" # 비과세/감면 요건 (예: 5년이상납입유지, 가입당시소득5천만원이하)
+        ContributionLimit = "CONTRIBUTIONLIMIT"   # 납입/투자 한도 (예: 연간 1800만원한도, 납입한도 2천만원)
+        TaxRateInfo = "TAXRATEINFO"               # 구체적 세율 정보 (예: 15.4% 세율, 9% 원천징수)
     
     # 허용 관계 종류 (Enum 정의)
     class Relations(str, Enum):
@@ -220,7 +223,37 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document]) -> None:
         ("INCOMETYPE", "SUBJECT_TO", "TAXRULE"),
         ("PORTFOLIOITEM", "SUBJECT_TO", "TAXRULE"),
         ("TAXRULE", "BASED_ON", "LEGALREFERENCE"),
+        ("PORTFOLIOITEM", "HAS_LIMIT", "CONTRIBUTIONLIMIT"),
+        ("ASSETCLASS", "HAS_LIMIT", "CONTRIBUTIONLIMIT"),
+        ("TAXEXEMPTCONDITION", "PROVIDES_BENEFIT", "INCOMETYPE"),
+        ("TAXEXEMPTCONDITION", "PROVIDES_BENEFIT", "TAXRULE"),
+        ("TAXEXEMPTCONDITION", "APPLIES_WHEN", "PORTFOLIOITEM"),
+        ("TAXEXEMPTCONDITION", "APPLIES_WHEN", "INCOMETYPE"),
+        ("TAXRULE", "DEFINES_RATE", "TAXRATEINFO"),
+        ("TAXRATEINFO", "BASED_ON", "LEGALREFERENCE"),
     ]
+
+    custom_system_prompt = (
+        "당신은 금융 및 세법 전문 지식 그래프 추출기입니다.\n"
+        "주어진 텍스트 본문에서 한국 금융 세제와 자산 운용에 관련된 노드(Entity)와 관계(Relationship)를 정확하게 추출하십시오.\n\n"
+        "### 기본(Base) 스키마 가이드:\n"
+        "1. 엔티티 유형(Entities) 정의:\n"
+        "   - ASSETCLASS (자산군): 예) 주식, 채권, 연금, 부동산\n"
+        "   - PORTFOLIOITEM (종목/상품): 예) ISA, IRP, 일반적금, 청년도약계좌\n"
+        "   - INCOMETYPE (소득유형): 예) 배당소득, 이자소득, 양도소득, 연금소득\n"
+        "   - TAXRULE (세율/세제규칙): 예) 비과세혜택규정, 배당소득세율규칙\n"
+        "   - LEGALREFERENCE (근거법령): 예) 소득세법 제14조, 금융소비자보호법\n"
+        "   - TAXEXEMPTCONDITION (비과세/감면 요건): 예) 5년이상납입유지, 가입당시소득5천만원이하\n"
+        "   - CONTRIBUTIONLIMIT (납입/투자 한도): 예) 연간 1800만원한도, 납입한도 2천만원\n"
+        "   - TAXRATEINFO (구체적 세율 정보): 예) 15.4% 세율, 9% 원천징수\n"
+        "2. 관계 유형(Relations) 정의:\n"
+        "   - BELONGS_TO, GENERATES, SUBJECT_TO, BASED_ON, HAS_LIMIT, APPLIES_WHEN, PROVIDES_BENEFIT, DEFINES_RATE\n\n"
+        "### ⚠️ 동적 스키마 확장 규칙 (중요):\n"
+        "- 본문을 분석할 때 위의 기본 스키마에 딱 들어맞지 않지만, 세무/금융 맥락상 매우 중요하다고 판단되는 고유한 개념이나 속성\n"
+        "  (예: 특정 세금 우대 혜택 명칭, 특별 공제 대상, 대주주 판정 요건 등)이 등장하는 경우,\n"
+        "  **새로운 엔티티 유형 및 관계 유형을 동적으로 창안하여 자유롭게 추출하십시오.**\n"
+        "- 단, 무분별한 노드 난립을 막기 위해 개념이 명확하고 중복되지 않는 용어를 사용하십시오."
+    )
 
     # Schema 기반 LLM 지식 추출기 세팅
     schema_extractor = SchemaLLMPathExtractor(
@@ -228,8 +261,9 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document]) -> None:
         possible_entities=Entities,
         possible_relations=Relations,
         kg_validation_schema=kg_validation_schema,
-        strict=True,  # 스키마에 엄격히 부합하는 노드/관계만 추출
-        num_workers=1, # Gemini 무료 한도(RPM)가 낮아 순차 처리로 429(rate limit) 회피
+        strict=False,  # 기본 스키마 외에 LLM이 제안한 새로운 노드/관계도 동적으로 허용
+        system_prompt=custom_system_prompt,
+        num_workers=2, # Vertex AI의 넉넉한 할당량을 활용하기 위해 동시성 상향 조정
     )
     
     extractors = [schema_extractor]

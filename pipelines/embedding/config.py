@@ -369,7 +369,7 @@ class PipelineConfig:
     def validate(self) -> None:
         """필수 설정값 검증."""
         try:
-            from src.utils.api_key_rotator import APIKeyRotator
+            from shared.utils.api_key_rotator import APIKeyRotator
             APIKeyRotator()
         except ValueError as exc:
             raise ValueError(

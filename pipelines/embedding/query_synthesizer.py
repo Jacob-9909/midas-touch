@@ -21,8 +21,8 @@ from typing import AsyncIterator
 
 import httpx
 
-from src.embedding_pipeline.config import PipelineConfig
-from src.embedding_pipeline.document_parser import Passage
+from pipelines.embedding.config import PipelineConfig
+from pipelines.embedding.document_parser import Passage
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class NIMClient:
 
     def __init__(self, config: PipelineConfig) -> None:
         self._cfg = config.nim
-        from src.utils.api_key_rotator import APIKeyRotator
+        from shared.utils.api_key_rotator import APIKeyRotator
         self._rotator = APIKeyRotator()
         self._client: httpx.AsyncClient | None = None
         self._semaphore = asyncio.Semaphore(self._cfg.max_concurrent_requests)

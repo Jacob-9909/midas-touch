@@ -22,11 +22,80 @@ import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
 
-from src.embedding_pipeline.config import PipelineConfig
-from src.embedding_pipeline.document_parser import Passage
-from src.embedding_pipeline.query_synthesizer import SyntheticQuery
+from pipelines.embedding.config import PipelineConfig
+from pipelines.embedding.document_parser import Passage
+from pipelines.embedding.query_synthesizer import SyntheticQuery
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# numpy 기반 경량 BM25 Sparse Retriever
+# ---------------------------------------------------------------------------
+class SparseBM25:
+    """
+    numpy 기반의 경량 BM25 Sparse Retriever 클래스.
+    형태소 분석기 없이 한국어 어절 단위로 텍스트를 토큰화하여 세법/금융 단어 매칭을 고속 수행합니다.
+    """
+    def __init__(self, corpus: list[str], k1: float = 1.5, b: float = 0.75) -> None:
+        import re
+        import math
+        from collections import Counter, defaultdict
+
+        self.k1 = k1
+        self.b = b
+        self.corpus_size = len(corpus)
+        
+        # 문서 토큰화
+        self.doc_tokens = [self._tokenize(doc) for doc in corpus]
+        self.doc_lens = np.array([len(tokens) for tokens in self.doc_tokens])
+        self.avg_doc_len = self.doc_lens.mean() if self.corpus_size > 0 else 1.0
+        
+        # 각 단어(token)가 등장한 문서 수 (df) 및 IDF 계산
+        self.df = defaultdict(int)
+        for tokens in self.doc_tokens:
+            for token in set(tokens):
+                self.df[token] += 1
+                
+        self.idf = {}
+        for token, freq in self.df.items():
+            self.idf[token] = math.log((self.corpus_size - freq + 0.5) / (freq + 0.5) + 1.0)
+            
+        # 고속 점수 계산을 위해 각 문서별 단어 빈도수(tf) 미리 빌드
+        self.doc_tfs = [Counter(tokens) for tokens in self.doc_tokens]
+
+    @staticmethod
+    def _tokenize(text: str) -> list[str]:
+        """한국어 어절 및 특수문자 제거 기반 간이 토크나이저."""
+        import re
+        text = text.lower().strip()
+        # 특수문자 제거 (공백으로 치환)
+        text = re.sub(r"[^\w\s]", " ", text)
+        return [w for w in text.split() if w]
+
+    def get_scores(self, query: str) -> np.ndarray:
+        """주어진 쿼리에 대한 전체 문서의 BM25 유사도 점수 계산."""
+        q_tokens = self._tokenize(query)
+        scores = np.zeros(self.corpus_size)
+        
+        if not q_tokens:
+            return scores
+            
+        for token in q_tokens:
+            if token not in self.idf:
+                continue
+            idf_val = self.idf[token]
+            
+            # 각 문서에 대해 tf 스코어 적용
+            for doc_idx in range(self.corpus_size):
+                tf = self.doc_tfs[doc_idx].get(token, 0)
+                if tf == 0:
+                    continue
+                numerator = tf * (self.k1 + 1)
+                denominator = tf + self.k1 * (1.0 - self.b + self.b * (self.doc_lens[doc_idx] / self.avg_doc_len))
+                scores[doc_idx] += idf_val * (numerator / denominator)
+                
+        return scores
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +233,7 @@ class NVRetrieverMarginFilter:
 # ---------------------------------------------------------------------------
 class HardNegativeMiner:
     """
-    교사 임베딩 모델 + NV-Retriever 마진 필터를 결합한 하드 네거티브 마이닝.
+    교사 임베딩 모델 + BM25 sparse index + NV-Retriever 마진 필터를 결합한 RRF 하이브리드 하드 네거티브 마이닝.
     """
 
     def __init__(self, config: PipelineConfig) -> None:
@@ -173,19 +242,24 @@ class HardNegativeMiner:
         self._embedder = TeacherEmbedder(config)
         self._margin_filter = NVRetrieverMarginFilter(config)
 
-        # 단락 임베딩 캐시 (ID → index 매핑)
+        # 단락 임베딩 및 Sparse 인덱스 캐시
         self._passage_embeddings: np.ndarray | None = None
         self._passage_index: list[Passage] = []
         self._passage_id_to_idx: dict[str, int] = {}
+        self._bm25: SparseBM25 | None = None
 
     def index_passages(self, passages: list[Passage]) -> None:
-        """전체 단락 코퍼스를 한 번에 임베딩하여 인덱싱."""
-        logger.info("%d개 단락 임베딩 중 (교사: %s)...", len(passages), self._cfg.teacher_model.model_name)
+        """전체 단락 코퍼스를 임베딩하고 BM25 Sparse 인덱스도 구축."""
+        logger.info("%d개 단락 인덱싱 중 (교사: %s)...", len(passages), self._cfg.teacher_model.model_name)
 
         texts = [p.text for p in passages]
         self._passage_embeddings = self._embedder.encode(texts, show_progress_bar=True)
         self._passage_index = passages
         self._passage_id_to_idx = {p.passage_id: idx for idx, p in enumerate(passages)}
+        
+        # BM25 구축
+        logger.info("BM25 Sparse 인덱스 구축 중...")
+        self._bm25 = SparseBM25(texts)
 
         logger.info("단락 인덱싱 완료. Shape: %s", self._passage_embeddings.shape)
 
@@ -194,34 +268,44 @@ class HardNegativeMiner:
         queries: list[SyntheticQuery],
     ) -> list[MiningResult]:
         """
-        쿼리 리스트 전체에 대해 하드 네거티브 마이닝 수행 (배치 유사도 연산으로 OOM 보호).
+        쿼리 리스트 전체에 대해 RRF 하이브리드 하드 네거티브 마이닝 수행.
         """
-        if self._passage_embeddings is None:
-            raise RuntimeError("index_passages()를 먼저 호출하세요.")
+        if self._passage_embeddings is None or self._bm25 is None:
+            raise RuntimeError("index_passages() 또는 load_embeddings_cache()를 먼저 호출하세요.")
 
-        logger.info("%d개 쿼리에 대해 하드 네거티브 마이닝 시작...", len(queries))
+        logger.info("%d개 쿼리에 대해 RRF 하이브리드 하드 네거티브 마이닝 시작...", len(queries))
 
-        # 쿼리 임베딩 (배치)
+        # 쿼리 임베딩 (Dense)
         query_texts = [q.query_text for q in queries]
         query_embeddings = self._embedder.encode(query_texts, show_progress_bar=True)
 
         results: list[MiningResult] = []
         batch_size = self._hn_cfg.mining_batch_size
 
-        # OOM 방지를 위해 쿼리를 지정된 배치 크기 단위로 쪼개어 연산
         for start_idx in range(0, len(queries), batch_size):
             end_idx = min(start_idx + batch_size, len(queries))
             q_batch = queries[start_idx:end_idx]
             q_emb_batch = query_embeddings[start_idx:end_idx]
 
-            # 부분 유사도 행렬 계산 (배치 사이즈 x 단락 전체 개수)
+            # Dense 유사도 행렬 계산 (배치 사이즈 x 단락 전체 개수)
             sim_matrix_batch = self._embedder.similarity_matrix(
                 q_emb_batch, self._passage_embeddings
             )
 
             for local_idx, query in enumerate(q_batch):
                 q_idx = start_idx + local_idx
-                result = self._mine_single(query, sim_matrix_batch[local_idx])
+                
+                # Dense 스코어
+                dense_scores = sim_matrix_batch[local_idx]
+                
+                # Sparse(BM25) 스코어 계산
+                sparse_scores = self._bm25.get_scores(query.query_text)
+                
+                # RRF(Reciprocal Rank Fusion) 스코어 융합
+                hybrid_scores = self._compute_rrf_scores(dense_scores, sparse_scores)
+                
+                # 마이닝 수행
+                result = self._mine_single_hybrid(query, dense_scores, hybrid_scores)
                 results.append(result)
 
                 if (q_idx + 1) % 500 == 0 or (q_idx + 1) == len(queries):
@@ -232,16 +316,24 @@ class HardNegativeMiner:
 
         total_hn = sum(len(r.hard_negatives) for r in results)
         logger.info(
-            "하드 네거티브 마이닝 완료. 총 %d개 삼중쌍 생성 가능.", total_hn
+            "하이브리드 하드 네거티브 마이닝 완료. 총 %d개 삼중쌍 생성 가능.", total_hn
         )
         return results
 
-    def _mine_single(
+    @staticmethod
+    def _compute_rrf_scores(dense_scores: np.ndarray, sparse_scores: np.ndarray, k: int = 60) -> np.ndarray:
+        """Dense 스코어와 Sparse 스코어의 순위를 매겨 RRF 점수를 계산합니다."""
+        dense_ranks = np.argsort(np.argsort(-dense_scores)) + 1
+        sparse_ranks = np.argsort(np.argsort(-sparse_scores)) + 1
+        return (1.0 / (k + dense_ranks)) + (1.0 / (k + sparse_ranks))
+
+    def _mine_single_hybrid(
         self,
         query: SyntheticQuery,
-        similarity_scores: np.ndarray,
+        dense_scores: np.ndarray,
+        hybrid_scores: np.ndarray,
     ) -> MiningResult:
-        """단일 쿼리에 대한 하드 네거티브 마이닝."""
+        """RRF 순위가 높은 후보 위주로 탐색하되, NV-Retriever 마진 규격은 Dense 코사인 유사도로 검사."""
         positive_idx = self._passage_id_to_idx.get(query.passage_id)
         if positive_idx is None:
             logger.warning("긍정 단락 ID를 찾을 수 없음: %s", query.passage_id)
@@ -251,19 +343,20 @@ class HardNegativeMiner:
                 hard_negatives=[],
             )
 
-        positive_score = float(similarity_scores[positive_idx])
+        positive_score = float(dense_scores[positive_idx])
 
-        # top-K 후보 추출 (긍정 단락 포함, 이후 필터에서 제거)
+        # RRF 하이브리드 점수를 기준으로 상위 후보 추출 (긍정 단락 포함)
         top_k = self._hn_cfg.top_k_candidates
-        top_k = min(top_k, len(similarity_scores))
+        top_k = min(top_k, len(hybrid_scores))
         
-        top_k_indices = np.argpartition(similarity_scores, -top_k)[-top_k:]
-        top_k_indices = top_k_indices[np.argsort(similarity_scores[top_k_indices])[::-1]]
+        top_k_indices = np.argpartition(hybrid_scores, -top_k)[-top_k:]
+        top_k_indices = top_k_indices[np.argsort(hybrid_scores[top_k_indices])[::-1]]
 
+        # 마진 계산 및 필터링에는 교사 임베딩의 Dense 유사도(dense_scores)를 사용
         candidates = [
             SimilarityScore(
                 passage_id=self._passage_index[idx].passage_id,
-                score=float(similarity_scores[idx]),
+                score=float(dense_scores[idx]),
             )
             for idx in top_k_indices
         ]
@@ -302,7 +395,7 @@ class HardNegativeMiner:
         )
 
     def save_embeddings_cache(self, cache_path: Path) -> None:
-        """단락 임베딩을 numpy 파일로 캐싱 (재실행 시 재사용)."""
+        """단락 임베딩을 numpy 파일로 캐싱."""
         if self._passage_embeddings is None:
             raise RuntimeError("임베딩이 아직 계산되지 않았습니다.")
         cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -312,13 +405,18 @@ class HardNegativeMiner:
     def load_embeddings_cache(
         self, cache_path: Path, passages: list[Passage]
     ) -> bool:
-        """캐싱된 임베딩 로드. 파일이 없으면 False 반환."""
+        """캐싱된 임베딩 로드 및 BM25 Sparse 인덱스 재구축."""
         if not cache_path.exists():
             return False
 
         self._passage_embeddings = np.load(cache_path)
         self._passage_index = passages
         self._passage_id_to_idx = {p.passage_id: idx for idx, p in enumerate(passages)}
+        
+        # 캐시된 임베딩을 활용할 때도 BM25 Sparse 인덱스를 재생성해 융합 랭킹이 돌아가게 함
+        logger.info("임베딩 캐시 발견: BM25 Sparse 인덱스 재구축 중...")
+        self._bm25 = SparseBM25([p.text for p in passages])
+        
         logger.info("임베딩 캐시 로드 완료: %s (shape=%s)", cache_path, self._passage_embeddings.shape)
         return True
 

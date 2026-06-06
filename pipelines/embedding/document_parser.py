@@ -52,15 +52,44 @@ class FinancialChunker:
     
     - 분할 구분자 우선순위: \n\n (단락) -> \n (줄바꿈) -> . (문장) -> " " (어절) -> "" (글자)
     - 문맥 보존을 위한 Chunk Overlap 지원.
+    - [고도화] AutoTokenizer를 활용한 실제 토큰 수 기반 정밀 분할. 
+              (실패 시 글자 수 기반 청킹으로 자동 Fallback)
     """
 
     def __init__(
         self,
-        chunk_size: int = 700,      # 한글 기준 약 400~500 토큰
-        chunk_overlap: int = 150,   # 문맥 보존 오버랩
+        model_name: str = "nlpai-lab/KURE-v1",
+        chunk_size: int = 450,      # 토큰 기준 상한
+        chunk_overlap: int = 100,   # 토큰 기준 오버랩
     ) -> None:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.model_name = model_name
+        self.tokenizer = None
+        self.use_token_mode = False
+
+        try:
+            from transformers import AutoTokenizer
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.use_token_mode = True
+            logger.info("AutoTokenizer('%s')를 활용한 토큰 기반 청킹이 활성화되었습니다. (chunk_size=%d, overlap=%d)", model_name, chunk_size, chunk_overlap)
+        except Exception as exc:
+            logger.warning(
+                "토크나이저 로드 실패 (%s). 글자 수 기반 청킹(Fallback)으로 전환합니다.", exc
+            )
+            # 글자 수 기반 fallback 세팅
+            self.chunk_size = 700      # 한글 기준 약 400~500 토큰에 대응
+            self.chunk_overlap = 150
+            self.use_token_mode = False
+
+    def _get_length(self, text: str) -> int:
+        """현재 모드에 맞춰 텍스트의 길이를 반환 (토큰 수 또는 글자 수)."""
+        if self.use_token_mode and self.tokenizer is not None:
+            try:
+                return len(self.tokenizer.encode(text, add_special_tokens=False))
+            except Exception:
+                pass
+        return len(text)
 
     def split_text(self, text: str) -> list[str]:
         """Recursive Character Splitting 수행 (Markdown 헤더 및 금융 단락 고려)."""
@@ -73,7 +102,7 @@ class FinancialChunker:
 
     def _split_recursive(self, text: str, separators: list[str]) -> list[str]:
         """재귀적으로 구분자를 활용해 분할한 후 적절한 오버랩을 주어 그룹화."""
-        if len(text) <= self.chunk_size:
+        if self._get_length(text) <= self.chunk_size:
             return [text]
 
         # 사용할 수 있는 구분자 탐색
@@ -106,7 +135,7 @@ class FinancialChunker:
         # 각 조각들이 여전히 크면 다음 우선순위 구분자로 재귀 분할
         refined_splits: list[str] = []
         for split in final_splits:
-            if len(split) > self.chunk_size:
+            if self._get_length(split) > self.chunk_size:
                 refined_splits.extend(self._split_recursive(split, next_separators))
             else:
                 refined_splits.append(split)
@@ -117,9 +146,10 @@ class FinancialChunker:
         current_length = 0
 
         for split in refined_splits:
-            split_len = len(split)
+            split_len = self._get_length(split)
+            sep_len = self._get_length(separator) if current_chunk else 0
             # 현재 청크에 추가했을 때 넘치는지 확인
-            if current_length + split_len + (len(separator) if current_chunk else 0) > self.chunk_size:
+            if current_length + split_len + sep_len > self.chunk_size:
                 if current_chunk:
                     # 완성된 청크 저장
                     chunks.append(separator.join(current_chunk))
@@ -129,23 +159,26 @@ class FinancialChunker:
                     overlap_chunk: list[str] = []
                     overlap_len = 0
                     for prev_split in reversed(current_chunk):
-                        prev_len = len(prev_split)
-                        if overlap_len + prev_len + (len(separator) if overlap_chunk else 0) <= self.chunk_overlap:
+                        prev_len = self._get_length(prev_split)
+                        sep_overlap_len = self._get_length(separator) if overlap_chunk else 0
+                        if overlap_len + prev_len + sep_overlap_len <= self.chunk_overlap:
                             overlap_chunk.insert(0, prev_split)
-                            overlap_len += prev_len + len(separator)
+                            overlap_len += prev_len + sep_overlap_len
                         else:
                             break
                     current_chunk = overlap_chunk
                     current_length = overlap_len
                 
             current_chunk.append(split)
-            current_length += split_len + (len(separator) if len(current_chunk) > 1 else 0)
+            sep_len = self._get_length(separator) if len(current_chunk) > 1 else 0
+            current_length += split_len + sep_len
 
         if current_chunk:
             chunks.append(separator.join(current_chunk))
 
-        # 너무 짧은 청크(예: 30자 미만) 병합 또는 보정
-        valid_chunks = [c.strip() for c in chunks if len(c.strip()) >= 40]
+        # 너무 짧은 청크(예: 토큰 모드에서는 25토큰 미만, 글자 모드에서는 40자 미만) 병합 또는 보정
+        min_limit = 25 if self.use_token_mode else 40
+        valid_chunks = [c.strip() for c in chunks if self._get_length(c.strip()) >= min_limit]
         return valid_chunks
 
 
@@ -220,51 +253,105 @@ class DocumentParser:
     # 포맷별 파싱 헬퍼
     # ------------------------------------------------------------------
     def _parse_pdf(self, path: Path) -> str:
-        """pypdf 기반 PDF 텍스트 추출 및 여백 노이즈 정제."""
-        if pypdf is None:
-            raise ImportError(
-                "PDF 파싱을 위해서는 pypdf 라이브러리가 필요합니다. "
-                "먼저 'uv sync' 또는 'pip install pypdf'를 실행하세요."
-            )
-
-        reader = pypdf.PdfReader(path)
-        pages_text: list[str] = []
-
-        # 여백 머리글, 바닥글, 페이지 번호 제거용 정규식 패턴들
-        pg_num_pattern = re.compile(r"^\s*-\s*\d+\s*-\s*$|^\s*\d+\s*$/?\s*\d*\s*$", re.MULTILINE)
-
-        for page_idx, page in enumerate(reader.pages):
-            text = page.extract_text()
-            if not text:
-                continue
-
-            # 한글 인코딩 자모 분리 교정
-            text = unicodedata.normalize('NFC', text)
-
-            cleaned_lines: list[str] = []
-            for line in text.splitlines():
-                line = line.strip()
-                # 페이지 번호 패턴 제거
-                if pg_num_pattern.match(line):
-                    continue
-                # 머리글/바닥글 노이즈 필터링 (보통 회사명이나 보고서명이 끝자리에 반복됨)
-                if len(line) < 4 and line.isdigit():
-                    continue
-                cleaned_lines.append(line)
-
-            page_refined = "\n".join(cleaned_lines)
+        """pymupdf를 기본으로 사용하고 pypdf를 보완적으로 사용하여 텍스트 및 표 데이터를 고품질로 추출."""
+        raw_text = ""
+        
+        # 1. pymupdf(fitz)를 이용한 고품질 파싱 시도 (표 추출 포함)
+        try:
+            import pymupdf
+            doc = pymupdf.open(path)
+            pages_text: list[str] = []
             
-            # 연속된 개행, 연속된 스페이스 정제
-            page_refined = re.sub(r" {2,}", " ", page_refined)
-            page_refined = re.sub(r"\n{3,}", "\n\n", page_refined)
-            pages_text.append(page_refined)
+            for page_idx, page in enumerate(doc):
+                page_text = page.get_text("text") or ""
+                
+                # 표(Table) 추출하여 마크다운 표로 변환 및 삽입
+                tables_md = []
+                try:
+                    tables = page.find_tables()
+                    for table in tables:
+                        # table.extract()는 이중 리스트 [ [cell1, cell2], [cell3, cell4] ] 형태 반환
+                        grid = table.extract()
+                        if grid and len(grid) > 0:
+                            # 마크다운 표로 변환
+                            headers = [str(h or "").strip() for h in grid[0]]
+                            col_count = len(headers)
+                            md_lines = []
+                            md_lines.append("| " + " | ".join(headers) + " |")
+                            md_lines.append("| " + " | ".join(["---"] * col_count) + " |")
+                            for row in grid[1:]:
+                                cells = [str(c or "").strip().replace('\n', ' ') for c in row]
+                                # 혹시 row의 열 개수가 header와 다를 경우 맞추어 줌
+                                if len(cells) < col_count:
+                                    cells += [""] * (col_count - len(cells))
+                                else:
+                                    cells = cells[:col_count]
+                                md_lines.append("| " + " | ".join(cells) + " |")
+                            table_md_str = "\n".join(md_lines)
+                            tables_md.append(table_md_str)
+                except Exception as t_exc:
+                    logger.debug("페이지 %d 표 추출 실패: %s", page_idx + 1, t_exc)
+                
+                # 정제 작업 수행
+                page_refined = unicodedata.normalize('NFC', page_text)
+                
+                # 페이지 번호 패턴 제거
+                pg_num_pattern = re.compile(r"^\s*-\s*\d+\s*-\s*$|^\s*\d+\s*$/?\s*\d*\s*$", re.MULTILINE)
+                lines = [line.strip() for line in page_refined.splitlines() if line.strip() and not pg_num_pattern.match(line.strip())]
+                page_refined = "\n".join(lines)
+                
+                # 표가 발견되었으면 본문에 부착
+                if tables_md:
+                    page_refined += "\n\n[추출된 표 데이터]\n" + "\n\n".join(tables_md)
+                
+                pages_text.append(page_refined)
+            
+            raw_text = "\n\n".join(pages_text)
+            logger.info("pymupdf로 PDF '%s' 파싱 성공 (페이지 수: %d)", path.name, len(doc))
+        except Exception as exc:
+            logger.warning("pymupdf 파싱 실패, pypdf로 보완 처리합니다: %s", exc)
+            raw_text = ""
 
-        final_pdf_text = "\n\n".join(pages_text)
+        # 2. pymupdf 결과가 비어있거나 실패했을 경우 pypdf로 폴백
+        if not raw_text.strip():
+            if pypdf is None:
+                raise ImportError(
+                    "PDF 파싱을 위해서는 pypdf 라이브러리가 필요합니다. "
+                    "먼저 'uv sync' 또는 'pip install pypdf'를 실행하세요."
+                )
+            reader = pypdf.PdfReader(path)
+            pages_text = []
+            pg_num_pattern = re.compile(r"^\s*-\s*\d+\s*-\s*$|^\s*\d+\s*$/?\s*\d*\s*$", re.MULTILINE)
+            
+            for page_idx, page in enumerate(reader.pages):
+                text = page.extract_text()
+                if not text:
+                    continue
+                text = unicodedata.normalize('NFC', text)
+                cleaned_lines: list[str] = []
+                for line in text.splitlines():
+                    line = line.strip()
+                    if pg_num_pattern.match(line):
+                        continue
+                    if len(line) < 4 and line.isdigit():
+                        continue
+                    cleaned_lines.append(line)
+                page_refined = "\n".join(cleaned_lines)
+                page_refined = re.sub(r" {2,}", " ", page_refined)
+                page_refined = re.sub(r"\n{3,}", "\n\n", page_refined)
+                pages_text.append(page_refined)
+            raw_text = "\n\n".join(pages_text)
+            logger.info("pypdf로 PDF '%s' 보완 파싱 완료", path.name)
 
-        # 텍스트 레이어 품질 검증: 너무 짧거나(스캔본) 글자 깨짐(폰트 매핑 손상)이면 비전 전사로 폴백.
-        stripped = final_pdf_text.strip()
+        # 3. 공백 및 개행 최종 정밀 정제
+        raw_text = re.sub(r" {2,}", " ", raw_text)
+        raw_text = re.sub(r"\n{3,}", "\n\n", raw_text)
+
+        # 4. 텍스트 깨짐 및 스캔본 감지 시 비전 OCR 폴백
+        stripped = raw_text.strip()
         too_short = len(stripped) < 50
         corrupted = self._looks_corrupted(stripped)
+        
         if too_short or corrupted:
             reason = "텍스트가 거의 추출되지 않음(스캔본 추정)" if too_short else "텍스트 레이어 손상(글자 단위 깨짐) 감지"
             logger.warning(
@@ -275,10 +362,10 @@ class DocumentParser:
             if vision_text.strip():
                 return vision_text
             logger.error(
-                "[PDF] '%s' 비전 전사도 실패했습니다. pypdf 추출 결과를 그대로 반환합니다.", path.name
+                "[PDF] '%s' 비전 전사도 실패했습니다. 추출 결과를 그대로 반환합니다.", path.name
             )
 
-        return final_pdf_text
+        return raw_text
 
     @staticmethod
     def _looks_corrupted(text: str, sample_chars: int = 4000) -> bool:

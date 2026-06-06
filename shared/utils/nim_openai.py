@@ -5,7 +5,7 @@ import asyncio
 from llama_index.llms.openai import OpenAI
 from llama_index.core.llms import LLMMetadata
 from llama_index.core.base.llms.types import MessageRole
-from src.utils.api_key_rotator import APIKeyRotator
+from shared.utils.api_key_rotator import APIKeyRotator
 from openai import RateLimitError, APITimeoutError, APIConnectionError
 
 logger = logging.getLogger("nim_openai")

@@ -27,9 +27,9 @@ from sentence_transformers import (
 )
 from sentence_transformers.evaluation import InformationRetrievalEvaluator
 
-from src.embedding_pipeline.config import PipelineConfig, DEFAULT_CONFIG
-from src.embedding_pipeline.dataset_builder import DatasetIO, Triplet
-from src.embedding_pipeline.pipeline import setup_logging
+from pipelines.embedding.config import PipelineConfig, DEFAULT_CONFIG
+from pipelines.embedding.dataset_builder import DatasetIO, Triplet
+from pipelines.embedding.pipeline import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ def load_train_eval_datasets(
         if config.paths.sub_dir:
             raise ValueError("특정 파일 격리 모드이므로 로컬 JSONL 경로에서 데이터를 로드합니다.")
             
-        from src.db.connector import db_cursor
+        from shared.database.connector import db_cursor
         logger.info("PostgreSQL 데이터베이스(emb_training_triplets)에서 학습 데이터셋 조회 시도 중...")
         with db_cursor() as (_, cursor):
             cursor.execute("""
@@ -350,7 +350,7 @@ def main() -> None:
     if args.file:
         import unicodedata
         from dataclasses import replace
-        from src.embedding_pipeline.config import PathConfig
+        from pipelines.embedding.config import PathConfig
         file_stem = unicodedata.normalize('NFC', Path(args.file).stem)
         config = replace(config, paths=PathConfig(sub_dir=file_stem))
 

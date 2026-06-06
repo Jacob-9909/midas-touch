@@ -17,7 +17,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import models metadata
-from src.db.models.postgres_models import PostgresBase
+from shared.database.models.postgres_models import PostgresBase
 target_metadata = PostgresBase.metadata
 
 

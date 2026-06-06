@@ -18,9 +18,9 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Iterator
 
-from src.embedding_pipeline.config import PipelineConfig
-from src.embedding_pipeline.hard_negative_miner import MiningResult
-from src.embedding_pipeline.query_synthesizer import SyntheticQuery
+from pipelines.embedding.config import PipelineConfig
+from pipelines.embedding.hard_negative_miner import MiningResult
+from pipelines.embedding.query_synthesizer import SyntheticQuery
 
 logger = logging.getLogger(__name__)
 

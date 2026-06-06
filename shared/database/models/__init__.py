@@ -1,6 +1,6 @@
 """SQLAlchemy Models package for consolidated Midas Touch database schemas."""
 
-from src.db.models.postgres_models import (
+from shared.database.models.postgres_models import (
     PostgresBase,
     User,
     Portfolio,
