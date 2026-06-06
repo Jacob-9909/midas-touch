@@ -1,24 +1,23 @@
-"""
-reingest_pdf.py
----------------
+"""reingest.py
+
 손상된 텍스트 레이어 PDF를 DocumentParser(비전 폴백 포함)로 재파싱하여
-emb_passages 테이블에 재적재하는 일회성/재사용 유틸.
+emb_passages 테이블에 재적재하는 일회성/재사용 유틸리티.
 
 사용:
-    python -m scripts.reingest_pdf data/raw_documents/주택과세금_2025.pdf
+    python -m pipelines.embedding.reingest <pdf_path>
 """
 
 import sys
 import logging
 from pathlib import Path
-
 from dotenv import load_dotenv
 
-load_dotenv(str(Path(__file__).resolve().parent.parent / ".env"))
+# Load env variables
+load_dotenv(str(Path(__file__).resolve().parent.parent.parent / ".env"))
 
-from src.embedding_pipeline.config import DEFAULT_CONFIG
-from src.embedding_pipeline.document_parser import DocumentParser
-from src.db.connector import bulk_upsert_emb_passages
+from pipelines.embedding.config import DEFAULT_CONFIG
+from pipelines.embedding.document_parser import DocumentParser
+from shared.database.connector import bulk_upsert_emb_passages
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,7 +29,7 @@ logger = logging.getLogger("reingest_pdf")
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("usage: python -m scripts.reingest_pdf <pdf_path>")
+        print("Usage: python -m pipelines.embedding.reingest <pdf_path>")
         raise SystemExit(1)
 
     path = Path(sys.argv[1])

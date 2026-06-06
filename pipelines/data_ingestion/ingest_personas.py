@@ -1,10 +1,10 @@
-"""Midas Touch Persona Ingestion and Vector Embedding Pipeline Orchestrator.
+"""Midas Touch Persona Ingestion and Vector Embedding Pipeline.
 
 This script:
-1. Bootstraps the Supabase pgvector schema (idempotent setup of tables, indexes, and RPC functions).
+1. Bootstraps the target PostgreSQL database schema (idempotent setup of tables, indexes, and RPC functions).
 2. Loads augmented_personas.csv.
 3. Generates 1024-dimensional Korean retrieval embeddings using nlpai-lab/KURE-v1 (local sentence-transformers).
-4. Bulk upserts the persona texts and embeddings into Supabase persona_embeddings table.
+4. Bulk upserts the persona texts and embeddings into target database persona_embeddings table.
 """
 
 import os
@@ -14,23 +14,22 @@ import pandas as pd
 from tqdm import tqdm
 from dotenv import load_dotenv
 
-# Set up project root and source path
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(project_root, "src"))
-
 import psycopg2
 from sentence_transformers import SentenceTransformer
 
 load_dotenv()
 
+# Set up project root relative to this file
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 def bootstrap_supabase_schema() -> None:
-    db_url = os.environ.get("DATABASE_URL") or os.environ.get("SUPABASE_DB_URL")
+    db_url = os.environ.get("DATABASE_URL")
     if not db_url:
-        print("DATABASE_URL 또는 SUPABASE_DB_URL이 설정되지 않아 스키마 부트스트랩을 건너뜁니다.")
+        print("DATABASE_URL이 설정되지 않아 스키마 부트스트랩을 건너뜁니다.")
         return
         
-    schema_path = os.path.join(project_root, "database", "schema", "postgres_schema.sql")
+    schema_path = os.path.join(PROJECT_ROOT, "shared", "database", "schema", "postgres_schema.sql")
     if not os.path.exists(schema_path):
         print(f"스키마 파일 없음: {schema_path}")
         return
@@ -53,17 +52,17 @@ def bootstrap_supabase_schema() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Midas Touch 페르소나 임베딩 및 Supabase 적재 파이프라인")
+    parser = argparse.ArgumentParser(description="Midas Touch 페르소나 임베딩 및 PostgreSQL 적재 파이프라인")
     parser.add_argument(
         "--file", "-f",
-        default=os.path.join(project_root, "data", "augmented_personas.csv"),
+        default=os.path.join(PROJECT_ROOT, "data", "augmented_personas.csv"),
         help="입력 augmented_personas.csv 경로",
     )
     parser.add_argument(
         "--batch-size", "-b",
         type=int,
         default=50,
-        help="Supabase 적재 배치 크기 (기본값: 50)",
+        help="데이터베이스 적재 배치 크기 (기본값: 50)",
     )
     args = parser.parse_args()
 
@@ -73,7 +72,7 @@ def main() -> None:
     # 2. Check source CSV
     if not os.path.exists(args.file):
         print(f"❌ 입력 파일 없음: {args.file}")
-        print("   먼저 `uv run src/data_pipeline/generate_finance_data.py`를 가동하여 augmented_personas.csv를 생성해 주세요.")
+        print("   먼저 `uv run pipelines/data_ingestion/generate_finance_data.py`를 가동하여 augmented_personas.csv를 생성해 주세요.")
         sys.exit(1)
 
     print("\n2. 페르소나 데이터셋 로드 중...")
@@ -123,10 +122,10 @@ def main() -> None:
             "embedding": embedding_vec
         })
 
-    # 5. Direct Bulk Upsert to Consolidated PostgreSQL DB
-    db_url = os.environ.get("DATABASE_URL") or os.environ.get("SUPABASE_DB_URL")
+    # 5. Direct Bulk Upsert to target PostgreSQL DB
+    db_url = os.environ.get("DATABASE_URL")
     if not db_url:
-        print("❌ 오류: DATABASE_URL 또는 SUPABASE_DB_URL 환경변수가 존재하지 않아 적재를 종료합니다.")
+        print("❌ 오류: DATABASE_URL 환경변수가 존재하지 않아 적재를 종료합니다.")
         sys.exit(1)
 
     print(f"\n5. PostgreSQL pgvector(persona_embeddings)에 {len(rows_to_insert):,}건 적재를 시작합니다...")
