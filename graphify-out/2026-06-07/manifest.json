@@ -1,192 +1,187 @@
 {
-  ".understand-anything/fingerprints.json": {
+  "/Users/jacob/Develop/midas-touch/.understand-anything/fingerprints.json": {
     "mtime": 1780311186.190673,
     "ast_hash": "498701b4adf584de95353f522b91f1fe",
     "semantic_hash": "498701b4adf584de95353f522b91f1fe"
   },
-  ".understand-anything/intermediate/scan-result.json": {
+  "/Users/jacob/Develop/midas-touch/.understand-anything/intermediate/scan-result.json": {
     "mtime": 1780310698.3163207,
     "ast_hash": "fd48f69ef5ad325ccfa5341f953fafc9",
     "semantic_hash": "fd48f69ef5ad325ccfa5341f953fafc9"
   },
-  ".understand-anything/knowledge-graph.json": {
+  "/Users/jacob/Develop/midas-touch/.understand-anything/knowledge-graph.json": {
     "mtime": 1780311185.987524,
     "ast_hash": "9daccf93d2c0cd9af0bb03e74935c760",
     "semantic_hash": "9daccf93d2c0cd9af0bb03e74935c760"
   },
-  ".understand-anything/meta.json": {
+  "/Users/jacob/Develop/midas-touch/.understand-anything/meta.json": {
     "mtime": 1780311196.9568188,
     "ast_hash": "64abaeb712d939f491e08713dba3a4a9",
     "semantic_hash": "64abaeb712d939f491e08713dba3a4a9"
   },
-  "backend/app/main.py": {
+  "/Users/jacob/Develop/midas-touch/backend/app/main.py": {
     "mtime": 1780753409.0557625,
     "ast_hash": "af1c6187d7d76fe4598b30f8017aadda",
     "semantic_hash": "af1c6187d7d76fe4598b30f8017aadda"
   },
-  "backend/app/services/agent/recommender.py": {
+  "/Users/jacob/Develop/midas-touch/backend/app/services/agent/recommender.py": {
     "mtime": 1780754005.024525,
     "ast_hash": "536f05fe2443a4367e324e168bc95fcf",
     "semantic_hash": "536f05fe2443a4367e324e168bc95fcf"
   },
-  "pipelines/data_ingestion/export_csv.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/data_ingestion/export_csv.py": {
     "mtime": 1780753403.109128,
     "ast_hash": "25ed13713ec01b834648a7e26ea685eb",
     "semantic_hash": "25ed13713ec01b834648a7e26ea685eb"
   },
-  "pipelines/data_ingestion/fetch_market_data.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/data_ingestion/fetch_market_data.py": {
     "mtime": 1780754012.3984141,
     "ast_hash": "01f188f77e8ea845fe3daf46abac5cd0",
     "semantic_hash": "01f188f77e8ea845fe3daf46abac5cd0"
   },
-  "pipelines/data_ingestion/generate_finance_data.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/data_ingestion/generate_finance_data.py": {
     "mtime": 1780803834.3355694,
     "ast_hash": "7cc2299b54fae95358b07dcbea3fa5d2",
     "semantic_hash": "7cc2299b54fae95358b07dcbea3fa5d2"
   },
-  "pipelines/data_ingestion/ingest_personas.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/data_ingestion/ingest_personas.py": {
     "mtime": 1780754017.894206,
     "ast_hash": "7925f1022666d81ecf95e78137a32bfb",
     "semantic_hash": "7925f1022666d81ecf95e78137a32bfb"
   },
-  "pipelines/embedding/__init__.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/embedding/__init__.py": {
     "mtime": 1780753403.096689,
     "ast_hash": "87c7d7a83dc4d657ced0dd3aad97560a",
     "semantic_hash": "87c7d7a83dc4d657ced0dd3aad97560a"
   },
-  "pipelines/embedding/config.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/embedding/config.py": {
     "mtime": 1780753591.8313012,
     "ast_hash": "d88bb6170cc31361596492c09100197e",
     "semantic_hash": "d88bb6170cc31361596492c09100197e"
   },
-  "pipelines/embedding/dataset_builder.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/embedding/dataset_builder.py": {
     "mtime": 1780753591.8337705,
     "ast_hash": "c82899a2d3f3de9739f4704f648fc2e7",
     "semantic_hash": "c82899a2d3f3de9739f4704f648fc2e7"
   },
-  "pipelines/embedding/document_parser.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/embedding/document_parser.py": {
     "mtime": 1780753403.1009552,
     "ast_hash": "233c87e6242e47545bb6d1434d0b3a95",
     "semantic_hash": "233c87e6242e47545bb6d1434d0b3a95"
   },
-  "pipelines/embedding/hard_negative_miner.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/embedding/hard_negative_miner.py": {
     "mtime": 1780753591.8331912,
     "ast_hash": "3218e68d4988f4a768cf4775dc3e11dc",
     "semantic_hash": "3218e68d4988f4a768cf4775dc3e11dc"
   },
-  "pipelines/embedding/pipeline.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/embedding/pipeline.py": {
     "mtime": 1780753591.8348475,
     "ast_hash": "7bfc98d143a889192ab2a4f65e96f2bc",
     "semantic_hash": "7bfc98d143a889192ab2a4f65e96f2bc"
   },
-  "pipelines/embedding/query_synthesizer.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/embedding/query_synthesizer.py": {
     "mtime": 1780753591.832379,
     "ast_hash": "a3528e06901c6bd590d8695e527bdbd2",
     "semantic_hash": "a3528e06901c6bd590d8695e527bdbd2"
   },
-  "pipelines/embedding/reingest.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/embedding/reingest.py": {
     "mtime": 1780754021.9359126,
     "ast_hash": "335e1bdf033e2011be2b023b2d893652",
     "semantic_hash": "335e1bdf033e2011be2b023b2d893652"
   },
-  "pipelines/embedding/train.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/embedding/train.py": {
     "mtime": 1780753591.8354967,
     "ast_hash": "a2999b4452f1ff9c22e2d5b6c481b80d",
     "semantic_hash": "a2999b4452f1ff9c22e2d5b6c481b80d"
   },
-  "pipelines/knowledge_graph/builder.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/knowledge_graph/builder.py": {
     "mtime": 1780753591.830233,
     "ast_hash": "34a7f6f8480b95eef79257d3e66e06c4",
     "semantic_hash": "34a7f6f8480b95eef79257d3e66e06c4"
   },
-  "pipelines/knowledge_graph/entity_resolution.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/knowledge_graph/entity_resolution.py": {
     "mtime": 1780753403.1062558,
     "ast_hash": "d3701088e56675ad7354d0a5517a8b00",
     "semantic_hash": "d3701088e56675ad7354d0a5517a8b00"
   },
-  "pipelines/knowledge_graph/test_rag.py": {
+  "/Users/jacob/Develop/midas-touch/pipelines/knowledge_graph/test_rag.py": {
     "mtime": 1780753591.8306177,
     "ast_hash": "6b45f096209e2148cf52cec8a36f3a18",
     "semantic_hash": "6b45f096209e2148cf52cec8a36f3a18"
   },
-  "shared/database/connector.py": {
+  "/Users/jacob/Develop/midas-touch/shared/database/connector.py": {
     "mtime": 1780753403.079614,
     "ast_hash": "5c9d0e0881791234fc8886cbeb13a073",
     "semantic_hash": "5c9d0e0881791234fc8886cbeb13a073"
   },
-  "shared/database/migrations/postgres/env.py": {
+  "/Users/jacob/Develop/midas-touch/shared/database/migrations/postgres/env.py": {
     "mtime": 1780753591.8261154,
     "ast_hash": "4a0f0c871707efb83fe0b6560c4dca04",
     "semantic_hash": "4a0f0c871707efb83fe0b6560c4dca04"
   },
-  "shared/database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py": {
+  "/Users/jacob/Develop/midas-touch/shared/database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py": {
     "mtime": 1780753403.0889642,
     "ast_hash": "46da0cf46c85b5704d81d71488eb0d11",
     "semantic_hash": "46da0cf46c85b5704d81d71488eb0d11"
   },
-  "shared/database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py": {
+  "/Users/jacob/Develop/midas-touch/shared/database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py": {
     "mtime": 1780753403.0895023,
     "ast_hash": "deba04875994be7584e3ff2e756333d5",
     "semantic_hash": "deba04875994be7584e3ff2e756333d5"
   },
-  "shared/database/models/__init__.py": {
+  "/Users/jacob/Develop/midas-touch/shared/database/models/__init__.py": {
     "mtime": 1780753591.826688,
     "ast_hash": "8c27e59004431d8ca443e91dc1a7e59d",
     "semantic_hash": "8c27e59004431d8ca443e91dc1a7e59d"
   },
-  "shared/database/models/postgres_models.py": {
+  "/Users/jacob/Develop/midas-touch/shared/database/models/postgres_models.py": {
     "mtime": 1780753403.0805442,
     "ast_hash": "1da2840b69c433dfd0d5fd46d87e3431",
     "semantic_hash": "1da2840b69c433dfd0d5fd46d87e3431"
   },
-  "shared/database/schema/postgres_schema.sql": {
+  "/Users/jacob/Develop/midas-touch/shared/database/schema/postgres_schema.sql": {
     "mtime": 1780753403.0906236,
     "ast_hash": "4e056dec59ed5a2fad42aa2cf962cb39",
     "semantic_hash": "4e056dec59ed5a2fad42aa2cf962cb39"
   },
-  "shared/database/seeds/seed_tax_rules.sql": {
+  "/Users/jacob/Develop/midas-touch/shared/database/seeds/seed_tax_rules.sql": {
     "mtime": 1780753403.0912244,
     "ast_hash": "0c7f1dc99d1e3ac9af4e1ea65ba3f2cc",
     "semantic_hash": "0c7f1dc99d1e3ac9af4e1ea65ba3f2cc"
   },
-  "shared/database/supabase_connector.py": {
+  "/Users/jacob/Develop/midas-touch/shared/database/supabase_connector.py": {
     "mtime": 1780753403.0808942,
     "ast_hash": "ab7f09ad71a82c08e7792f411d1038e0",
     "semantic_hash": "ab7f09ad71a82c08e7792f411d1038e0"
   },
-  "shared/utils/api_key_rotator.py": {
+  "/Users/jacob/Develop/midas-touch/shared/utils/api_key_rotator.py": {
     "mtime": 1780753403.0847945,
     "ast_hash": "747689eea8ef4b3087338bab2299d3dc",
     "semantic_hash": "747689eea8ef4b3087338bab2299d3dc"
   },
-  "shared/utils/nim_openai.py": {
+  "/Users/jacob/Develop/midas-touch/shared/utils/nim_openai.py": {
     "mtime": 1780753591.8279746,
     "ast_hash": "890be55ed4583413e4d21fc2b18e2ca3",
     "semantic_hash": "890be55ed4583413e4d21fc2b18e2ca3"
   },
-  "tests/test_agent.py": {
+  "/Users/jacob/Develop/midas-touch/tests/test_agent.py": {
     "mtime": 1780064827.3052974,
     "ast_hash": "d5e96410ed8a8497d00258039382262a",
     "semantic_hash": "d5e96410ed8a8497d00258039382262a"
   },
-  "tests/test_document_parser.py": {
+  "/Users/jacob/Develop/midas-touch/tests/test_document_parser.py": {
     "mtime": 1780064827.3054864,
     "ast_hash": "5f96e9b578e179031deb522391430264",
     "semantic_hash": "5f96e9b578e179031deb522391430264"
   },
-  "README.md": {
+  "/Users/jacob/Develop/midas-touch/README.md": {
     "mtime": 1780755009.482504,
     "ast_hash": "bdc59a4c0ae60867de8220d05399e76e",
     "semantic_hash": "bdc59a4c0ae60867de8220d05399e76e"
   },
-  "infra/docker-compose.yml": {
+  "/Users/jacob/Develop/midas-touch/infra/docker-compose.yml": {
     "mtime": 1780753403.1137109,
     "ast_hash": "62d6af728c3b35c4e8872b87c39c86dd",
     "semantic_hash": "62d6af728c3b35c4e8872b87c39c86dd"
-  },
-  "CLAUDE.md": {
-    "mtime": 1780831193.3222792,
-    "ast_hash": "82efb97a359f5c7290bf2513d14686be",
-    "semantic_hash": ""
   }
 }
