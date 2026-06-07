@@ -14,12 +14,12 @@ from dotenv import load_dotenv
 # .env 파일 로드
 load_dotenv()
 
-# src 경로를 sys.path에 추가해 db.connector 임포트 가능하게 함
-_SRC_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _SRC_ROOT not in sys.path:
-    sys.path.insert(0, _SRC_ROOT)
+# 프로젝트 루트 경로를 sys.path에 추가해 shared.database.connector 임포트 가능하게 함
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
-from db.connector import bulk_upsert_users
+from shared.database.connector import bulk_upsert_users
 
 # ==========================================
 # 1. 설정 (Settings)
@@ -227,8 +227,8 @@ async def main():
         display_cols = ['age', 'total_amount', 'monthly_income', 'aggressiveness', 'target_return_percent']
         print(new_df[display_cols].head())
 
-    # 4.5. Azure SQL에 직접 upsert
-    print(f"\n4.5. Azure SQL에 {len(new_df)}건 적재 중...")
+    # 4.5. PostgreSQL에 직접 upsert
+    print(f"\n4.5. PostgreSQL(users)에 {len(new_df)}건 적재 중...")
     int_cols = [
         "has_stock", "has_bond", "has_deposit", "has_real_estate", "requires_liquidity",
         "stock_amount", "bond_amount", "deposit_amount", "real_estate_amount",
