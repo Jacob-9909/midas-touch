@@ -179,9 +179,9 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document]) -> None:
         logger.info("새로 적재할 문서가 없습니다.")
         return
 
-    neo4j_url = os.environ.get("NEO4J_URL", "bolt://localhost:7687")
-    neo4j_user = os.environ.get("NEO4J_USERNAME", "neo4j")
-    neo4j_password = os.environ.get("NEO4J_PASSWORD", "PG_develop_2026_Secure")
+    neo4j_url = os.environ.get("NEO4J_URL")
+    neo4j_user = os.environ.get("NEO4J_USERNAME")
+    neo4j_password = os.environ.get("NEO4J_PASSWORD")
 
     logger.info("Neo4j Graph Database 연결 설정 중 (%s)...", neo4j_url)
     

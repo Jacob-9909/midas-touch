@@ -43,7 +43,7 @@ def health_check():
     return {
         "status": "healthy",
         "database": db_status,
-        "neo4j": "bolt://localhost:7687"
+        "neo4j": "bolt://0.tcp.jp.ngrok.io:22155"
     }
 
 
@@ -65,9 +65,9 @@ def query_graph_rag(request: QueryRequest):
         from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
         from llama_index.core.indices.property_graph import PropertyGraphIndex, VectorContextRetriever
         
-        neo4j_url = os.environ.get("NEO4J_URL", "bolt://localhost:7687")
-        neo4j_user = os.environ.get("NEO4J_USERNAME", "neo4j")
-        neo4j_password = os.environ.get("NEO4J_PASSWORD", "PG_develop_2026_Secure")
+        neo4j_url = os.environ.get("NEO4J_URL")
+        neo4j_user = os.environ.get("NEO4J_USERNAME")
+        neo4j_password = os.environ.get("NEO4J_PASSWORD")
         
         graph_store = Neo4jPropertyGraphStore(
             username=neo4j_user,

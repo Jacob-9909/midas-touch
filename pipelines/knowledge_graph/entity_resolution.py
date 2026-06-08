@@ -48,9 +48,9 @@ class EntityRefiner:
     def _init_connections(self) -> None:
         """Neo4j, 임베딩, LLM 등 필요한 외부 커넥션 초기화."""
         # 1. Neo4j Store 연결
-        neo4j_url = os.environ.get("NEO4J_URL", "bolt://localhost:7687")
-        neo4j_user = os.environ.get("NEO4J_USERNAME", "neo4j")
-        neo4j_password = os.environ.get("NEO4J_PASSWORD", "PG_develop_2026_Secure")
+        neo4j_url = os.environ.get("NEO4J_URL")
+        neo4j_user = os.environ.get("NEO4J_USERNAME")
+        neo4j_password = os.environ.get("NEO4J_PASSWORD")
         
         logger.info("Neo4j 연결 중 (%s)...", neo4j_url)
         self.graph_store = Neo4jPropertyGraphStore(

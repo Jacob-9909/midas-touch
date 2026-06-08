@@ -60,9 +60,9 @@ def setup_llamaindex_settings() -> tuple[NIMOpenAI, HuggingFaceEmbedding]:
 
 def run_graph_rag_query(query_text: str) -> None:
     """구축된 Neo4j 지식 그래프를 대상으로 다중 홉(Multi-hop) GraphRAG 질의 추론 실행."""
-    neo4j_url = os.environ.get("NEO4J_URL", "bolt://localhost:7687")
-    neo4j_user = os.environ.get("NEO4J_USERNAME", "neo4j")
-    neo4j_password = os.environ.get("NEO4J_PASSWORD", "PG_develop_2026_Secure")
+    neo4j_url = os.environ.get("NEO4J_URL")
+    neo4j_user = os.environ.get("NEO4J_USERNAME")
+    neo4j_password = os.environ.get("NEO4J_PASSWORD")
 
     logger.info("=" * 60)
     logger.info("질의어: %s", query_text)
