@@ -20,9 +20,14 @@
     "semantic_hash": "64abaeb712d939f491e08713dba3a4a9"
   },
   "backend/app/main.py": {
-    "mtime": 1781276607.2557814,
-    "ast_hash": "f5640b4a0a4f198972e88abfcd5d66d8",
-    "semantic_hash": ""
+    "mtime": 1780753409.0557625,
+    "ast_hash": "af1c6187d7d76fe4598b30f8017aadda",
+    "semantic_hash": "af1c6187d7d76fe4598b30f8017aadda"
+  },
+  "backend/app/services/agent/recommender.py": {
+    "mtime": 1780754005.024525,
+    "ast_hash": "536f05fe2443a4367e324e168bc95fcf",
+    "semantic_hash": "536f05fe2443a4367e324e168bc95fcf"
   },
   "pipelines/data_ingestion/export_csv.py": {
     "mtime": 1780753403.109128,
@@ -40,9 +45,9 @@
     "semantic_hash": "7cc2299b54fae95358b07dcbea3fa5d2"
   },
   "pipelines/data_ingestion/ingest_personas.py": {
-    "mtime": 1781275663.1484942,
-    "ast_hash": "6e9d2a04bf19f8ca55d83ca019609596",
-    "semantic_hash": ""
+    "mtime": 1780754017.894206,
+    "ast_hash": "7925f1022666d81ecf95e78137a32bfb",
+    "semantic_hash": "7925f1022666d81ecf95e78137a32bfb"
   },
   "pipelines/embedding/__init__.py": {
     "mtime": 1780753403.096689,
@@ -90,19 +95,19 @@
     "semantic_hash": "a2999b4452f1ff9c22e2d5b6c481b80d"
   },
   "pipelines/knowledge_graph/builder.py": {
-    "mtime": 1781184744.4037418,
-    "ast_hash": "aa0d468fe7500cc256500bd47fd15976",
-    "semantic_hash": ""
+    "mtime": 1780753591.830233,
+    "ast_hash": "34a7f6f8480b95eef79257d3e66e06c4",
+    "semantic_hash": "34a7f6f8480b95eef79257d3e66e06c4"
   },
   "pipelines/knowledge_graph/entity_resolution.py": {
-    "mtime": 1780923012.2870378,
-    "ast_hash": "6430598cc6d8c8610deddedded3e43c3",
-    "semantic_hash": ""
+    "mtime": 1780753403.1062558,
+    "ast_hash": "d3701088e56675ad7354d0a5517a8b00",
+    "semantic_hash": "d3701088e56675ad7354d0a5517a8b00"
   },
   "pipelines/knowledge_graph/test_rag.py": {
-    "mtime": 1780923015.5223072,
-    "ast_hash": "a637b6b5e6d4f13e2f5a333d2bccd38a",
-    "semantic_hash": ""
+    "mtime": 1780753591.8306177,
+    "ast_hash": "6b45f096209e2148cf52cec8a36f3a18",
+    "semantic_hash": "6b45f096209e2148cf52cec8a36f3a18"
   },
   "shared/database/connector.py": {
     "mtime": 1780753403.079614,
@@ -160,9 +165,9 @@
     "semantic_hash": "890be55ed4583413e4d21fc2b18e2ca3"
   },
   "tests/test_agent.py": {
-    "mtime": 1781277881.5726886,
-    "ast_hash": "d816fab36250123b770492d2d5144b53",
-    "semantic_hash": ""
+    "mtime": 1780064827.3052974,
+    "ast_hash": "d5e96410ed8a8497d00258039382262a",
+    "semantic_hash": "d5e96410ed8a8497d00258039382262a"
   },
   "tests/test_document_parser.py": {
     "mtime": 1780064827.3054864,
@@ -170,9 +175,9 @@
     "semantic_hash": "5f96e9b578e179031deb522391430264"
   },
   "README.md": {
-    "mtime": 1781277891.528185,
-    "ast_hash": "154b2bcc6ec0d34238e1c796ddc3441c",
-    "semantic_hash": ""
+    "mtime": 1780755009.482504,
+    "ast_hash": "bdc59a4c0ae60867de8220d05399e76e",
+    "semantic_hash": "bdc59a4c0ae60867de8220d05399e76e"
   },
   "infra/docker-compose.yml": {
     "mtime": 1780753403.1137109,
@@ -182,71 +187,6 @@
   "CLAUDE.md": {
     "mtime": 1780831193.3222792,
     "ast_hash": "82efb97a359f5c7290bf2513d14686be",
-    "semantic_hash": ""
-  },
-  "backend/app/api/chat.py": {
-    "mtime": 1781279609.345282,
-    "ast_hash": "039193d00469081b42b624d7aae18f17",
-    "semantic_hash": ""
-  },
-  "backend/app/services/agent/checkpointer.py": {
-    "mtime": 1781279566.231213,
-    "ast_hash": "1d13dba7556397e9cefa6d06f1c8296d",
-    "semantic_hash": ""
-  },
-  "backend/app/services/agent/graph.py": {
-    "mtime": 1781279529.9056807,
-    "ast_hash": "efa7af2039b37eaa006da922590d7569",
-    "semantic_hash": ""
-  },
-  "backend/app/services/agent/llm.py": {
-    "mtime": 1781276224.4995046,
-    "ast_hash": "4d3795503fea09d4ef6dda9478bea646",
-    "semantic_hash": ""
-  },
-  "backend/app/services/agent/prompts.py": {
-    "mtime": 1781276314.522302,
-    "ast_hash": "4bd30c5a5f1c0c713e7b7a02365698dc",
-    "semantic_hash": ""
-  },
-  "backend/app/services/agent/state.py": {
-    "mtime": 1781276321.2018514,
-    "ast_hash": "eaa03cffb0c101c8a2a0f11681dc7c32",
-    "semantic_hash": ""
-  },
-  "backend/app/services/agent/tools/__init__.py": {
-    "mtime": 1781276296.0598419,
-    "ast_hash": "0f76da86a785d72b6f1ff9c7f47d1f39",
-    "semantic_hash": ""
-  },
-  "backend/app/services/agent/tools/_embedding.py": {
-    "mtime": 1781279473.3700562,
-    "ast_hash": "d13427e611ddb7ec0ec29ed27ffef34d",
-    "semantic_hash": ""
-  },
-  "backend/app/services/agent/tools/graph_rag.py": {
-    "mtime": 1781279500.3620782,
-    "ast_hash": "aca2e1be18c292f40c4b02bd67cab53e",
-    "semantic_hash": ""
-  },
-  "backend/app/services/agent/tools/persona_rag.py": {
-    "mtime": 1781276254.6770914,
-    "ast_hash": "845d19bee069a6f6e3842dff58f3f3f3",
-    "semantic_hash": ""
-  },
-  "backend/app/services/agent/tools/tax_lookup.py": {
-    "mtime": 1781276291.2410166,
-    "ast_hash": "592baeb1854fa767b7ff8bfbb01a0f87",
-    "semantic_hash": ""
-  },
-  "shared/database/migrations/postgres/versions/b2c3d4e5f6a7_add_langgraph_checkpoint_tables.py": {
-    "mtime": 1781279594.818266,
-    "ast_hash": "75956f9751f7f7b318b51c6ce992398e",
-    "semantic_hash": ""
-  },
-  "backend/app/services/agent/DESIGN.md": {
-    "mtime": 1781279814.9564877,
-    "ast_hash": "1bb662450c7c94a85b1643a65943eab2",
     "semantic_hash": ""
   }
 }
