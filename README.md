@@ -73,14 +73,22 @@ PYTHONPATH=. uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --re
 ```
 * **Swagger UI 웹 콘솔**: http://localhost:8000/docs
 
-### 3. 금융 조언 에이전트 CLI 테스트
-```bash
-# 대화형 모드로 실행
-PYTHONPATH=. uv run python -m backend.app.services.agent.recommender --interactive
+### 3. 멀티턴 금융 에이전트 (LangGraph) 호출
 
-# 특정 쿼리로 직접 추천 생성
-PYTHONPATH=. uv run python -m backend.app.services.agent.recommender --query "30대 직장인, 주택 청약 자금 마련 목적"
+FastAPI 서버 구동 후, 세션 기반 멀티턴 대화형 자산관리 에이전트(`/api/v1/chat`)를 호출합니다.
+LangGraph `create_react_agent`가 질의 성격에 따라 도구(persona_rag / graph_rag / tax_and_market_lookup)를
+자동 선택하며, `session_id`(thread_id)별로 대화 맥락이 유지됩니다. `user_uuid`는 필수입니다.
+
+```bash
+curl -X POST http://localhost:8000/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "user-session-001",
+    "user_uuid": "<users 테이블에 존재하는 UUID>",
+    "message": "나와 비슷한 투자자들의 자산 배분을 벤치마크로 보여줘."
+  }'
 ```
+* 같은 `session_id`로 다시 호출하면 이전 대화가 이어집니다(멀티턴 메모리).
 
 ### 4. 거시경제 지표 수집 배치 가동 (yfinance API 연동)
 ```bash

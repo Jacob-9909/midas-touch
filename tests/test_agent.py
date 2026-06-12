@@ -1,22 +1,27 @@
-"""Unit test suite for Midas Touch RAG advisor agent & database helper functions.
+"""Midas Touch 백엔드 에이전트 & DB 헬퍼 통합 테스트.
 
-Run tests:
-    python -m unittest tests/test_agent.py
+실행:
+    PYTHONPATH=. uv run python -m unittest tests/test_agent.py -v
+
+DB(localhost Postgres/Neo4j)와 NVIDIA NIM 연동을 전제로 하는 통합 테스트다.
+NVIDIA_API_KEY가 없으면 LLM이 필요한 테스트는 skip된다.
 """
 
 import os
 import sys
 import unittest
 
-# Set up project root and source path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(project_root, "src"))
+sys.path.insert(0, project_root)
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from agent.recommender import MidasAdviser
-from db.connector import (
+from langchain_core.messages import AIMessage
+
+from backend.app.services.agent.tools import graph_rag, persona_rag, tax_and_market_lookup
+from shared.database.connector import (
     get_all_tax_rules,
     get_latest_market_snapshots,
     get_user_by_uuid,
@@ -24,89 +29,121 @@ from db.connector import (
 )
 
 
-class TestMidasAgent(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        # Check environment variables
-        cls.has_env = os.path.exists(os.path.join(project_root, ".env"))
-        if not cls.has_env:
-            print("⚠️ Warning: .env file missing. Some integration tests might fail.")
+def _first_user_uuid() -> str | None:
+    """테스트용으로 persona_embeddings에 존재하는 실제 user_uuid 하나를 가져온다."""
+    import psycopg2
+
+    try:
+        conn = psycopg2.connect(os.environ["DATABASE_URL"])
+        with conn.cursor() as cur:
+            cur.execute("SELECT azure_user_uuid FROM persona_embeddings LIMIT 1")
+            row = cur.fetchone()
+        conn.close()
+        return row[0] if row else None
+    except Exception:
+        return None
+
+
+class TestDatabaseHelpers(unittest.TestCase):
+    """shared.database.connector 조회 헬퍼 검증."""
 
     def test_get_all_tax_rules(self) -> None:
-        """Test retrieving tax rules from Azure SQL Database."""
-        try:
-            tax_rules = get_all_tax_rules()
-            self.assertIsInstance(tax_rules, list, "Tax rules should be returned as a list.")
-            if len(tax_rules) > 0:
-                rule = tax_rules[0]
-                self.assertIn("asset_type", rule, "Tax rule dict should contain key 'asset_type'.")
-                self.assertIn("tax_rate", rule, "Tax rule dict should contain key 'tax_rate'.")
-                print(f"✅ Azure SQL Tax Rules integration succeeded! Retrieved {len(tax_rules)} rules.")
-            else:
-                print("ℹ️ Azure SQL Tax Rules table is empty, but query executed successfully.")
-        except Exception as e:
-            self.fail(f"Failed to query tax_rules from Azure SQL: {e}")
+        rules = get_all_tax_rules()
+        self.assertIsInstance(rules, list)
+        if rules:
+            self.assertIn("asset_type", rules[0])
+            self.assertIn("tax_rate", rules[0])
 
     def test_get_latest_market_snapshots(self) -> None:
-        """Test retrieving latest market snapshots from Azure SQL."""
-        try:
-            snapshots = get_latest_market_snapshots()
-            self.assertIsInstance(snapshots, list, "Market snapshots should be returned as a list.")
-            if len(snapshots) > 0:
-                snap = snapshots[0]
-                self.assertIn("snapshot_date", snap, "Snapshot dict should contain key 'snapshot_date'.")
-                self.assertIn("data_type", snap, "Snapshot dict should contain key 'data_type'.")
-                self.assertIn("value", snap, "Snapshot dict should contain key 'value'.")
-                print(f"✅ Azure SQL Market Snapshots integration succeeded! Retrieved {len(snapshots)} latest snapshots.")
-            else:
-                print("ℹ️ Azure SQL Market Snapshots table is empty, but query executed successfully.")
-        except Exception as e:
-            self.fail(f"Failed to query market_snapshots from Azure SQL: {e}")
+        snapshots = get_latest_market_snapshots()
+        self.assertIsInstance(snapshots, list)
+        if snapshots:
+            self.assertIn("snapshot_date", snapshots[0])
+            self.assertIn("data_type", snapshots[0])
+            self.assertIn("value", snapshots[0])
 
-    def test_supabase_vector_search(self) -> None:
-        """Test Supabase pgvector cosine similarity search using mock embedding vector."""
-        # Generate 1024-dimensional mock embedding vector (all ones)
+    def test_persona_vector_search_and_join(self) -> None:
+        """pgvector 유사도 검색 + Users 프로필 조인 (1024차원 bge-m3 공간)."""
         mock_embedding = [0.01] * 1024
-        try:
-            results = search_similar_personas_db(mock_embedding, top_k=2)
-            self.assertIsInstance(results, list, "Results should be a list.")
-            if len(results) > 0:
-                res = results[0]
-                self.assertIn("azure_user_uuid", res, "Result dict should contain 'azure_user_uuid'.")
-                self.assertIn("similarity", res, "Result dict should contain 'similarity'.")
-                
-                # Verify that we can query the twin user from Azure SQL using the matched UUID
-                uuid = res["azure_user_uuid"]
-                profile = get_user_by_uuid(uuid)
-                self.assertIsNotNone(profile, f"User profile for UUID '{uuid}' must exist in Azure SQL.")
-                self.assertEqual(profile["uuid"], uuid)
-                print(f"✅ Supabase Vector Search & Azure SQL user profile join succeeded! Match 1 UUID: {uuid}")
-            else:
-                print("ℹ️ Supabase pgvector search returned no matches. (Database might be empty).")
-        except Exception as e:
-            self.fail(f"Failed to perform Supabase pgvector search or Azure SQL join: {e}")
+        results = search_similar_personas_db(mock_embedding, top_k=2)
+        self.assertIsInstance(results, list)
+        if results:
+            res = results[0]
+            self.assertIn("azure_user_uuid", res)
+            self.assertIn("similarity", res)
+            profile = get_user_by_uuid(res["azure_user_uuid"])
+            self.assertIsNotNone(profile)
 
-    def test_end_to_end_adviser_flow(self) -> None:
-        """Test MidasAdviser RAG recommendation generation."""
+
+class TestAgentTools(unittest.TestCase):
+    """LangGraph 도구가 독립적으로 정상 컨텍스트를 반환하는지 검증."""
+
+    def test_persona_rag_tool(self) -> None:
+        out = persona_rag.invoke({"query": "30대 직장인, 주식·부동산 투자 성향", "top_k": 2})
+        self.assertIsInstance(out, str)
+        self.assertIn("유사 성향 투자자", out)
+
+    def test_tax_and_market_lookup_tool(self) -> None:
+        out = tax_and_market_lookup.invoke({})
+        self.assertIsInstance(out, str)
+        self.assertIn("세법 규칙", out)
+
+    def test_graph_rag_tool(self) -> None:
+        """Neo4j 1024차원 인덱스에 대해 차원 불일치 없이 검색되는지 확인."""
+        out = graph_rag.invoke({"query": "주식 양도소득세 근거 법령"})
+        self.assertIsInstance(out, str)
+        self.assertIn("지식 그래프 관계망", out)
+
+
+class TestAgentEndToEnd(unittest.TestCase):
+    """create_react_agent 멀티턴 + 도구 라우팅 end-to-end 검증."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.uuid = _first_user_uuid()
+
+    def setUp(self) -> None:
         if not os.environ.get("NVIDIA_API_KEY"):
-            self.skipTest("Skipping end-to-end LLM adviser test: NVIDIA_API_KEY is not set.")
-            
-        try:
-            adviser = MidasAdviser()
-            query = "30대 직장인 주식 부동산 투자 성향"
-            report = adviser.get_recommendation(query, top_k=2)
-            self.assertIsNotNone(report, "Adviser must return a non-empty report string.")
-            self.assertIn("요약", report, "Report should contain section '요약'.")
-            self.assertIn("포트폴리오", report, "Report should contain section '포트폴리오'.")
-            self.assertIn("세금", report, "Report should contain section '세금'.")
-            print("✅ End-to-End MidasAdviser hybrid RAG recommendation generation succeeded!")
-            
-            # Print a snippet of the report for visual reference in logs
-            print("\n----- Report Snippet -----")
-            print("\n".join(report.splitlines()[:15]) + "\n...")
-            print("--------------------------\n")
-        except Exception as e:
-            self.fail(f"End-to-End MidasAdviser flow failed: {e}")
+            self.skipTest("NVIDIA_API_KEY 미설정 — LLM 통합 테스트 skip")
+        if not self.uuid:
+            self.skipTest("persona_embeddings에 테스트용 user_uuid 없음")
+
+    def test_multiturn_and_tool_routing(self) -> None:
+        from backend.app.api.chat import ChatRequest, chat
+        from backend.app.services.agent.graph import get_agent
+
+        thread = "test-e2e-multiturn"
+        config = {"configurable": {"thread_id": thread}}
+        agent = get_agent()
+
+        # 턴 1: 유사 투자자 벤치마크 → persona_rag 라우팅 기대
+        r1 = chat(ChatRequest(session_id=thread, message="나와 비슷한 투자자들의 자산 배분을 보여줘.", user_uuid=self.uuid))
+        self.assertTrue(r1.reply)
+
+        # 턴 2: 멀티턴 메모리 — 이전 맥락 참조
+        r2 = chat(ChatRequest(session_id=thread, message="방금 내용 중 핵심 하나만 다시 짚어줘.", user_uuid=self.uuid))
+        self.assertTrue(r2.reply)
+
+        state = agent.get_state(config)
+        tools_called = [
+            tc["name"]
+            for m in state.values["messages"]
+            if isinstance(m, AIMessage)
+            for tc in (m.tool_calls or [])
+        ]
+        # 적어도 하나의 검색 도구가 호출되어야 한다
+        self.assertTrue(set(tools_called) & {"persona_rag", "graph_rag", "tax_and_market_lookup"})
+        # 멀티턴 누적(턴1 user + 응답 + 턴2 user + 응답)으로 4개 초과
+        self.assertGreater(len(state.values["messages"]), 4)
+
+    def test_unknown_user_returns_404(self) -> None:
+        from fastapi import HTTPException
+
+        from backend.app.api.chat import ChatRequest, chat
+
+        with self.assertRaises(HTTPException) as ctx:
+            chat(ChatRequest(session_id="test-404", message="안녕", user_uuid="nonexistent-uuid-0000"))
+        self.assertEqual(ctx.exception.status_code, 404)
 
 
 if __name__ == "__main__":

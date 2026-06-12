@@ -27,6 +27,13 @@ data/
 .uv/
 .python-version
 
+# Caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.cache/
+graphify-out/cache/
+
 # IDE / Editors
 .vscode/
 .idea/

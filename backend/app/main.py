@@ -8,12 +8,16 @@ import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from shared.database.connector import get_connection
+from backend.app.api.chat import router as chat_router
 
 app = FastAPI(
     title="Midas Touch API Server",
     description="금융 특화 임베딩 및 Neo4j GraphRAG 기반 자산관리 조언 서비스 API",
     version="1.0.0",
 )
+
+# 멀티턴 에이전트 라우터 (LangGraph 기반 /api/v1/chat)
+app.include_router(chat_router)
 
 
 class QueryRequest(BaseModel):
@@ -43,7 +47,7 @@ def health_check():
     return {
         "status": "healthy",
         "database": db_status,
-        "neo4j": "bolt://0.tcp.jp.ngrok.io:22155"
+        "neo4j": os.environ.get("NEO4J_URL", "unset"),
     }
 
 
