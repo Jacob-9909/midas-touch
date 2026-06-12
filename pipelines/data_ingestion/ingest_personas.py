@@ -3,7 +3,9 @@
 This script:
 1. Bootstraps the target PostgreSQL database schema (idempotent setup of tables, indexes, and RPC functions).
 2. Loads augmented_personas.csv.
-3. Generates 1024-dimensional Korean retrieval embeddings using nlpai-lab/KURE-v1 (local sentence-transformers).
+3. Generates 1024-dimensional Korean retrieval embeddings using BAAI/bge-m3 (local sentence-transformers).
+   NOTE: bge-m3 is the project-wide unified embedding model — it MUST match the model used by
+   the backend agent's persona_rag tool and the Neo4j knowledge-graph index. Do not diverge.
 4. Bulk upserts the persona texts and embeddings into target database persona_embeddings table.
 """
 
@@ -45,7 +47,7 @@ def bootstrap_supabase_schema() -> None:
             cursor.execute(sql_schema)
             conn.commit()
         conn.close()
-        print("   PostgreSQL 통합 스키마 및 RPC 함수 부트스트랩 성공 (1024차원 KURE-v1 최적화 완료).")
+        print("   PostgreSQL 통합 스키마 및 RPC 함수 부트스트랩 성공 (1024차원 bge-m3 최적화 완료).")
     except Exception as e:
         print(f"⚠️ PostgreSQL 스키마 초기화 중 예외 발생: {e}")
         print("   (경고: 테이블 수정 권한을 확인해 주세요.)")
@@ -64,10 +66,20 @@ def main() -> None:
         default=50,
         help="데이터베이스 적재 배치 크기 (기본값: 50)",
     )
+    parser.add_argument(
+        "--skip-schema",
+        action="store_true",
+        help="스키마 부트스트랩(postgres_schema.sql)을 건너뜁니다. "
+             "주의: 부트스트랩은 users/tax_rules/market_snapshots 등 모든 테이블을 DROP CASCADE 후 재생성합니다. "
+             "embedding만 재적재(bge-m3 재임베딩)할 때는 반드시 이 플래그를 사용하세요 — upsert는 ON CONFLICT로 기존 행만 갱신합니다.",
+    )
     args = parser.parse_args()
 
-    # 1. Schema Bootstrap
-    bootstrap_supabase_schema()
+    # 1. Schema Bootstrap (destructive — drops ALL tables; skip for embedding-only re-ingestion)
+    if args.skip_schema:
+        print("1. --skip-schema 지정됨: 스키마 부트스트랩(DROP CASCADE)을 건너뜁니다. 기존 테이블 보존.")
+    else:
+        bootstrap_supabase_schema()
 
     # 2. Check source CSV
     if not os.path.exists(args.file):
@@ -83,14 +95,14 @@ def main() -> None:
         print("❌ 오류: CSV에 'uuid' 컬럼이 존재하지 않습니다.")
         sys.exit(1)
 
-    # 3. Load Embedding Model
-    print("\n3. 고려대학교 한국어 URE 임베딩 모델(nlpai-lab/KURE-v1) 로드 중...")
+    # 3. Load Embedding Model (project-wide unified: BAAI/bge-m3)
+    print("\n3. 통합 한국어 임베딩 모델(BAAI/bge-m3) 로드 중...")
     print("   (Hugging Face에서 최초 1회 다운로드가 진행되므로 네트워크 상황에 따라 시간이 소요될 수 있습니다.)")
     try:
-        model = SentenceTransformer("nlpai-lab/KURE-v1")
-        print("   KURE-v1 모델 로드 성공. (임베딩 차원: 1024)")
+        model = SentenceTransformer("BAAI/bge-m3")
+        print("   bge-m3 모델 로드 성공. (임베딩 차원: 1024)")
     except Exception as e:
-        print(f"❌ KURE-v1 임베딩 모델 로드 실패: {e}")
+        print(f"❌ bge-m3 임베딩 모델 로드 실패: {e}")
         sys.exit(1)
 
     # 4. Generate Embeddings & Prepare rows
@@ -113,7 +125,7 @@ def main() -> None:
         if not persona_text:
             persona_text = f"Persona profile for user with UUID: {uuid}"
 
-        # Generate KURE-v1 1024-dim embedding
+        # Generate bge-m3 1024-dim embedding
         embedding_vec = model.encode(persona_text).tolist()
         
         rows_to_insert.append({

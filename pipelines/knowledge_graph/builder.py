@@ -34,6 +34,10 @@ from llama_index.core.indices.property_graph import (
     SchemaLLMPathExtractor,
 )
 from llama_index.llms.google_genai import GoogleGenAI
+from llama_index.llms.openai import OpenAI
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+from queue import Queue
 
 # 로깅 설정
 logging.basicConfig(
@@ -42,6 +46,21 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("graph_builder")
+
+# 외부 라이브러리(HTTP 요청, OpenAI, Hugging Face, 구글 API 등)의 불필요한 INFO 로그 억제
+for noisy_logger in [
+    "httpx",
+    "httpcore",
+    "openai",
+    "urllib3",
+    "google",
+    "sentence_transformers",
+    "transformers",
+    "huggingface_hub",
+    "llama_index",
+]:
+    logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+
 
 
 def setup_llamaindex_settings() -> tuple[GoogleGenAI, HuggingFaceEmbedding]:
@@ -75,7 +94,37 @@ def setup_llamaindex_settings() -> tuple[GoogleGenAI, HuggingFaceEmbedding]:
     Settings.llm = llm
     Settings.embed_model = embed_model
     
+    # 한국어 bge-m3 모델의 로컬 스레드 안정성을 보장하기 위해 Lock 적용 오버라이딩
+    orig_get_text_embedding = embed_model.get_text_embedding
+    orig_get_text_embedding_batch = embed_model.get_text_embedding_batch
+    orig_aget_text_embedding = embed_model.aget_text_embedding
+    orig_aget_text_embedding_batch = embed_model.aget_text_embedding_batch
+    
+    embed_lock = Lock()
+    
+    def thread_safe_get_text_embedding(*args, **kwargs):
+        with embed_lock:
+            return orig_get_text_embedding(*args, **kwargs)
+            
+    def thread_safe_get_text_embedding_batch(*args, **kwargs):
+        with embed_lock:
+            return orig_get_text_embedding_batch(*args, **kwargs)
+            
+    async def thread_safe_aget_text_embedding(*args, **kwargs):
+        with embed_lock:
+            return await orig_aget_text_embedding(*args, **kwargs)
+            
+    async def thread_safe_aget_text_embedding_batch(*args, **kwargs):
+        with embed_lock:
+            return await orig_aget_text_embedding_batch(*args, **kwargs)
+            
+    object.__setattr__(embed_model, 'get_text_embedding', thread_safe_get_text_embedding)
+    object.__setattr__(embed_model, 'get_text_embedding_batch', thread_safe_get_text_embedding_batch)
+    object.__setattr__(embed_model, 'aget_text_embedding', thread_safe_aget_text_embedding)
+    object.__setattr__(embed_model, 'aget_text_embedding_batch', thread_safe_aget_text_embedding_batch)
+    
     return llm, embed_model
+
 
 
 def load_passages_as_documents() -> list[Document]:
@@ -168,7 +217,7 @@ def save_processed_passage_ids(passage_ids: list[str]) -> None:
         with db_cursor() as (_, cursor):
             params = [(pid,) for pid in passage_ids]
             cursor.executemany(sql, params)
-        logger.info("성공적으로 처리된 %d개의 passage_id를 PostgreSQL에 기록했습니다.", len(passage_ids))
+        logger.debug("성공적으로 처리된 %d개의 passage_id를 PostgreSQL에 기록했습니다.", len(passage_ids))
     except Exception as exc:
         logger.error("processed passage_id 저장 오류: %s", exc)
 
@@ -192,6 +241,14 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document]) -> None:
         url=neo4j_url,
         database="neo4j",
     )
+
+    # 병렬 처리 시 Neo4j schema refresh의 동시성 버그(pop from empty list) 방지 및 속도 향상을 위해 get_schema 오버라이드
+    orig_get_schema = graph_store.get_schema
+    def thread_safe_get_schema(refresh=False, *args, **kwargs):
+        # ingestion 단계에서는 refresh를 강제로 False로 전달하여 리프레시를 건너뜁니다.
+        return orig_get_schema(refresh=False, *args, **kwargs)
+    object.__setattr__(graph_store, "get_schema", thread_safe_get_schema)
+
 
     # 2. 세법 전용 스키마 지식 추출 가이드 정의 (Strict Schema Extractor)
     logger.info("금융 세법/자산 전용 스키마 지식 추출 프롬프트/가이드 구성 중...")
@@ -233,7 +290,7 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document]) -> None:
         ("TAXRATEINFO", "BASED_ON", "LEGALREFERENCE"),
     ]
 
-    custom_system_prompt = (
+    custom_extract_prompt = (
         "당신은 금융 및 세법 전문 지식 그래프 추출기입니다.\n"
         "주어진 텍스트 본문에서 한국 금융 세제와 자산 운용에 관련된 노드(Entity)와 관계(Relationship)를 정확하게 추출하십시오.\n\n"
         "### 기본(Base) 스키마 가이드:\n"
@@ -252,56 +309,144 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document]) -> None:
         "- 본문을 분석할 때 위의 기본 스키마에 딱 들어맞지 않지만, 세무/금융 맥락상 매우 중요하다고 판단되는 고유한 개념이나 속성\n"
         "  (예: 특정 세금 우대 혜택 명칭, 특별 공제 대상, 대주주 판정 요건 등)이 등장하는 경우,\n"
         "  **새로운 엔티티 유형 및 관계 유형을 동적으로 창안하여 자유롭게 추출하십시오.**\n"
-        "- 단, 무분별한 노드 난립을 막기 위해 개념이 명확하고 중복되지 않는 용어를 사용하십시오."
+        "- 단, 무분별한 노드 난립을 막기 위해 개념이 명확하고 중복되지 않는 용어를 사용하십시오.\n\n"
+        "최대 {max_triplets_per_chunk}개의 추출된 경로로 출력을 제한하십시오.\n"
+        "-------\n"
+        "{text}\n"
+        "-------\n"
     )
 
-    # Schema 기반 LLM 지식 추출기 세팅
-    schema_extractor = SchemaLLMPathExtractor(
-        llm=llm,
-        possible_entities=Entities,
-        possible_relations=Relations,
-        kg_validation_schema=kg_validation_schema,
-        strict=False,  # 기본 스키마 외에 LLM이 제안한 새로운 노드/관계도 동적으로 허용
-        system_prompt=custom_system_prompt,
-        num_workers=2, # Vertex AI의 넉넉한 할당량을 활용하기 위해 동시성 상향 조정
-    )
+    # 2. API 키 로드 및 각 모델별 LLM + Extractor 풀 빌드
+    extractors = []
     
-    extractors = [schema_extractor]
+    # (A) Gemini (Vertex AI) Extractor 추가
+    extractors.append((
+        SchemaLLMPathExtractor(
+            llm=llm,
+            possible_entities=Entities,
+            possible_relations=Relations,
+            kg_validation_schema=kg_validation_schema,
+            strict=False,
+            extract_prompt=custom_extract_prompt,
+            num_workers=1,
+        ),
+        "Gemini-VertexAI"
+    ))
+    
+    # (B) 환경변수에서 NVIDIA API 키 목록 동적 로드 및 추가
+    nim_keys = []
+    if os.environ.get("NVIDIA_API_KEY"):
+        nim_keys.append(os.environ.get("NVIDIA_API_KEY"))
+    if os.environ.get("NVIDIA_API_KEY_2"):
+        nim_keys.append(os.environ.get("NVIDIA_API_KEY_2"))
+    
+    i = 3
+    while True:
+        k = os.environ.get(f"NVIDIA_API_KEY_{i}")
+        if not k:
+            break
+        nim_keys.append(k)
+        i += 1
+        
+    nim_model = os.environ.get("NIM_GENERATION_MODEL")
+    for idx, key in enumerate(nim_keys, start=1):
+        nim_llm = OpenAI(
+            model=nim_model,
+            api_key=key,
+            api_base="https://integrate.api.nvidia.com/v1",
+            temperature=0.0,
+            max_tokens=10000,
+        )
+        extractors.append((
+            SchemaLLMPathExtractor(
+                llm=nim_llm,
+                possible_entities=Entities,
+                possible_relations=Relations,
+                kg_validation_schema=kg_validation_schema,
+                strict=False,
+                extract_prompt=custom_extract_prompt,
+                num_workers=1,
+            ),
+            f"NVIDIA-NIM-{idx}"
+        ))
 
-    # 3. PropertyGraphIndex 빌드 및 Neo4j 적재 (루프를 돌며 순차적 처리 및 즉시 커밋)
+    num_workers = len(extractors)
+    logger.info("총 %d개의 병렬 추출기(Gemini 1개, NVIDIA NIM %d개)를 준비했습니다.", 
+                num_workers, len(nim_keys))
+    
+    # 3. ThreadPoolExecutor 빌드 및 Neo4j 적재 (루프를 돌며 병렬 처리 및 즉시 커밋)
     total_docs = len(documents)
-    logger.info("지식 그래프 구축 및 Neo4j 추가 적재 시작 (총 %d개 단락 순차 처리)...", total_docs)
+    logger.info("지식 그래프 구축 및 Neo4j 추가 적재 시작 (총 %d개 단락 병렬 처리)...", total_docs)
     logger.info("기존 Neo4j 데이터를 보존하고 추가 적재합니다.")
     
     start_time = time.perf_counter()
     success_count = 0
     
-    for idx, doc in enumerate(documents, start=1):
-        logger.info("-" * 50)
-        logger.info("[%d / %d] passage_id: %s 처리 시작...", idx, total_docs, doc.id_)
-        # 문장 일부 출력 (로깅용)
-        snippet = doc.text[:60].replace('\n', ' ') + "..."
-        logger.info("내용 일부: %s", snippet)
+    # 스레드 안전하게 공유할 큐와 락
+    extractor_queue = Queue()
+    for ext, name in extractors:
+        extractor_queue.put((ext, name))
+        
+    progress_lock = Lock()
+    
+    def worker_task(doc, doc_idx):
+        # 큐에서 사용 가능한 추출기 대여
+        ext, w_name = extractor_queue.get()
+        
+        with progress_lock:
+            logger.info("[%d/%d] [%s] %s 시작...", doc_idx, total_docs, w_name, doc.id_)
+            
+        max_retries = 3
+        backoff = 2.0  # 초
+        success = False
         
         try:
-            # 단일 문서에 대해 PropertyGraphIndex 구축 수행 (Neo4j에 자동 반영)
-            PropertyGraphIndex.from_documents(
-                [doc],
-                property_graph_store=graph_store,
-                kg_extractors=extractors,
-                show_progress=False,
-            )
-            # 성공 즉시 DB 체크포인트 테이블에 기록
-            save_processed_passage_ids([doc.id_])
-            success_count += 1
-            logger.info("[%d / %d] passage_id: %s 처리 성공 및 PostgreSQL 체크포인트 기록 완료.", idx, total_docs, doc.id_)
-        except (KeyboardInterrupt, SystemExit):
-            logger.warning("⚠️ 사용자에 의해 작업이 인터럽트 되었습니다. 루프를 중단합니다.")
-            raise
-        except Exception as exc:
-            logger.error("❌ [%d / %d] passage_id: %s 처리 중 오류 발생: %s", idx, total_docs, doc.id_, exc)
-            logger.warning("안정성을 위해 작업을 중단합니다. 다음 실행 시 이 지점부터 이어서 진행됩니다.")
-            break
+            for attempt in range(1, max_retries + 1):
+                try:
+                    # 단일 문서에 대해 PropertyGraphIndex 구축 수행 (Neo4j에 자동 반영)
+                    PropertyGraphIndex.from_documents(
+                        [doc],
+                        property_graph_store=graph_store,
+                        kg_extractors=[ext],
+                        show_progress=False,
+                    )
+                    # 성공 즉시 DB 체크포인트 테이블에 기록
+                    with progress_lock:
+                        save_processed_passage_ids([doc.id_])
+                        nonlocal success_count
+                        success_count += 1
+                        logger.info("✅ [%d/%d] [%s] %s 완료!", doc_idx, total_docs, w_name, doc.id_)
+                    success = True
+                    break
+                except Exception as exc:
+                    with progress_lock:
+                        if attempt < max_retries:
+                            sleep_time = backoff * (2 ** (attempt - 1))
+                            logger.warning(
+                                "⚠️ [%d/%d] [%s] %s 오류 (%d/%d 시도), %s초 후 재시도: %s",
+                                doc_idx, total_docs, w_name, doc.id_, attempt, max_retries, sleep_time, exc
+                            )
+                            time.sleep(sleep_time)
+                        else:
+                            logger.error("❌ [%d/%d] [%s] %s 최종 실패 (%d/%d 시도): %s", 
+                                         doc_idx, total_docs, w_name, doc.id_, attempt, max_retries, exc)
+            return success
+        finally:
+            # 사용 후 큐에 반납
+            extractor_queue.put((ext, w_name))
+
+    # ThreadPoolExecutor를 통한 병렬 실행
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        futures = [executor.submit(worker_task, doc, idx) for idx, doc in enumerate(documents, start=1)]
+        for fut in futures:
+            try:
+                fut.result()
+            except KeyboardInterrupt:
+                logger.warning("⚠️ 사용자에 의해 작업이 인터럽트 되었습니다. 중단을 시도합니다.")
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise
+            except Exception:
+                pass
             
     elapsed = time.perf_counter() - start_time
     logger.info("=" * 60)
