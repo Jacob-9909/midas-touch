@@ -14,7 +14,12 @@ midas-touch/
 │   └── app/
 │       ├── main.py             # FastAPI 엔트리포인트 (GraphRAG API 및 에이전트 라우터)
 │       └── services/
-│           └── agent/          # 금융 질의 대응 자율 에이전트 모듈 (MidasAdviser)
+│           └── agent/          # 금융 질의 대응 LangGraph 에이전트 모듈 (MidasAdviser)
+│               ├── graph.py        # StateGraph 조립/컴파일 (배선 전용) + 캐시된 get_agent()
+│               ├── state.py        # AgentState 스키마 + tool_context 누적 리듀서
+│               ├── checkpointer.py # PostgresSaver 멀티턴 영속화 (커넥션 풀)
+│               ├── nodes/          # 그래프 노드 (intent · 도구 3종 · synthesize · dispatch 라우팅)
+│               └── tools/          # 노드가 호출하는 검색 도구 (persona/graph RAG, tax lookup)
 ├── pipelines/                  # 배치 데이터 수집/임베딩/지식 그래프 파이프라인
 │   ├── data_ingestion/         # 금융/세법 원천 데이터 크롤링, 페르소나 인제스션
 │   ├── embedding/              # 대조 학습용 Triplet 데이터셋 구축 및 토큰 청커/마이닝 파이프라인
@@ -60,6 +65,40 @@ Midas Touch의 통합 데이터 파이프라인은 금융 및 세법 원천 문�
 
 ---
 
+## 🕸️ 에이전트 그래프 구조 (LangGraph `StateGraph`)
+
+멀티턴 자산관리 에이전트(MidasAdviser)는 도구 선택을 LLM ReAct 루프에 맡기는 대신, **앞단 intent 분류기가 "어떤 도구를 쓸지"를 한 번에 판정**하고 해당 도구 노드만 결정적으로 실행하는 **intent 분기 그래프**로 구성됩니다. 복합 질문은 여러 도구를 동시에(fan-out) 태워 컨텍스트를 누적한 뒤, `synthesize` 노드가 **단 1회의 LLM 호출**로 최종 답변을 작성합니다. (도구 호출마다 LLM 라운드가 붙는 ReAct 대비 지연·비용을 절감)
+
+```
+                                  ┌─────────────────────────┐
+                                  │   intent (classify)     │  필요 도구 판정 (structured-output,
+                                  │  LLM 라우터 + 키워드 폴백  │  실패 시 키워드 폴백) · tool_context 리셋
+                                  └────────────┬────────────┘
+   START ───────────────────────────────────►  │
+                                  dispatch (conditional fan-out)
+              ┌──────────────────────┬─────────┴──────────┬──────────────────────┐
+              ▼                      ▼                    ▼                      │ (도구 불필요)
+     ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────────────┐     │
+     │   persona_rag   │   │    graph_rag    │   │  tax_and_market_lookup  │     │
+     │ 또래 벤치마킹 검색  │    │ 세법 근거/관계 검색 │   │   절세 조건·시장 수치 조회    │     │
+     └────────┬────────┘   └────────┬────────┘   └────────────┬────────────┘     │
+              └─────────────────────┴────────tool_context 누적 ┴──────────────────┤
+                                                      ▼
+                                  ┌──────────────────────────────────────────────────┐
+                                  │                  synthesize                      │
+                                  │  SYSTEM_PROMPT + 프로필요약 + 누적 컨텍스트로 1회 작문   │
+                                  └────────────────────────┬─────────────────────────┘
+                                                           ▼
+                                                          END
+```
+
+* **상태(`AgentState`)**: `messages`(대화 이력, `add_messages` 리듀서) · `user_uuid`(필수) · `profile_summary`(첫 턴 구성 후 재사용) · `route`(고른 도구 목록) · `tool_context`(도구들이 누적한 검색 컨텍스트, `merge_tool_context` 리듀서로 fan-out 결과를 충돌 없이 병합).
+* **노드 분리**: 각 노드는 `nodes/` 패키지에 파일 단위로 분리되고, `graph.py`는 이를 import해 **배선(토폴로지)만** 담당합니다. 노드 로직 수정은 `nodes/`에서, 그래프 연결 변경은 `graph.py`에서 합니다.
+* **멀티턴 영속화**: `PostgresSaver` 체크포인터로 `thread_id`(=`session_id`)별 대화 상태를 Postgres에 영속화 — 프로세스 재시작·다중 uvicorn 워커 간 세션이 공유됩니다. 체크포인트 테이블은 **Alembic 마이그레이션이 단일 진실원천**이라 `setup()`은 호출하지 않습니다.
+* **레거시**: 이전 ReAct 구성(`langchain.agents.create_agent`)은 `graph.py`의 `[LEGACY]` 블록에 주석으로 보존되어 있어 토폴로지 교체로 되돌릴 수 있습니다.
+
+---
+
 ## 🚀 실행 명령어 모음
 
 ### 1. 데이터베이스 마이그레이션 최신화
@@ -76,8 +115,9 @@ PYTHONPATH=. uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --re
 ### 3. 멀티턴 금융 에이전트 (LangGraph) 호출
 
 FastAPI 서버 구동 후, 세션 기반 멀티턴 대화형 자산관리 에이전트(`/api/v1/chat`)를 호출합니다.
-LangGraph `create_react_agent`가 질의 성격에 따라 도구(persona_rag / graph_rag / tax_and_market_lookup)를
-자동 선택하며, `session_id`(thread_id)별로 대화 맥락이 유지됩니다. `user_uuid`는 필수입니다.
+LangGraph **intent 분기 `StateGraph`**가 질의 성격을 한 번에 분류해 필요한 도구(persona_rag / graph_rag /
+tax_and_market_lookup)만 fan-out 실행한 뒤 `synthesize`로 답변을 작성하며(위 [에이전트 그래프 구조](#️-에이전트-그래프-구조-langgraph-stategraph) 참고),
+`session_id`(thread_id)별로 대화 맥락이 유지됩니다. `user_uuid`는 필수입니다.
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/chat \
