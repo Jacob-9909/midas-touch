@@ -160,8 +160,8 @@
     "semantic_hash": "890be55ed4583413e4d21fc2b18e2ca3"
   },
   "tests/test_agent.py": {
-    "mtime": 1781277881.5726886,
-    "ast_hash": "d816fab36250123b770492d2d5144b53",
+    "mtime": 1781314365.392722,
+    "ast_hash": "dca025471fa67ee5d6cd5bf89946bcb6",
     "semantic_hash": ""
   },
   "tests/test_document_parser.py": {
@@ -195,8 +195,8 @@
     "semantic_hash": ""
   },
   "backend/app/services/agent/graph.py": {
-    "mtime": 1781279529.9056807,
-    "ast_hash": "efa7af2039b37eaa006da922590d7569",
+    "mtime": 1781314586.2948377,
+    "ast_hash": "600225918df169542179afc6602eb392",
     "semantic_hash": ""
   },
   "backend/app/services/agent/llm.py": {
@@ -205,13 +205,13 @@
     "semantic_hash": ""
   },
   "backend/app/services/agent/prompts.py": {
-    "mtime": 1781276314.522302,
-    "ast_hash": "4bd30c5a5f1c0c713e7b7a02365698dc",
+    "mtime": 1781316907.9850411,
+    "ast_hash": "f67cde2f04076adb8da1ea5cb2ed2cb3",
     "semantic_hash": ""
   },
   "backend/app/services/agent/state.py": {
-    "mtime": 1781276321.2018514,
-    "ast_hash": "eaa03cffb0c101c8a2a0f11681dc7c32",
+    "mtime": 1781314267.9382038,
+    "ast_hash": "96d8954a77b5901eed4251350bd2139d",
     "semantic_hash": ""
   },
   "backend/app/services/agent/tools/__init__.py": {
@@ -230,8 +230,8 @@
     "semantic_hash": ""
   },
   "backend/app/services/agent/tools/persona_rag.py": {
-    "mtime": 1781276254.6770914,
-    "ast_hash": "845d19bee069a6f6e3842dff58f3f3f3",
+    "mtime": 1781316899.8242934,
+    "ast_hash": "d6fef87c2cc3871fe790c5b6b0ae59b7",
     "semantic_hash": ""
   },
   "backend/app/services/agent/tools/tax_lookup.py": {
@@ -244,9 +244,44 @@
     "ast_hash": "75956f9751f7f7b318b51c6ce992398e",
     "semantic_hash": ""
   },
-  "backend/app/services/agent/DESIGN.md": {
-    "mtime": 1781279814.9564877,
-    "ast_hash": "1bb662450c7c94a85b1643a65943eab2",
+  "backend/app/services/agent/nodes/__init__.py": {
+    "mtime": 1781314562.5539174,
+    "ast_hash": "9a3af9859d1c79db71901b275f31cfa1",
+    "semantic_hash": ""
+  },
+  "backend/app/services/agent/nodes/_common.py": {
+    "mtime": 1781314529.39634,
+    "ast_hash": "aabf9b5b73ca6cea524b12b8bc89d556",
+    "semantic_hash": ""
+  },
+  "backend/app/services/agent/nodes/graph_rag.py": {
+    "mtime": 1781314549.7562897,
+    "ast_hash": "fa3e6c214910d2bdb08eb44c66efeb0e",
+    "semantic_hash": ""
+  },
+  "backend/app/services/agent/nodes/intent.py": {
+    "mtime": 1781316914.2225425,
+    "ast_hash": "f31dbbd2d3b6f8c35c68ff3b8b61c52e",
+    "semantic_hash": ""
+  },
+  "backend/app/services/agent/nodes/persona_rag.py": {
+    "mtime": 1781314547.3953772,
+    "ast_hash": "da1128f456056d527148799785aa6a22",
+    "semantic_hash": ""
+  },
+  "backend/app/services/agent/nodes/routing.py": {
+    "mtime": 1781314559.1035235,
+    "ast_hash": "0d3590c14d5a4eb0cc5dae2b1f2788fe",
+    "semantic_hash": ""
+  },
+  "backend/app/services/agent/nodes/synthesize.py": {
+    "mtime": 1781314556.8145964,
+    "ast_hash": "4a3b45b3e133e063c5c423505d878caa",
+    "semantic_hash": ""
+  },
+  "backend/app/services/agent/nodes/tax_lookup.py": {
+    "mtime": 1781314552.1091297,
+    "ast_hash": "16a6feea4ba4105a8a89aa9592ae010a",
     "semantic_hash": ""
   }
 }

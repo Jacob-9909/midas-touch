@@ -1,16 +1,16 @@
-# Graph Report - midas-touch  (2026-06-07)
+# Graph Report - midas-touch  (2026-06-13)
 
 ## Corpus Check
-- 37 files · ~43,350 words
+- 56 files · ~45,623 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 964 nodes · 1558 edges · 80 communities (72 shown, 8 thin omitted)
-- Extraction: 83% EXTRACTED · 17% INFERRED · 0% AMBIGUOUS · INFERRED: 264 edges (avg confidence: 0.55)
+- 1089 nodes · 1783 edges · 82 communities (74 shown, 8 thin omitted)
+- Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 261 edges (avg confidence: 0.54)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ad3b7742`
+- Built from commit: `b74ca2b7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -39,9 +39,8 @@
 - [[_COMMUNITY_Module Group 21|Module Group 21]]
 - [[_COMMUNITY_Module Group 22|Module Group 22]]
 - [[_COMMUNITY_Module Group 23|Module Group 23]]
-- [[_COMMUNITY_Module Group 24|Module Group 24]]
 - [[_COMMUNITY_Module Group 25|Module Group 25]]
-- [[_COMMUNITY_Module Group 26|Module Group 26]]
+- [[_COMMUNITY_Community 26|Community 26]]
 - [[_COMMUNITY_Module Group 27|Module Group 27]]
 - [[_COMMUNITY_Module Group 28|Module Group 28]]
 - [[_COMMUNITY_Module Group 29|Module Group 29]]
@@ -81,20 +80,22 @@
 - [[_COMMUNITY_Module Group 63|Module Group 63]]
 - [[_COMMUNITY_Module Group 64|Module Group 64]]
 - [[_COMMUNITY_Module Group 65|Module Group 65]]
-- [[_COMMUNITY_Module Group 68|Module Group 68]]
+- [[_COMMUNITY_Community 66|Community 66]]
+- [[_COMMUNITY_Community 67|Community 67]]
+- [[_COMMUNITY_Community 68|Community 68]]
 - [[_COMMUNITY_Module Group 69|Module Group 69]]
 - [[_COMMUNITY_Module Group 70|Module Group 70]]
 - [[_COMMUNITY_Module Group 71|Module Group 71]]
-- [[_COMMUNITY_Module Group 75|Module Group 75]]
-- [[_COMMUNITY_Module Group 76|Module Group 76]]
+- [[_COMMUNITY_Community 72|Community 72]]
 - [[_COMMUNITY_Module Group 77|Module Group 77]]
 - [[_COMMUNITY_Module Group 79|Module Group 79]]
 - [[_COMMUNITY_Module Group 80|Module Group 80]]
 - [[_COMMUNITY_Module Group 81|Module Group 81]]
 - [[_COMMUNITY_Module Group 82|Module Group 82]]
+- [[_COMMUNITY_Community 83|Community 83]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `PipelineConfig` - 62 edges
+1. `PipelineConfig` - 63 edges
 2. `SyntheticQuery` - 39 edges
 3. `files` - 37 edges
 4. `importMap` - 37 edges
@@ -102,20 +103,20 @@
 6. `Passage` - 36 edges
 7. `EmbeddingDatasetPipeline` - 34 edges
 8. `db_cursor()` - 30 edges
-9. `QuerySynthesizer` - 28 edges
-10. `PathConfig` - 27 edges
+9. `PathConfig` - 28 edges
+10. `QuerySynthesizer` - 28 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Twin Persona Semantic Search (pgvector similarity matching)` --semantically_similar_to--> `RRF Hybrid Retrieval (Dense + BM25 Sparse fusion)`  [INFERRED] [semantically similar]
-  backend/app/services/agent/recommender.py → pipelines/embedding/hard_negative_miner.py
-- `GraphRAG Pipeline (Korean Tax/Finance)` --conceptually_related_to--> `BAAI/bge-m3 Korean Embedding Model`  [INFERRED]
-  README.md → pipelines/knowledge_graph/builder.py
-- `build_knowledge_graph` --implements--> `GraphRAG Pipeline (Korean Tax/Finance)`  [INFERRED]
-  pipelines/knowledge_graph/builder.py → README.md
-- `run_graph_rag_query` --implements--> `GraphRAG Pipeline (Korean Tax/Finance)`  [INFERRED]
-  pipelines/knowledge_graph/test_rag.py → README.md
-- `test_financial_chunker` --conceptually_related_to--> `README: Midas Touch Project`  [INFERRED]
-  tests/test_document_parser.py → README.md
+- `TestDatabaseHelpers` --uses--> `ChatRequest`  [INFERRED]
+  tests/test_agent.py → backend/app/api/chat.py
+- `main()` --calls--> `SentenceTransformer`  [INFERRED]
+  pipelines/data_ingestion/ingest_personas.py → backend/app/services/agent/tools/_embedding.py
+- `QuerySynthesisConfig` --uses--> `APIKeyRotator`  [INFERRED]
+  pipelines/embedding/config.py → shared/utils/api_key_rotator.py
+- `PathConfig` --uses--> `APIKeyRotator`  [INFERRED]
+  pipelines/embedding/config.py → shared/utils/api_key_rotator.py
+- `SentenceTransformer` --uses--> `PathConfig`  [INFERRED]
+  backend/app/services/agent/tools/_embedding.py → pipelines/embedding/config.py
 
 ## Import Cycles
 - None detected.
@@ -128,75 +129,75 @@
 - **PostgreSQL schema defined consistently across ORM models, SQL schema, and Alembic migrations** — models_postgres_models_user, schema_postgres_schema_sql, migrations_env_runmigrations, migrations_a1b2c3d4_addembeddingtables, migrations_d93ff1c5_consolidatedinitial [INFERRED 0.90]
 - **NIMOpenAI rate limit handling: APIKeyRotator + dynamic backoff form a unified retry/rotation pattern** — utils_nim_openai_nimopenai, utils_api_key_rotator_apikeyrotator, utils_nim_openai_ratelimit_pattern, concept_nvidia_nim [EXTRACTED 0.95]
 
-## Communities (80 total, 8 thin omitted)
+## Communities (82 total, 8 thin omitted)
 
 ### Community 0 - "Persona Ingestion Pipeline"
-Cohesion: 0.07
-Nodes (37): LoRA Fine-tuning for embedding model (PEFT), bootstrap_supabase_schema(), main(), Midas Touch Persona Ingestion and Vector Embedding Pipeline.  This script: 1. Bo, Dataset, PathConfig, 쿼리 타입 분포를 유지하며 학습/평가셋 분리., Triplet 리스트를 JSONL 파일로 저장. (+29 more)
+Cohesion: 0.10
+Nodes (34): LoRA Fine-tuning for embedding model (PEFT), Dataset, compute_dataset_stats(), DatasetIO, 쿼리 타입 분포를 유지하며 학습/평가셋 분리., Triplet 리스트 ↔ JSONL 파일 입출력., Triplet 리스트를 JSONL 파일로 저장., JSONL 파일에서 Triplet 리스트 로드. (+26 more)
 
 ### Community 1 - "FastAPI GraphRAG Backend"
-Cohesion: 0.09
-Nodes (26): health_check(), query_graph_rag(), QueryRequest, QueryResponse, main.py ------- FastAPI 기반 실시간 Midas Touch 금융 자산 관리 및 GraphRAG 질의 웹 API 서비스 엔트리포, GraphRAG 자연어 질의 엔진을 호출하여 답변을 생성합니다., BaseModel, connection (+18 more)
+Cohesion: 0.13
+Nodes (15): Exception, main(), test_rag.py ----------- LlamaIndex + Neo4j 기반 지식 그래프 RAG (GraphRAG) 질의 추론 테스트 실행, LlamaIndex의 전역 LLM 및 임베딩 모델 설정., 구축된 Neo4j 지식 그래프를 대상으로 다중 홉(Multi-hop) GraphRAG 질의 추론 실행., run_graph_rag_query(), setup_llamaindex_settings(), LLMMetadata (+7 more)
 
 ### Community 2 - "Project Scan Metadata"
 Cohesion: 0.05
 Nodes (37): importMap, alembic.ini, database/migrations/postgres/env.py, database/migrations/postgres/README, database/migrations/postgres/script.py.mako, database/migrations/postgres/versions/a1b2c3d4e5f6_add_embedding_pipeline_tables.py, database/migrations/postgres/versions/d93ff1c5811e_consolidated_initial_schema.py, database/schema/postgres_schema.sql (+29 more)
 
 ### Community 3 - "Document Parser"
-Cohesion: 0.08
-Nodes (18): FinancialChunker, 재귀적으로 구분자를 활용해 분할한 후 적절한 오버랩을 주어 그룹화., 단일 파일 경로를 읽어 확장자에 알맞게 파싱 및 청킹 수행.          Returns:             Passage 인스턴스 목록, pymupdf를 기본으로 사용하고 pypdf를 보완적으로 사용하여 텍스트 및 표 데이터를 고품질로 추출., 텍스트 레이어 손상 감지: 공백으로 분리된 토큰 대부분이 1글자면 깨진 것으로 판단.          정상 한글 본문은 '주택임대소득' 같은 다, 손상/스캔 PDF를 페이지 이미지로 렌더링한 뒤 Gemini 비전으로 전사하여 markdown 텍스트로 복원., 마크다운 파일 읽기 및 가벼운 문법 노이즈(코드블럭 기호 등) 정제., 일반 텍스트 파일 로드 및 공백 정규화. (+10 more)
+Cohesion: 0.07
+Nodes (27): Gemini Vision OCR Fallback for corrupted/scanned PDFs, DocumentParser, FinancialChunker, 재귀적으로 구분자를 활용해 분할한 후 적절한 오버랩을 주어 그룹화., 다양한 형식(PDF, TXT, MD)의 금융 문서를 자동으로 파싱하고     고품질 임베딩 단락(Passage)으로 정제 청킹하는 리더., 단일 파일 경로를 읽어 확장자에 알맞게 파싱 및 청킹 수행.          Returns:             Passage 인스턴스 목록, pymupdf를 기본으로 사용하고 pypdf를 보완적으로 사용하여 텍스트 및 표 데이터를 고품질로 추출., 텍스트 레이어 손상 감지: 공백으로 분리된 토큰 대부분이 1글자면 깨진 것으로 판단.          정상 한글 본문은 '주택임대소득' 같은 다 (+19 more)
 
 ### Community 4 - "Embedding Config & Passages"
-Cohesion: 0.18
-Nodes (9): NVRetrieverMarginFilter, 단일 (쿼리 ↔ 단락) 유사도 계산 결과., sentence-transformers 기반 교사 임베딩 모델 래퍼.     배치 처리 + 정규화 + GPU/CPU 자동 선택., NV-Retriever 논문 방식의 양적 여유도(quantile margin) 기반 필터., 후보 단락에서 유효한 하드 네거티브를 선별., SimilarityScore, TeacherEmbedder, NamedTuple (+1 more)
+Cohesion: 0.16
+Nodes (15): pgvector HNSW Vector Search, bulk_upsert_emb_passages, bulk_upsert_users, db_cursor, get_all_tax_rules, get_connection, search_similar_personas_db, upsert_market_snapshot (+7 more)
 
 ### Community 5 - "Dataset Builder & Hard Negatives"
-Cohesion: 0.14
-Nodes (15): DatasetSplitter, DocumentParser, 다양한 형식(PDF, TXT, MD)의 금융 문서를 자동으로 파싱하고     고품질 임베딩 단락(Passage)으로 정제 청킹하는 리더., CheckpointManager, EmbeddingDatasetPipeline, main(), PassageLoader, 파이프라인 단계별 체크포인트 저장/로드. (+7 more)
+Cohesion: 0.13
+Nodes (19): DatasetSplitter, 삼중쌍을 학습/평가셋으로 분리 (쿼리 단위 stratified split)., DatasetSplitter, HardNegativeCandidate, CheckpointManager, EmbeddingDatasetPipeline, main(), PassageLoader (+11 more)
 
 ### Community 6 - "Scan Result Categories"
-Cohesion: 0.18
-Nodes (11): config, ipynb, mako, markdown, python, shell, sql, toml (+3 more)
+Cohesion: 0.07
+Nodes (28): code, config, data, docs, infra, script, config, ipynb (+20 more)
 
 ### Community 7 - "RAG Retrieval Concepts"
-Cohesion: 0.08
-Nodes (26): MidasAdviser._format_rag_context, MidasAdviser._get_embedding, MidasAdviser.get_recommendation, KURE-v1 (nlpai-lab Korean embedding model, 1024-dim), Market Snapshots (macroeconomic indicators: exchange rates, interest rates, commodities, indices), NVIDIA NIM API (LLM inference endpoint), NV-Retriever Margin Hard Negative Filtering, Persona Embeddings (pgvector table for investor persona semantic search) (+18 more)
+Cohesion: 0.12
+Nodes (18): KURE-v1 (nlpai-lab Korean embedding model, 1024-dim), NVIDIA NIM API (LLM inference endpoint), NV-Retriever Margin Hard Negative Filtering, Persona Embeddings (pgvector table for investor persona semantic search), RRF Hybrid Retrieval (Dense + BM25 Sparse fusion), export_csv (Nemotron-Personas-Korea export), generate_finance_data (async LLM persona generator), ingest_personas main (KURE-v1 embedding + pgvector upsert) (+10 more)
 
 ### Community 8 - "MidasAdviser Agent"
-Cohesion: 0.13
-Nodes (18): interactive_mode(), main(), MidasAdviser, print_banner(), Midas Touch RAG-based Financial Recommendation Agent.  This module implements th, Format Azure SQL & Supabase retrieved entities into a clean, text block for LLM, Generate a 1024-dimensional embedding vector from text using KURE-v1., Analyze the query, pull hybrid RAG contexts from Azure SQL and Supabase, and gen (+10 more)
+Cohesion: 0.17
+Nodes (13): SentenceTransformer, embed(), get_embedding_model(), get_llamaindex_embedding(), 프로젝트 통합 임베딩(BAAI/bge-m3) 싱글톤.  이 모듈은 백엔드 에이전트의 모든 검색 도구가 공유하는 **단일** 임베딩 진입점이다., 프로세스 전역에서 한 번만 로드되는 bge-m3 모델 인스턴스를 반환한다., 단일 텍스트를 1024차원 bge-m3 벡터로 인코딩한다 (persona_embeddings 적재와 동일 방식)., 위 단일 SentenceTransformer를 감싸는 LlamaIndex BaseEmbedding 어댑터(캐시).      graph_rag가 (+5 more)
 
 ### Community 9 - "Hard Negative Mining"
-Cohesion: 0.11
-Nodes (17): HardNegativeMiner, 텍스트 리스트를 배치 임베딩으로 변환., 교사 임베딩 모델 + BM25 sparse index + NV-Retriever 마진 필터를 결합한 RRF 하이브리드 하드 네거티브 마이닝., 전체 단락 코퍼스를 임베딩하고 BM25 Sparse 인덱스도 구축., 쿼리 리스트 전체에 대해 RRF 하이브리드 하드 네거티브 마이닝 수행., Dense 스코어와 Sparse 스코어의 순위를 매겨 RRF 점수를 계산합니다., RRF 순위가 높은 후보 위주로 탐색하되, NV-Retriever 마진 규격은 Dense 코사인 유사도로 검사., numpy 기반의 경량 BM25 Sparse Retriever 클래스.     형태소 분석기 없이 한국어 어절 단위로 텍스트를 토큰화하여 세법/ (+9 more)
+Cohesion: 0.09
+Nodes (20): HardNegativeMiner, sentence-transformers 기반 교사 임베딩 모델 래퍼.     배치 처리 + 정규화 + GPU/CPU 자동 선택., 텍스트 리스트를 배치 임베딩으로 변환., 교사 임베딩 모델 + BM25 sparse index + NV-Retriever 마진 필터를 결합한 RRF 하이브리드 하드 네거티브 마이닝., 전체 단락 코퍼스를 임베딩하고 BM25 Sparse 인덱스도 구축., 쿼리 리스트 전체에 대해 RRF 하이브리드 하드 네거티브 마이닝 수행., Dense 스코어와 Sparse 스코어의 순위를 매겨 RRF 점수를 계산합니다., RRF 순위가 높은 후보 위주로 탐색하되, NV-Retriever 마진 규격은 Dense 코사인 유사도로 검사. (+12 more)
 
 ### Community 10 - "Market Data Ingestion"
 Cohesion: 0.15
 Nodes (13): fetch_ecos_data(), fetch_fred_data(), fetch_realtime_stock(), fetch_yfinance_data(), main(), MarketDataPipeline, Market Data Fetcher from open APIs (yfinance, FRED, ECOS).  This module manages, Fetch history from BOK ECOS API. (+5 more)
 
 ### Community 11 - "Dataset Builder Core"
-Cohesion: 0.16
-Nodes (22): compute_dataset_stats(), DatasetIO, DatasetSplitter, dataset_builder.py ------------------ (Query, Positive, Negative) 삼중쌍 조립 및 데이터셋, 긍정 단락을 제외하고 랜덤 단락 샘플링., 삼중쌍을 학습/평가셋으로 분리 (쿼리 단위 stratified split)., Triplet 리스트 ↔ JSONL 파일 입출력., SyntheticQuery + MiningResult를 결합하여 Triplet 리스트 생성. (+14 more)
+Cohesion: 0.14
+Nodes (22): PipelineConfig, dataset_builder.py ------------------ (Query, Positive, Negative) 삼중쌍 조립 및 데이터셋, 긍정 단락을 제외하고 랜덤 단락 샘플링., SyntheticQuery + MiningResult를 결합하여 Triplet 리스트 생성., TripletAssembler, compute_mining_stats(), MiningResult, NVRetrieverMarginFilter (+14 more)
 
 ### Community 12 - "Knowledge Graph Builder"
-Cohesion: 0.16
-Nodes (16): Document, build_knowledge_graph(), get_processed_passage_ids(), get_processed_passage_ids, init_checkpoint_table(), init_checkpoint_table, load_passages_as_documents(), load_passages_as_documents (+8 more)
+Cohesion: 0.12
+Nodes (19): Document, get_processed_passage_ids(), get_processed_passage_ids, init_checkpoint_table(), init_checkpoint_table, load_passages_as_documents(), load_passages_as_documents, main() (+11 more)
 
 ### Community 13 - "Query Synthesizer & API Keys"
-Cohesion: 0.07
-Nodes (17): QuerySynthesisConfig, 하드 네거티브 마이닝에 사용할 교사 임베딩 모델 설정., TeacherModelConfig, NIMClient, 단일 chat completion 요청. 실패 시 지수 백오프 재시도 및 동적 지연 조절., NIM API를 호출하여 원시 쿼리 문자열 리스트 반환., LLM 응답에서 JSON 배열을 안전하게 추출.         만약 max_tokens 도달 등으로 인해 문자열이 잘렸다면(Unclosed),, NVIDIA NIM OpenAI-compatible API 비동기 클라이언트.     재시도 로직 + 동적 딜레이 제어 및 지수 백오프 포함. (+9 more)
+Cohesion: 0.06
+Nodes (28): HardNegativeConfig, LoraConfig, NIMConfig, PromptTemplates, QuerySynthesisConfig, config.py --------- 금융 특화 임베딩 파인튜닝 파이프라인의 모든 설정값·프롬프트·스키마를 코드와 분리 관리. 환경변수(.env), KURE-v1 파인튜닝 하이퍼파라미터., NVIDIA NIM API 접속 설정. (+20 more)
 
 ### Community 14 - "DB Migrations & ORM Models"
 Cohesion: 0.29
 Nodes (14): migrations.env.run_migrations_online, SQLAlchemy Models package for consolidated Midas Touch database schemas., LegalReference, MacroIndicator, MarketSnapshot, NewsEmbedding, PersonaEmbedding, Portfolio (+6 more)
 
 ### Community 15 - "Module Group 15"
-Cohesion: 0.16
-Nodes (16): pgvector HNSW Vector Search, bulk_upsert_emb_passages, bulk_upsert_users, db_cursor, get_all_tax_rules, get_connection, search_similar_personas_db, upsert_market_snapshot (+8 more)
+Cohesion: 0.19
+Nodes (11): get_all_tax_rules(), get_latest_market_snapshots(), Retrieve all current active tax rules., Retrieve the latest snapshot value for every unique (data_type, sub_key) pair., Midas Touch 백엔드 에이전트 & DB 헬퍼 통합 테스트.  실행:     PYTHONPATH=. uv run python -m unit, shared.database.connector 조회 헬퍼 검증., shared.database.connector 조회 헬퍼 검증., TestDatabaseHelpers (+3 more)
 
 ### Community 16 - "Module Group 16"
 Cohesion: 0.17
-Nodes (15): apply_schema(), bulk_upsert_emb_queries(), bulk_upsert_emb_triplets(), bulk_upsert_market_snapshots(), get_latest_market_value(), Consolidated PostgreSQL & pgvector Database connector for Midas Touch., Bulk upsert market snapshots in a single transaction. Returns count of rows proc, Upsert synthetic queries into emb_synthetic_queries. Returns count. (+7 more)
+Nodes (19): apply_schema(), bulk_upsert_emb_passages(), bulk_upsert_emb_queries(), bulk_upsert_emb_triplets(), bulk_upsert_market_snapshots(), db_cursor(), get_latest_market_value(), Consolidated PostgreSQL & pgvector Database connector for Midas Touch. (+11 more)
 
 ### Community 17 - "Module Group 17"
 Cohesion: 0.12
@@ -207,44 +208,32 @@ Cohesion: 0.19
 Nodes (11): EntityRefiner, main(), entity_resolution.py -------------------- Neo4j 지식 그래프의 동적 엔티티 중복 정제(Entity Reso, Neo4j DB에서 모든 Entity 노드 정보(이름, 라벨)를 조회., LLM을 호출하여 두 노드의 금융/세무적 의미가 완벽히 동일한지 판별., Python-driven 관계 이전 및 구 노드 DETACH DELETE 안전 병합 트랜잭션 수행., 지정한 시간 주기마다 백그라운드에서 엔티티 정제를 무한히 자동 가동하는 데몬 루프., 지식 그래프의 중복 엔티티를 정밀 진단 및 병합 정제하는 클래스. (+3 more)
 
 ### Community 19 - "Module Group 19"
-Cohesion: 0.29
-Nodes (13): db_cursor(), Context manager: yields (conn, cursor), auto-commits or rolls back., get_client(), Consolidated supabase_connector routing vector operations directly to the unifie, Mock get_client for backward compatibility., search_news(), search_similar_personas(), search_strategies() (+5 more)
+Cohesion: 0.12
+Nodes (15): 1. 데이터베이스 마이그레이션 최신화, 2. FastAPI 실시간 웹 서버 실행, 3. 멀티턴 금융 에이전트 (LangGraph) 호출, 4. 거시경제 지표 수집 배치 가동 (yfinance API 연동), 5. 유저 페르소나 데이터셋 빌드 및 DB 적재, 6. 금융 임베딩 학습 전처리 파이프라인 실행, 7. 지식 그래프 구축 및 RAG 질의 테스트, 8. 손상 PDF 문서 강제 재파싱 복구 (+7 more)
 
 ### Community 20 - "Module Group 20"
-Cohesion: 0.21
-Nodes (12): HardNegativeConfig, LoraConfig, NIMConfig, PipelineConfig, PromptTemplates, config.py --------- 금융 특화 임베딩 파인튜닝 파이프라인의 모든 설정값·프롬프트·스키마를 코드와 분리 관리. 환경변수(.env), KURE-v1 파인튜닝 하이퍼파라미터., NVIDIA NIM API 접속 설정. (+4 more)
+Cohesion: 0.27
+Nodes (11): get_client(), Consolidated supabase_connector routing vector operations directly to the unifie, Mock get_client for backward compatibility., search_news(), search_similar_personas(), search_strategies(), upsert_macro_indicator(), upsert_news() (+3 more)
 
 ### Community 21 - "Module Group 21"
 Cohesion: 0.15
 Nodes (12): edges, layers, nodes, project, analyzedAt, description, frameworks, gitCommitHash (+4 more)
 
 ### Community 22 - "Module Group 22"
-Cohesion: 0.22
-Nodes (8): extract_json(), generate_finance_data(), main(), 개별 행에 대해 LLM을 호출하여 금융 데이터를 생성합니다., LLM 출력에서 JSON 부분만 추출하는 헬퍼 함수, bulk_upsert_users(), Batch upsert. Returns count of rows processed., OpenAI
+Cohesion: 0.40
+Nodes (5): Market Snapshots (macroeconomic indicators: exchange rates, interest rates, commodities, indices), fetch_ecos_data, fetch_fred_data, fetch_yfinance_data, MarketDataPipeline
 
 ### Community 23 - "Module Group 23"
-Cohesion: 0.22
-Nodes (9): GraphRAG Pipeline (Korean Tax/Finance), Neo4j PropertyGraph Store, build_knowledge_graph, Incremental Graph Build Checkpoint Pattern, save_processed_passage_ids, Multi-hop GraphRAG Query Pattern, run_graph_rag_query, README: Midas Touch Project (+1 more)
+Cohesion: 0.05
+Nodes (40): get_checkpointer(), LangGraph 체크포인터 (PostgresSaver) 구성.  멀티턴 대화 상태를 Postgres에 영속화한다 — MemorySaver와 달, 앱 수명 동안 유지되는 PostgresSaver(커넥션 풀 기반)를 1회 생성해 캐시한다., build_agent(), get_agent(), intent 분기 StateGraph를 구성해 컴파일한다., 컴파일된 그래프(CompiledStateGraph)를 1회 생성 후 캐시한다.      체크포인터는 PostgresSaver(영속·다중워커 공유, intent 분기 StateGraph를 구성해 컴파일한다. (+32 more)
 
-### Community 24 - "Module Group 24"
-Cohesion: 0.22
-Nodes (8): estimatedComplexity, files, filteredByIgnore, frameworks, languages, projectName, scriptCompleted, totalFiles
-
-### Community 25 - "Module Group 25"
-Cohesion: 0.22
-Nodes (9): Gemini Vision OCR Fallback for corrupted/scanned PDFs, bulk_upsert_emb_passages(), Upsert parsed document passages into emb_passages. Returns count., DocumentParser, FinancialChunker, DocumentParser._parse_pdf_vision (Gemini vision OCR fallback), Passage dataclass, main() (+1 more)
-
-### Community 26 - "Module Group 26"
-Cohesion: 0.22
-Nodes (9): code, config, data, docs, infra, script, stats, byCategory (+1 more)
+### Community 26 - "Community 26"
+Cohesion: 0.19
+Nodes (12): Any, Any, get_user_by_uuid(), Search similar personas in our PostgreSQL database using the custom pgvector sea, search_similar_personas_db(), pgvector 유사도 검색 + Users 프로필 조인 (1024차원 bge-m3 공간)., pgvector 유사도 검색 + Users 프로필 조인 (1024차원 bge-m3 공간)., _format_rag_context() (+4 more)
 
 ### Community 27 - "Module Group 27"
-Cohesion: 0.20
-Nodes (5): Unit test suite for Midas Touch RAG advisor agent & database helper functions., Test retrieving tax rules from Azure SQL Database., Test retrieving latest market snapshots from Azure SQL., Test MidasAdviser RAG recommendation generation., TestMidasAgent
-
-### Community 28 - "Module Group 28"
-Cohesion: 0.28
-Nodes (9): BAAI/bge-m3 Korean Embedding Model, Embedding-based Entity Resolution, Google Gemini via Vertex AI, NVIDIA NIM OpenAI-compatible API, setup_llamaindex_settings, EntityRefiner._merge_nodes_neo4j, EntityRefiner.run_resolution, EntityRefiner._verify_duplicate_with_llm (+1 more)
+Cohesion: 0.06
+Nodes (49): _classify_intent(), _dispatch(), _keyword_route(), _latest_user_text(), _node_graph_rag(), _node_persona_rag(), _node_synthesize(), _node_tax_lookup() (+41 more)
 
 ### Community 29 - "Module Group 29"
 Cohesion: 0.22
@@ -390,9 +379,17 @@ Nodes (9): tests/test_agent.py, classes, contentHash, exports, filePath, functio
 Cohesion: 0.22
 Nodes (9): tests/test_document_parser.py, classes, contentHash, exports, filePath, functions, hasStructuralAnalysis, imports (+1 more)
 
-### Community 68 - "Module Group 68"
-Cohesion: 0.29
-Nodes (5): GoogleGenAI, LlamaIndex의 전역 LLM 및 임베딩 모델 설정., setup_llamaindex_settings(), Neo4j, 임베딩, LLM 등 필요한 외부 커넥션 초기화., HuggingFaceEmbedding
+### Community 66 - "Community 66"
+Cohesion: 0.20
+Nodes (8): GoogleGenAI, build_knowledge_graph(), Save the successfully processed passage IDs to PostgreSQL., Neo4j 데이터베이스에 세법 및 금융 자산 지식 그래프 자동 구축., Save the successfully processed passage IDs to PostgreSQL., Neo4j 데이터베이스에 세법 및 금융 자산 지식 그래프 자동 구축., save_processed_passage_ids(), Neo4j, 임베딩, LLM 등 필요한 외부 커넥션 초기화.
+
+### Community 67 - "Community 67"
+Cohesion: 0.28
+Nodes (9): BAAI/bge-m3 Korean Embedding Model, Embedding-based Entity Resolution, Google Gemini via Vertex AI, NVIDIA NIM OpenAI-compatible API, setup_llamaindex_settings, EntityRefiner._merge_nodes_neo4j, EntityRefiner.run_resolution, EntityRefiner._verify_duplicate_with_llm (+1 more)
+
+### Community 68 - "Community 68"
+Cohesion: 0.25
+Nodes (6): Neo4j PropertyGraph Store, build_knowledge_graph, Incremental Graph Build Checkpoint Pattern, save_processed_passage_ids, Multi-hop GraphRAG Query Pattern, run_graph_rag_query
 
 ### Community 69 - "Module Group 69"
 Cohesion: 0.47
@@ -406,8 +403,16 @@ Nodes (4): files, generatedAt, gitCommitHash, version
 Cohesion: 0.40
 Nodes (4): analyzedFiles, gitCommitHash, lastAnalyzedAt, version
 
+### Community 72 - "Community 72"
+Cohesion: 0.32
+Nodes (7): extract_json(), generate_finance_data(), main(), 개별 행에 대해 LLM을 호출하여 금융 데이터를 생성합니다., LLM 출력에서 JSON 부분만 추출하는 헬퍼 함수, bulk_upsert_users(), Batch upsert. Returns count of rows processed.
+
+### Community 83 - "Community 83"
+Cohesion: 0.67
+Nodes (3): bootstrap_supabase_schema(), main(), Midas Touch Persona Ingestion and Vector Embedding Pipeline.  This script: 1. Bo
+
 ## Knowledge Gaps
-- **409 isolated node(s):** `graphify`, `version`, `gitCommitHash`, `generatedAt`, `filePath` (+404 more)
+- **430 isolated node(s):** `version`, `gitCommitHash`, `generatedAt`, `filePath`, `contentHash` (+425 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -415,16 +420,16 @@ Nodes (4): analyzedFiles, gitCommitHash, lastAnalyzedAt, version
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `files` connect `Module Group 70` to `Module Group 29`, `Module Group 30`, `Module Group 31`, `Module Group 32`, `Module Group 33`, `Module Group 34`, `Module Group 35`, `Module Group 36`, `Module Group 37`, `Module Group 38`, `Module Group 39`, `Module Group 40`, `Module Group 41`, `Module Group 42`, `Module Group 43`, `Module Group 44`, `Module Group 45`, `Module Group 46`, `Module Group 47`, `Module Group 48`, `Module Group 49`, `Module Group 50`, `Module Group 51`, `Module Group 52`, `Module Group 53`, `Module Group 54`, `Module Group 55`, `Module Group 56`, `Module Group 57`, `Module Group 58`, `Module Group 59`, `Module Group 60`, `Module Group 61`, `Module Group 62`, `Module Group 63`, `Module Group 64`?**
-  _High betweenness centrality (0.113) - this node is a cross-community bridge._
-- **Why does `db_cursor()` connect `Module Group 19` to `Persona Ingestion Pipeline`, `FastAPI GraphRAG Backend`, `MidasAdviser Agent`, `Knowledge Graph Builder`, `Module Group 16`, `Module Group 22`, `Module Group 25`?**
-  _High betweenness centrality (0.097) - this node is a cross-community bridge._
-- **Why does `PipelineConfig` connect `Module Group 20` to `Persona Ingestion Pipeline`, `Document Parser`, `Embedding Config & Passages`, `Dataset Builder & Hard Negatives`, `Hard Negative Mining`, `Dataset Builder Core`, `Query Synthesizer & API Keys`, `Module Group 17`?**
-  _High betweenness centrality (0.079) - this node is a cross-community bridge._
-- **Are the 48 inferred relationships involving `PipelineConfig` (e.g. with `Dataset` and `APIKeyRotator`) actually correct?**
-  _`PipelineConfig` has 48 INFERRED edges - model-reasoned connections that need verification._
+  _High betweenness centrality (0.100) - this node is a cross-community bridge._
+- **Why does `NIMOpenAI` connect `FastAPI GraphRAG Backend` to `MidasAdviser Agent`, `Community 67`, `Query Synthesizer & API Keys`?**
+  _High betweenness centrality (0.083) - this node is a cross-community bridge._
+- **Why does `db_cursor()` connect `Module Group 16` to `Persona Ingestion Pipeline`, `Community 66`, `Community 72`, `Knowledge Graph Builder`, `Module Group 15`, `Module Group 20`, `Module Group 23`, `Community 26`?**
+  _High betweenness centrality (0.078) - this node is a cross-community bridge._
+- **Are the 49 inferred relationships involving `PipelineConfig` (e.g. with `Dataset` and `APIKeyRotator`) actually correct?**
+  _`PipelineConfig` has 49 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 31 inferred relationships involving `SyntheticQuery` (e.g. with `DatasetIO` and `DatasetSplitter`) actually correct?**
   _`SyntheticQuery` has 31 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 21 inferred relationships involving `APIKeyRotator` (e.g. with `HardNegativeConfig` and `LoraConfig`) actually correct?**
   _`APIKeyRotator` has 21 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `graphify`, `version`, `gitCommitHash` to the rest of the system?**
-  _556 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `version`, `gitCommitHash`, `generatedAt` to the rest of the system?**
+  _627 weakly-connected nodes found - possible documentation gaps or missing edges._

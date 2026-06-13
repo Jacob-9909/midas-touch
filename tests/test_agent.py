@@ -18,8 +18,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from langchain_core.messages import AIMessage
-
 from backend.app.services.agent.tools import graph_rag, persona_rag, tax_and_market_lookup
 from shared.database.connector import (
     get_all_tax_rules,
@@ -96,7 +94,7 @@ class TestAgentTools(unittest.TestCase):
 
 
 class TestAgentEndToEnd(unittest.TestCase):
-    """create_react_agent 멀티턴 + 도구 라우팅 end-to-end 검증."""
+    """intent 분기 그래프 멀티턴 + 도구 라우팅 end-to-end 검증."""
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -116,24 +114,22 @@ class TestAgentEndToEnd(unittest.TestCase):
         config = {"configurable": {"thread_id": thread}}
         agent = get_agent()
 
-        # 턴 1: 유사 투자자 벤치마크 → persona_rag 라우팅 기대
+        # 턴 1: 유사 투자자 벤치마크 → intent가 검색 도구를 라우팅해야 한다
         r1 = chat(ChatRequest(session_id=thread, message="나와 비슷한 투자자들의 자산 배분을 보여줘.", user_uuid=self.uuid))
         self.assertTrue(r1.reply)
+
+        # 턴 1의 라우팅 결과 검증 (route 필드는 턴마다 갱신되므로 턴2 전에 확인)
+        state_t1 = agent.get_state(config)
+        self.assertTrue(
+            set(state_t1.values.get("route") or []) & {"persona_rag", "graph_rag", "tax_and_market_lookup"}
+        )
 
         # 턴 2: 멀티턴 메모리 — 이전 맥락 참조
         r2 = chat(ChatRequest(session_id=thread, message="방금 내용 중 핵심 하나만 다시 짚어줘.", user_uuid=self.uuid))
         self.assertTrue(r2.reply)
 
-        state = agent.get_state(config)
-        tools_called = [
-            tc["name"]
-            for m in state.values["messages"]
-            if isinstance(m, AIMessage)
-            for tc in (m.tool_calls or [])
-        ]
-        # 적어도 하나의 검색 도구가 호출되어야 한다
-        self.assertTrue(set(tools_called) & {"persona_rag", "graph_rag", "tax_and_market_lookup"})
         # 멀티턴 누적(턴1 user + 응답 + 턴2 user + 응답)으로 4개 초과
+        state = agent.get_state(config)
         self.assertGreater(len(state.values["messages"]), 4)
 
     def test_unknown_user_returns_404(self) -> None:
