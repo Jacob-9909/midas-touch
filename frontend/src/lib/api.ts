@@ -38,6 +38,52 @@ export async function apiUpload<T>(path: string, file: File): Promise<T> {
   return handle<T>(res);
 }
 
+export async function apiDelete<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, { method: "DELETE" });
+  return handle<T>(res);
+}
+
+/** /api/v1/chat/stream SSE를 읽어 토큰을 onToken으로 흘린다. */
+export async function streamChat(
+  body: { session_id: string; user_uuid: string; message: string },
+  onToken: (t: string) => void,
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/v1/chat/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok || !res.body) {
+    await handle(res); // 에러 메시지 추출 후 throw
+    return;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+    for (const part of parts) {
+      const line = part.trim();
+      if (!line.startsWith("data:")) continue;
+      const evt = JSON.parse(line.slice(5).trim());
+      if (evt.type === "token") onToken(evt.content as string);
+      else if (evt.type === "error") throw new Error(evt.detail);
+    }
+  }
+}
+
+export interface ChatSessionMeta {
+  session_id: string;
+  user_uuid: string | null;
+  title: string;
+  message_count: number;
+  updated_at: string | null;
+}
+
 // ---- 타입 ----
 export interface UserSummary {
   uuid: string;

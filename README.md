@@ -10,16 +10,27 @@ Midas Touch는 관심사 분리(Separation of Concerns)를 극대화하고 단�
 
 ```
 midas-touch/
-├── backend/                    # 실시간 서빙 API & 에이전트 서비스
+├── backend/                    # 실시간 서빙 API & 에이전트 서비스 (FastAPI)
 │   └── app/
-│       ├── main.py             # FastAPI 엔트리포인트 (GraphRAG API 및 에이전트 라우터)
+│       ├── main.py             # FastAPI 엔트리포인트 (CORS·라우터 등록·GraphRAG /query)
+│       ├── api/                # HTTP 라우터
+│       │   ├── chat.py             # 멀티턴 챗봇·스트리밍(SSE)·세션 목록/기록/삭제
+│       │   ├── users.py            # 유저 목록/상세, 시장지표, 세율 (대시보드 조회)
+│       │   ├── finetune.py         # 문서 업로드 → 파인튜닝셋 생성 작업·데이터셋 프리뷰
+│       │   └── graph.py            # 지식그래프 빌드 작업·Neo4j 스냅샷
 │       └── services/
-│           └── agent/          # 금융 질의 대응 LangGraph 에이전트 모듈 (MidasAdviser)
+│           ├── jobs.py         # 비동기 작업(JobManager): CLI 파이프라인 subprocess + 진행률·로그 영속화
+│           └── agent/          # 금융 질의 대응 LangGraph 에이전트 (MidasAdviser)
 │               ├── graph.py        # StateGraph 조립/컴파일 (배선 전용) + 캐시된 get_agent()
 │               ├── state.py        # AgentState 스키마 + tool_context 누적 리듀서
 │               ├── checkpointer.py # PostgresSaver 멀티턴 영속화 (커넥션 풀)
 │               ├── nodes/          # 그래프 노드 (intent · 도구 3종 · synthesize · dispatch 라우팅)
 │               └── tools/          # 노드가 호출하는 검색 도구 (persona/graph RAG, tax lookup)
+├── frontend/                   # 웹 콘솔 (Next.js 16 · App Router · TypeScript · Tailwind)
+│   └── src/
+│       ├── app/                # 페이지: / (대시보드) · /chat · /finetune · /graph · /dashboard/[uuid]
+│       ├── components/         # NavBar · Card/Skeleton(ui) · JobProgress · GraphView(포스그래프)
+│       └── lib/                # api(fetch·SSE) · theme(다크/라이트) · toast · user-context
 ├── pipelines/                  # 배치 데이터 수집/임베딩/지식 그래프 파이프라인
 │   ├── data_ingestion/         # 금융/세법 원천 데이터 크롤링, 페르소나 인제스션
 │   ├── embedding/              # 대조 학습용 Triplet 데이터셋 구축 및 토큰 청커/마이닝 파이프라인
@@ -27,7 +38,11 @@ midas-touch/
 ├── shared/                     # 중앙화된 공통 의존성 및 유틸리티 라이브러리
 │   ├── database/               # PostgreSQL 통합 커넥터, SQLAlchemy ORM 모델, Alembic 마이그레이션
 │   └── utils/                  # 프로젝트 전역 공통 헬퍼 클래스 (로깅, 공통 유틸)
-├── infra/                      # 인프라 설정 및 배포 파일 관리 (Docker Compose, 로컬 보안 설정)
+├── tests/                      # 통합 테스트 (test_agent.py · test_api.py)
+├── infra/                      # 인프라 설정 (Docker Compose, 로컬 보안 설정)
+├── data/                       # 원천 문서·생성 데이터셋·작업 이력(jobs/) [git 미추적]
+├── dev.sh                      # 개발 런처 (백엔드 --reload + 프론트 next dev)
+├── start.sh                    # 프로덕션 런처 (next build/start + uvicorn --workers)
 └── alembic.ini                 # 데이터베이스 마이그레이션 설정 파일
 ```
 
@@ -99,77 +114,97 @@ Midas Touch의 통합 데이터 파이프라인은 금융 및 세법 원천 문�
 
 ---
 
+## 🖥️ 웹 콘솔 기능 (Backend API · Frontend)
+
+기존 파이프라인/에이전트 기능을 브라우저에서 사용할 수 있는 통합 웹 콘솔이다.
+프론트(Next.js, :3000)가 백엔드(FastAPI, :8000)를 호출하며, 긴 배치 작업은 **비동기 작업 +
+진행률 폴링**으로 처리한다(기존 CLI를 subprocess로 재사용). 인증/권한은 아직 없다(로컬 콘솔 전제).
+
+### Backend API (FastAPI · prefix `/api/v1`)
+
+| 분류 | 엔드포인트 | 설명 |
+|------|-----------|------|
+| 챗봇 | `POST /chat` | 멀티턴 답변(단건). `session_id`·`user_uuid`·`message` |
+| 챗봇 | `POST /chat/stream` | 동일하되 **SSE 토큰 스트리밍**(synthesize 답변만) |
+| 챗봇 | `GET /chat/sessions` | 세션 목록(체크포인터 기반, `?user_uuid` 필터) |
+| 챗봇 | `GET /chat/history/{session_id}` | 세션 대화 기록(user/assistant) 복원 |
+| 챗봇 | `DELETE /chat/sessions/{session_id}` | 세션 대화 기록 삭제 |
+| 대시보드 | `GET /users` · `GET /users/{uuid}` | 유저 목록 / 프로필+포트폴리오 |
+| 대시보드 | `GET /market/snapshots` · `GET /tax-rules` | 최신 시장지표 / 세율 |
+| 파인튜닝 | `POST /finetune/upload` | 금융 문서(PDF·TXT·MD·JSONL) 업로드 |
+| 파인튜닝 | `POST /finetune/jobs` · `GET /finetune/jobs/{id}` | 파이프라인 작업 시작 / 진행률·로그 |
+| 파인튜닝 | `GET /finetune/datasets?sub_dir=` | 생성된 train/eval triplet 프리뷰 |
+| 그래프 | `POST /graph/build/jobs` · `GET …/{id}` | 지식그래프 증분 빌드 작업 / 진행률 |
+| 그래프 | `GET /graph/snapshot?limit=` | Neo4j 노드/엣지 스냅샷(포스그래프용 JSON) |
+| GraphRAG | `POST /query` | 질의 답변 + 근거 서브그래프·출처 본문 |
+| 기타 | `GET /` · `GET /health` | 루트 / DB·Neo4j 헬스체크 · `GET /docs` Swagger |
+
+### Frontend 페이지 (Next.js)
+
+| 경로 | 기능 |
+|------|------|
+| `/` | 유저 목록·검색·선택, 최신 시장지표 카드 |
+| `/chat` | 멀티턴 에이전트 챗봇 — 실시간 스트리밍, 좌측 세션 사이드바(불러오기·삭제) |
+| `/finetune` | 문서 업로드 → 파이프라인 실행 → 진행률·로그 → triplet 데이터셋 프리뷰 |
+| `/graph` | 지식그래프 빌드 → 인터랙티브 포스그래프 → GraphRAG 질의·근거 노드 강조 |
+| `/dashboard/[uuid]` | 유저 프로필 + 자산배분·포트폴리오 도넛 차트 |
+
+공통: 다크/라이트 테마 토글, 토스트 알림, 로딩 스켈레톤, 반응형 레이아웃.
+
+---
+
 ## 🚀 실행 명령어 모음
 
-### 1. 데이터베이스 마이그레이션 최신화
+### 1. 준비 (의존성 · DB 마이그레이션)
 ```bash
-uv run alembic upgrade head
+uv sync                         # 백엔드/파이프라인 의존성 동기화
+(cd frontend && npm install)    # 프론트 의존성
+uv run alembic upgrade head     # DB 스키마 + 체크포인트 테이블 최신화
 ```
 
-### 2. FastAPI 실시간 웹 서버 실행
+### 2. 웹 콘솔 실행 (백엔드 + 프론트)
 ```bash
-PYTHONPATH=. uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+./dev.sh        # 개발: 백엔드(:8000,--reload) + 프론트(:3000,HMR) 동시 — Ctrl+C로 모두 종료
+./start.sh      # 프로덕션: next build/start + uvicorn --workers (재시작 없음)
 ```
-* **Swagger UI 웹 콘솔**: http://localhost:8000/docs
+* 개별 실행: `./dev.sh backend` / `./dev.sh frontend` (start.sh도 동일)
+* 백엔드 수동 실행: `PYTHONPATH=. uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload`
+* 웹 콘솔 http://localhost:3000 · **Swagger UI** http://localhost:8000/docs
 
-### 3. 멀티턴 금융 에이전트 (LangGraph) 호출
-
-FastAPI 서버 구동 후, 세션 기반 멀티턴 대화형 자산관리 에이전트(`/api/v1/chat`)를 호출합니다.
-LangGraph **intent 분기 `StateGraph`**가 질의 성격을 한 번에 분류해 필요한 도구(persona_rag / graph_rag /
-tax_and_market_lookup)만 fan-out 실행한 뒤 `synthesize`로 답변을 작성하며(위 [에이전트 그래프 구조](#️-에이전트-그래프-구조-langgraph-stategraph) 참고),
-`session_id`(thread_id)별로 대화 맥락이 유지됩니다. `user_uuid`는 필수입니다.
-
+### 3. 멀티턴 에이전트 직접 호출 (API)
+`session_id`(=thread_id)별로 대화 맥락이 유지되며 `user_uuid`는 필수다. intent 분기 그래프가
+필요한 도구만 fan-out 실행 후 `synthesize`로 작문한다(위 [에이전트 그래프 구조](#️-에이전트-그래프-구조-langgraph-stategraph) 참고).
 ```bash
 curl -X POST http://localhost:8000/api/v1/chat \
   -H "Content-Type: application/json" \
-  -d '{
-    "session_id": "user-session-001",
-    "user_uuid": "<users 테이블에 존재하는 UUID>",
-    "message": "나와 비슷한 투자자들의 자산 배분을 벤치마크로 보여줘."
-  }'
+  -d '{"session_id":"user-session-001","user_uuid":"<users UUID>","message":"나와 비슷한 투자자들의 자산 배분을 벤치마크로 보여줘."}'
 ```
-* 같은 `session_id`로 다시 호출하면 이전 대화가 이어집니다(멀티턴 메모리).
+* 스트리밍은 동일 바디로 `POST /api/v1/chat/stream` (SSE).
 
-### 4. 거시경제 지표 수집 배치 가동 (yfinance API 연동)
+### 4. 배치 파이프라인 (CLI — 웹 콘솔의 작업 버튼과 동일 로직)
 ```bash
-# 최근 7일 데이터 배치 수집
-PYTHONPATH=. uv run python -m pipelines.data_ingestion.fetch_market_data
+# 거시경제 지표 수집 (yfinance) — 기본 최근 7일 / --backfill 시 과거 90일
+PYTHONPATH=. uv run python -m pipelines.data_ingestion.fetch_market_data [--backfill]
 
-# 과거 90일 데이터 백필(Backfill) 실행
-PYTHONPATH=. uv run python -m pipelines.data_ingestion.fetch_market_data --backfill
-```
-
-### 5. 유저 페르소나 데이터셋 빌드 및 DB 적재
-```bash
+# 유저 페르소나 데이터셋 빌드 및 DB 적재
 PYTHONPATH=. uv run python -m pipelines.data_ingestion.ingest_personas --file data/augmented_personas.csv
-```
 
-### 6. 금융 임베딩 학습 전처리 파이프라인 실행
-```bash
-# 전체 문서 파이프라인 가동
-PYTHONPATH=. uv run python pipelines/embedding/pipeline.py
+# 임베딩 파인튜닝셋 생성 — 전체 / 단일 파일(--file) / 특정 단계 강제 재실행(--force-rerun)
+PYTHONPATH=. uv run python pipelines/embedding/pipeline.py [--file financial_report.pdf] [--force-rerun query_synthesis]
 
-# 특정 단일 파일만 전처리 실행
-PYTHONPATH=. uv run python pipelines/embedding/pipeline.py --file financial_report.pdf
-
-# 특정 단계 강제 재시작 (체크포인트 무시)
-PYTHONPATH=. uv run python pipelines/embedding/pipeline.py --force-rerun query_synthesis
-```
-
-### 7. 지식 그래프 구축 및 RAG 질의 테스트
-```bash
-# Neo4j 지식 그래프 증분 빌드 실행
+# 지식 그래프 증분 빌드 / GraphRAG 질의 테스트
 PYTHONPATH=. uv run python -m pipelines.knowledge_graph.builder
-
-# GraphRAG 질의 추론 테스트 실행
 PYTHONPATH=. uv run python -m pipelines.knowledge_graph.test_rag
-```
 
-### 8. 손상 PDF 문서 강제 재파싱 복구
-```bash
+# 손상 PDF 문서 강제 재파싱 복구
 PYTHONPATH=. uv run python -m pipelines.embedding.reingest data/raw_documents/주택과세금_2025.pdf
 ```
 
-### 9. Neo4j 시각화 확인
-* **주소**: [http://localhost:7474](http://localhost:7474) (기본 계정: `neo4j` / `PG_develop_2026_Secure`)
-* **조회 쿼리**: `MATCH (n) RETURN n LIMIT 100`
+### 5. 테스트
+```bash
+PYTHONPATH=. uv run python -m unittest discover tests -v   # test_agent(에이전트/DB) + test_api(라우터)
+```
+
+### 6. Neo4j 시각화 확인
+* 웹 콘솔 `/graph`(인터랙티브 포스그래프) 또는 Neo4j Browser [http://localhost:7474](http://localhost:7474)
+* 기본 계정 `neo4j` / `PG_develop_2026_Secure` · 조회 `MATCH (n) RETURN n LIMIT 100`

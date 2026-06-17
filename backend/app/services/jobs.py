@@ -13,15 +13,20 @@ jobs.py
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import re
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 # 프로젝트 루트 (PYTHONPATH=. 로 실행되는 백엔드 기준)
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+# 작업 메타/로그 영속화 디렉토리 (서버 재시작에도 이력 보존)
+JOBS_DIR = PROJECT_ROOT / "data" / "jobs"
+_MAX_PERSIST_LOGS = 500
 
 # 진행률 추정용 패턴
 #  - 임베딩 파이프라인:  "[2/4] ..." 형태의 단계 로그
@@ -55,12 +60,53 @@ class Job:
             "finished_at": self.finished_at,
         }
 
+    def persist(self) -> None:
+        """작업 상태를 JSON 파일로 저장한다(로그는 최근 분량만)."""
+        try:
+            JOBS_DIR.mkdir(parents=True, exist_ok=True)
+            data = asdict(self)
+            data["logs"] = self.logs[-_MAX_PERSIST_LOGS:]
+            (JOBS_DIR / f"{self.job_id}.json").write_text(
+                json.dumps(data, ensure_ascii=False), encoding="utf-8"
+            )
+        except Exception:  # noqa: BLE001 - 영속화 실패가 작업을 막지 않도록
+            pass
+
 
 class JobManager:
-    """단일 프로세스 내에서 동작하는 비동기 작업 레지스트리."""
+    """비동기 작업 레지스트리. 작업 이력은 data/jobs/에 영속화된다."""
 
     def __init__(self) -> None:
         self._jobs: dict[str, Job] = {}
+        self._load_persisted()
+
+    def _load_persisted(self) -> None:
+        """디스크에 저장된 작업 이력을 복원한다. 미완료(running) 작업은 중단 처리."""
+        if not JOBS_DIR.exists():
+            return
+        for path in JOBS_DIR.glob("*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                job = Job(
+                    job_id=data["job_id"],
+                    kind=data["kind"],
+                    cmd=data.get("cmd", []),
+                    status=data.get("status", "failed"),
+                    progress=data.get("progress", 0),
+                    logs=data.get("logs", []),
+                    result=data.get("result"),
+                    error=data.get("error"),
+                    created_at=data.get("created_at", time.time()),
+                    finished_at=data.get("finished_at"),
+                )
+                # 이전 프로세스에서 실행 중이던 작업은 서버 재시작으로 더 이상 살아있지 않다.
+                if job.status == "running":
+                    job.status = "failed"
+                    job.error = "서버 재시작으로 작업이 중단되었습니다."
+                    job.finished_at = job.finished_at or time.time()
+                self._jobs[job.job_id] = job
+            except Exception:  # noqa: BLE001
+                continue
 
     def get(self, job_id: str) -> Job | None:
         return self._jobs.get(job_id)
@@ -76,6 +122,7 @@ class JobManager:
         job_id = uuid.uuid4().hex[:12]
         job = Job(job_id=job_id, kind=kind, cmd=cmd)
         self._jobs[job_id] = job
+        job.persist()
         # 현재 이벤트 루프에서 백그라운드 태스크로 실행
         asyncio.create_task(self._run(job))
         return job
@@ -99,20 +146,26 @@ class JobManager:
             job.status = "failed"
             job.error = f"프로세스 시작 실패: {exc}"
             job.finished_at = time.time()
+            job.persist()
             return
 
         assert proc.stdout is not None
+        line_no = 0
         async for raw in proc.stdout:
             line = raw.decode("utf-8", errors="replace").rstrip("\n")
             if not line:
                 continue
             job.logs.append(line)
+            line_no += 1
             # 진행률 추정: "[n/total]" 단계 로그가 보이면 갱신
             m = _STAGE_RE.search(line)
             if m:
                 cur, total = int(m.group(1)), int(m.group(2))
                 if total > 0:
                     job.progress = min(99, round(cur / total * 100))
+            # 주기적으로 영속화 (모든 줄마다 쓰면 과도하므로 일정 간격)
+            if line_no % 20 == 0:
+                job.persist()
 
         rc = await proc.wait()
         job.finished_at = time.time()
@@ -122,6 +175,7 @@ class JobManager:
         else:
             job.status = "failed"
             job.error = f"프로세스가 비정상 종료했습니다 (exit code {rc})"
+        job.persist()
 
 
 # 앱 전역에서 공유하는 단일 인스턴스

@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { apiGet, apiPost } from "@/lib/api";
-import { useSelectedUser } from "@/lib/user-context";
-import { Card, PageTitle } from "@/components/ui";
 import {
-  loadSessions,
-  upsertSession,
-  removeSession,
-  makeSessionId,
-  type ChatSession,
-} from "@/lib/chat-sessions";
+  apiDelete,
+  apiGet,
+  streamChat,
+  type ChatSessionMeta,
+} from "@/lib/api";
+import { useSelectedUser } from "@/lib/user-context";
+import { useToast } from "@/lib/toast";
+import { Card, PageTitle } from "@/components/ui";
 
 interface Msg {
   role: "user" | "assistant";
@@ -20,113 +19,116 @@ interface Msg {
 
 export default function ChatPage() {
   const { selected, setSelected } = useSelectedUser();
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const toast = useToast();
+  const [sessions, setSessions] = useState<ChatSessionMeta[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
-  const initRef = useRef(false);
+  const initedFor = useRef<string | null>(null);
 
-  // 최초 진입: 세션 목록 로드 후, 선택 유저의 최근 세션을 열거나 새 대화 시작
-  useEffect(() => {
-    if (initRef.current) return;
-    initRef.current = true;
-    const list = loadSessions();
-    setSessions(list);
-    if (selected) {
-      const latest = list.find((s) => s.userUuid === selected.uuid);
-      if (latest) void openSession(latest);
-      else startNewChat();
+  const refreshSessions = useCallback(async () => {
+    try {
+      const qs = selected ? `?user_uuid=${encodeURIComponent(selected.uuid)}` : "";
+      const res = await apiGet<{ sessions: ChatSessionMeta[] }>(
+        `/api/v1/chat/sessions${qs}`,
+      );
+      setSessions(res.sessions);
+    } catch {
+      /* 사이드바 로드 실패는 조용히 무시 */
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selected]);
+
+  const startNewChat = useCallback(() => {
+    if (!selected) return;
+    setCurrentId(`${selected.uuid}-${Date.now()}`);
+    setMessages([]);
+  }, [selected]);
+
+  // 선택 유저가 바뀌면 세션 목록 갱신 + 새 대화 준비 (유저당 1회)
+  useEffect(() => {
+    if (!selected) return;
+    void refreshSessions();
+    if (initedFor.current !== selected.uuid) {
+      initedFor.current = selected.uuid;
+      startNewChat();
+    }
+  }, [selected, refreshSessions, startNewChat]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, busy]);
 
-  const startNewChat = () => {
-    if (!selected) return;
-    const id = makeSessionId(selected.uuid);
-    const s: ChatSession = {
-      id,
-      title: "새 대화",
-      userUuid: selected.uuid,
-      userLabel: selected.label,
-      updatedAt: Date.now(),
-    };
-    setSessions(upsertSession(s));
-    setCurrentId(id);
-    setMessages([]);
-    setError(null);
-  };
-
-  const openSession = async (s: ChatSession) => {
-    setCurrentId(s.id);
-    setSelected({ uuid: s.userUuid, label: s.userLabel });
-    setError(null);
+  const openSession = async (s: ChatSessionMeta) => {
+    setCurrentId(s.session_id);
+    if (s.user_uuid && s.user_uuid !== selected?.uuid) {
+      setSelected({ uuid: s.user_uuid, label: `유저 ${s.user_uuid.slice(0, 6)}` });
+      initedFor.current = s.user_uuid; // 새 대화 자동생성 방지
+    }
     setLoadingHistory(true);
     try {
       const res = await apiGet<{ messages: Msg[] }>(
-        `/api/v1/chat/history/${encodeURIComponent(s.id)}`,
+        `/api/v1/chat/history/${encodeURIComponent(s.session_id)}`,
       );
       setMessages(res.messages);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      toast(`기록 로드 실패: ${e instanceof Error ? e.message : e}`, "error");
       setMessages([]);
     } finally {
       setLoadingHistory(false);
     }
   };
 
-  const deleteSession = (id: string) => {
-    const list = removeSession(id);
-    setSessions(list);
-    if (currentId === id) {
-      setCurrentId(null);
-      setMessages([]);
+  const deleteSession = async (id: string) => {
+    try {
+      await apiDelete(`/api/v1/chat/sessions/${encodeURIComponent(id)}`);
+      if (currentId === id) {
+        setCurrentId(null);
+        setMessages([]);
+      }
+      await refreshSessions();
+      toast("대화를 삭제했습니다.", "success");
+    } catch (e) {
+      toast(`삭제 실패: ${e instanceof Error ? e.message : e}`, "error");
     }
   };
 
   const send = async () => {
     if (!input.trim() || !selected || !currentId || busy) return;
     const text = input.trim();
-    const isFirst = messages.length === 0;
     setInput("");
-    setMessages((m) => [...m, { role: "user", content: text }]);
+    setMessages((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
     setBusy(true);
-    setError(null);
     try {
-      const res = await apiPost<{ reply: string }>("/api/v1/chat", {
-        session_id: currentId,
-        user_uuid: selected.uuid,
-        message: text,
-      });
-      setMessages((m) => [...m, { role: "assistant", content: res.reply }]);
-      // 세션 메타 갱신 (첫 메시지면 제목으로 사용)
-      const cur = sessions.find((s) => s.id === currentId);
-      setSessions(
-        upsertSession({
-          id: currentId,
-          title: isFirst ? text.slice(0, 30) : (cur?.title ?? text.slice(0, 30)),
-          userUuid: selected.uuid,
-          userLabel: selected.label,
-          updatedAt: Date.now(),
-        }),
+      await streamChat(
+        { session_id: currentId, user_uuid: selected.uuid, message: text },
+        (tok) =>
+          setMessages((m) => {
+            const next = [...m];
+            next[next.length - 1] = {
+              role: "assistant",
+              content: next[next.length - 1].content + tok,
+            };
+            return next;
+          }),
       );
+      await refreshSessions();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      toast(`응답 실패: ${e instanceof Error ? e.message : e}`, "error");
+      setMessages((m) => m.slice(0, -1)); // 빈 assistant 버블 제거
     } finally {
       setBusy(false);
     }
   };
 
+  const fmtDate = (s: string | null) =>
+    s ? new Date(s).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }) : "";
+
   return (
     <div>
-      <PageTitle title="에이전트 챗봇" subtitle="MidasAdviser · 멀티턴 · 세션 기록" />
+      <PageTitle title="에이전트 챗봇" subtitle="MidasAdviser · 멀티턴 · 실시간 스트리밍" />
       <div className="flex gap-4">
         {/* 세션 사이드바 */}
         <aside className="w-60 shrink-0">
@@ -142,10 +144,10 @@ export default function ChatPage() {
               <p className="px-2 text-xs text-muted">대화 기록이 없습니다.</p>
             )}
             {sessions.map((s) => {
-              const active = s.id === currentId;
+              const active = s.session_id === currentId;
               return (
                 <div
-                  key={s.id}
+                  key={s.session_id}
                   className={`group flex items-center gap-1 rounded-lg px-2 py-2 text-sm transition ${
                     active
                       ? "bg-[color-mix(in_srgb,var(--gold)_12%,transparent)]"
@@ -158,11 +160,11 @@ export default function ChatPage() {
                   >
                     <div className="truncate text-fg">{s.title}</div>
                     <div className="truncate text-[10px] text-muted">
-                      {s.userLabel}
+                      {fmtDate(s.updated_at)} · {s.message_count}개 메시지
                     </div>
                   </button>
                   <button
-                    onClick={() => deleteSession(s.id)}
+                    onClick={() => deleteSession(s.session_id)}
                     className="text-muted opacity-0 transition hover:text-negative group-hover:opacity-100"
                     title="삭제"
                   >
@@ -185,29 +187,23 @@ export default function ChatPage() {
             </Card>
           ) : !currentId ? (
             <Card className="text-center text-muted">
-              왼쪽에서 대화를 선택하거나 <b className="text-gold">+ 새 대화</b>를
-              시작하세요.
+              왼쪽에서 대화를 선택하거나 <b className="text-gold">+ 새 대화</b>를 시작하세요.
             </Card>
           ) : (
             <Card className="flex h-[60vh] flex-col p-0">
               <div className="scroll-thin flex-1 space-y-4 overflow-auto p-5">
                 {loadingHistory && (
-                  <p className="text-center text-sm text-muted">
-                    기록 불러오는 중…
-                  </p>
+                  <p className="text-center text-sm text-muted">기록 불러오는 중…</p>
                 )}
                 {!loadingHistory && messages.length === 0 && (
                   <p className="mt-10 text-center text-sm text-muted">
-                    예: &ldquo;나와 비슷한 투자자들의 자산 배분을 벤치마크로
-                    보여줘&rdquo;
+                    예: &ldquo;나와 비슷한 투자자들의 자산 배분을 벤치마크로 보여줘&rdquo;
                   </p>
                 )}
                 {messages.map((m, i) => (
                   <div
                     key={i}
-                    className={`flex ${
-                      m.role === "user" ? "justify-end" : "justify-start"
-                    }`}
+                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
                       className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
@@ -216,22 +212,12 @@ export default function ChatPage() {
                           : "border border-line bg-[var(--ink-2)] text-fg"
                       }`}
                     >
-                      {m.content}
+                      {m.content || (busy ? "▍" : "")}
                     </div>
                   </div>
                 ))}
-                {busy && (
-                  <div className="flex justify-start">
-                    <div className="rounded-2xl border border-line bg-[var(--ink-2)] px-4 py-2.5 text-sm text-muted">
-                      답변 생성 중…
-                    </div>
-                  </div>
-                )}
                 <div ref={endRef} />
               </div>
-              {error && (
-                <p className="px-5 pb-2 text-xs text-negative">오류: {error}</p>
-              )}
               <div className="flex gap-2 border-t border-line p-3">
                 <input
                   value={input}

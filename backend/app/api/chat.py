@@ -7,11 +7,18 @@ user_uuid는 필수(Q5): 존재하지 않는 사용자면 404. 첫 턴에 Users 
 
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from backend.app.services.agent.graph import get_agent
-from shared.database.connector import get_user_by_uuid
+from shared.database.connector import (
+    delete_checkpoint_thread,
+    get_user_by_uuid,
+    list_checkpoint_threads,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["agent"])
 
@@ -72,6 +79,102 @@ def chat(req: ChatRequest) -> ChatResponse:
 
     reply = result["messages"][-1].content
     return ChatResponse(session_id=req.session_id, reply=reply)
+
+
+@router.post("/chat/stream")
+def chat_stream(req: ChatRequest) -> StreamingResponse:
+    """멀티턴 채팅을 SSE로 스트리밍한다(synthesize 노드의 최종 답변 토큰만 흘린다).
+
+    이벤트: {"type":"token","content":...} 반복 후 {"type":"done"}.
+    체크포인터 영속화는 비스트리밍 /chat과 동일하게 자동 처리된다.
+    """
+    profile = get_user_by_uuid(req.user_uuid)
+    if not profile:
+        raise HTTPException(status_code=404, detail=f"사용자를 찾을 수 없습니다: {req.user_uuid}")
+
+    agent = get_agent()
+    config = {"configurable": {"thread_id": req.session_id}}
+    existing = agent.get_state(config)
+    is_first_turn = not existing.values.get("messages")
+
+    state_in: dict = {
+        "messages": [{"role": "user", "content": req.message}],
+        "user_uuid": req.user_uuid,
+    }
+    if is_first_turn:
+        state_in["profile_summary"] = _build_profile_context(profile)
+
+    def event_stream():
+        try:
+            for chunk, metadata in agent.stream(
+                state_in, config, stream_mode="messages"
+            ):
+                # synthesize 노드가 생성하는 최종 답변 토큰만 전달(intent 분류기 LLM은 제외)
+                if metadata.get("langgraph_node") != "synthesize":
+                    continue
+                content = getattr(chunk, "content", None)
+                if content:
+                    yield f"data: {json.dumps({'type': 'token', 'content': content}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        except Exception as exc:  # noqa: BLE001
+            yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.get("/chat/sessions")
+def chat_sessions(user_uuid: str | None = None, limit: int = 50) -> dict:
+    """체크포인터에 저장된 대화 세션 목록을 최근순으로 반환한다(서버 기반 사이드바).
+
+    user_uuid를 주면 해당 유저의 세션만 필터링한다. 각 세션의 첫 사용자 메시지를 제목으로 쓴다.
+    """
+    agent = get_agent()
+    out: list[dict] = []
+    for row in list_checkpoint_threads(limit=limit):
+        thread_id = row["thread_id"]
+        config = {"configurable": {"thread_id": thread_id}}
+        try:
+            state = agent.get_state(config)
+        except Exception:  # noqa: BLE001
+            continue
+        values = state.values if state else {}
+        messages = values.get("messages", []) or []
+        if not messages:
+            continue
+
+        sess_user = values.get("user_uuid")
+        if user_uuid and sess_user != user_uuid:
+            continue
+
+        title = "새 대화"
+        human_count = 0
+        for m in messages:
+            if getattr(m, "type", None) == "human":
+                human_count += 1
+                if human_count == 1 and getattr(m, "content", None):
+                    title = str(m.content)[:40]
+
+        out.append(
+            {
+                "session_id": thread_id,
+                "user_uuid": sess_user,
+                "title": title,
+                "message_count": len(messages),
+                "updated_at": row["last_ts"],
+            }
+        )
+    return {"sessions": out}
+
+
+@router.delete("/chat/sessions/{session_id}")
+def delete_session(session_id: str) -> dict:
+    """세션의 대화 기록(체크포인트)을 삭제한다."""
+    deleted = delete_checkpoint_thread(session_id)
+    return {"session_id": session_id, "deleted_checkpoints": deleted}
 
 
 @router.get("/chat/history/{session_id}")
