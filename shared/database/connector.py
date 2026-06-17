@@ -309,6 +309,52 @@ def get_user_by_uuid(uuid: str) -> dict | None:
         return dict(zip(cols, row))
 
 
+def list_users(limit: int = 50, offset: int = 0) -> list[dict]:
+    """웹 콘솔 유저 선택용 요약 목록. uuid가 있는 사용자만 노출한다."""
+    sql = """
+    SELECT uuid, age, sex, occupation, family_type, district,
+           total_amount, monthly_income, aggressiveness, financial_literacy,
+           preferred_asset
+    FROM users
+    WHERE uuid IS NOT NULL
+    ORDER BY created_at DESC
+    LIMIT %s OFFSET %s
+    """
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql, [limit, offset])
+        rows = cursor.fetchall()
+        cols = [d[0] for d in cursor.description]
+        return [dict(zip(cols, r)) for r in rows]
+
+
+def get_portfolios_by_user_uuid(uuid: str) -> list[dict]:
+    """해당 유저의 포트폴리오와 각 포트폴리오의 개별 종목(items)을 함께 반환한다."""
+    pf_sql = """
+    SELECT p.id, p.name, p.strategy_name, p.stock_ratio, p.bond_ratio,
+           p.deposit_ratio, p.real_estate_ratio, p.gold_ratio, p.cash_ratio,
+           p.is_active
+    FROM portfolios p
+    JOIN users u ON u.id = p.user_id
+    WHERE u.uuid = %s
+    ORDER BY p.is_active DESC, p.created_at DESC
+    """
+    item_sql = """
+    SELECT asset_type, ticker, name, allocation_pct, currency, note
+    FROM portfolio_items
+    WHERE portfolio_id = %s
+    ORDER BY allocation_pct DESC
+    """
+    with db_cursor() as (_, cursor):
+        cursor.execute(pf_sql, [uuid])
+        pf_cols = [d[0] for d in cursor.description]
+        portfolios = [dict(zip(pf_cols, r)) for r in cursor.fetchall()]
+        for pf in portfolios:
+            cursor.execute(item_sql, [pf["id"]])
+            item_cols = [d[0] for d in cursor.description]
+            pf["items"] = [dict(zip(item_cols, r)) for r in cursor.fetchall()]
+    return portfolios
+
+
 def get_latest_market_value(data_type: str, sub_key: str) -> dict | None:
     sql = """
     SELECT snapshot_date, value, unit, source

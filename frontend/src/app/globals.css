@@ -1,0 +1,212 @@
+@import "tailwindcss";
+
+/* ────────────────────────────────────────────────
+   디자인 토큰 (럭셔리 골드 × 다크 / 라이트)
+   html.dark / html.light 에서 팔레트를 교체한다.
+   ──────────────────────────────────────────────── */
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-display: var(--font-display), Georgia, serif;
+}
+
+html.dark {
+  --ink: #0a0a0a;
+  --ink-2: #121110;
+  --surface: rgba(255, 255, 255, 0.035);
+  --line: rgba(212, 175, 55, 0.16);
+  --fg: #f5f3ee;
+  --muted: #a39d92;
+  --gold: #d4af37;
+  --gold-soft: #e8c873;
+  --positive: #5fd0a0;
+  --negative: #f0867a;
+  --glow: rgba(212, 175, 55, 0.1);
+  color-scheme: dark;
+}
+
+html.light {
+  --ink: #f7f4ec;
+  --ink-2: #ffffff;
+  --surface: #ffffff;
+  --line: rgba(150, 115, 30, 0.18);
+  --fg: #1c1a14;
+  --muted: #6f695e;
+  --gold: #a87d18;
+  --gold-soft: #b8860b;
+  --positive: #1a9c6a;
+  --negative: #c64537;
+  --glow: rgba(168, 125, 24, 0.08);
+  color-scheme: light;
+}
+
+html {
+  background: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--fg);
+  /* 상단에 은은한 골드 글로우가 깔린 깊은 배경 */
+  background:
+    radial-gradient(120% 70% at 50% -10%, var(--glow) 0%, transparent 55%),
+    var(--ink);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* 골드 그라디언트 텍스트 (로고/타이틀) */
+.text-gradient-gold {
+  background: linear-gradient(135deg, var(--gold-soft), var(--gold) 55%, #9a7b22);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 글래스 카드 */
+.glass {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 8px 30px -12px rgba(0, 0, 0, 0.5);
+}
+html.light .glass {
+  box-shadow: 0 8px 30px -16px rgba(120, 90, 20, 0.18);
+}
+
+/* 골드 버튼 */
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+  color: #1a1407;
+  font-weight: 600;
+  border-radius: 10px;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+  box-shadow: 0 4px 16px -6px var(--gold);
+}
+.btn-gold:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: 0 6px 22px -6px var(--gold);
+}
+.btn-gold:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn-gold:disabled {
+  opacity: 0.4;
+}
+
+/* 고스트 버튼 */
+.btn-ghost {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--fg);
+  transition: background 0.15s ease;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+}
+
+/* 입력 필드 */
+.field {
+  background: color-mix(in srgb, var(--ink) 60%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--fg);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.field::placeholder {
+  color: var(--muted);
+}
+.field:focus {
+  border-color: var(--gold);
+}
+
+/* 스켈레톤 시머 */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border-radius: 8px;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--gold) 12%, transparent),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* 토스트 진입 애니메이션 */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.toast-enter {
+  animation: toast-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 페이드/슬라이드 인 (콘텐츠) */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-rise {
+  animation: rise 0.4s ease both;
+}
+
+/* 가는 스크롤바 */
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 4px;
+}
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--gold) 40%, transparent);
+}

@@ -72,3 +72,28 @@ def chat(req: ChatRequest) -> ChatResponse:
 
     reply = result["messages"][-1].content
     return ChatResponse(session_id=req.session_id, reply=reply)
+
+
+@router.get("/chat/history/{session_id}")
+def chat_history(session_id: str) -> dict:
+    """체크포인터에 저장된 세션의 대화 이력(사람이 읽는 메시지)을 복원해 반환한다.
+
+    LangGraph state.values["messages"]에서 Human/AI 메시지만 추려 role/content로 직렬화.
+    존재하지 않는 세션이면 빈 목록을 반환한다.
+    """
+    agent = get_agent()
+    config = {"configurable": {"thread_id": session_id}}
+    state = agent.get_state(config)
+    messages = state.values.get("messages", []) if state and state.values else []
+
+    out: list[dict] = []
+    for m in messages:
+        role = getattr(m, "type", None)
+        content = getattr(m, "content", None)
+        if not content:
+            continue
+        if role == "human":
+            out.append({"role": "user", "content": content})
+        elif role == "ai":
+            out.append({"role": "assistant", "content": content})
+    return {"session_id": session_id, "messages": out}

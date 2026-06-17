@@ -222,7 +222,7 @@ def save_processed_passage_ids(passage_ids: list[str]) -> None:
         logger.error("processed passage_id 저장 오류: %s", exc)
 
 
-def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document]) -> None:
+def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document], delay: float = 0.0) -> None:
     """Neo4j 데이터베이스에 세법 및 금융 자산 지식 그래프 자동 구축."""
     if not documents:
         logger.info("새로 적재할 문서가 없습니다.")
@@ -430,12 +430,17 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document]) -> None:
                         else:
                             logger.error("❌ [%d/%d] [%s] %s 최종 실패 (%d/%d 시도): %s", 
                                          doc_idx, total_docs, w_name, doc.id_, attempt, max_retries, exc)
+            
+            if delay > 0:
+                logger.info("[%s] 작업 완료. 다음 작업 시작 전 %.2f초 대기합니다...", w_name, delay)
+                time.sleep(delay)
+                
             return success
         finally:
             # 사용 후 큐에 반납
             extractor_queue.put((ext, w_name))
 
-    # ThreadPoolExecutor를 통한 병렬 실행
+    # ThreadPoolExecutor를 통한 병렬 실행 (모든 작업을 큐에 넣고 워커별 개별 진행)
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
         futures = [executor.submit(worker_task, doc, idx) for idx, doc in enumerate(documents, start=1)]
         for fut in futures:
@@ -456,6 +461,22 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document]) -> None:
 
 
 def main() -> None:
+    import argparse
+    parser = argparse.ArgumentParser(description="LlamaIndex + Neo4j 금융 세법 지식 그래프 자동 구축 파이프라인")
+    parser.add_argument(
+        "--limit", "-l",
+        type=int,
+        default=40,
+        help="이번 실행에서 처리할 미처리 단락의 최대 개수 (기본값: 40, 전체를 처리하려면 -1 입력)"
+    )
+    parser.add_argument(
+        "--delay", "-d",
+        type=float,
+        default=0.0,
+        help="각 추출기(Gemini, NIM 등)가 작업을 완료한 후 다음 작업을 시작하기 전 대기할 시간(초) (기본값: 0.0)"
+    )
+    args = parser.parse_args()
+
     try:
         # 1. PostgreSQL 체크포인트 테이블 초기화
         init_checkpoint_table()
@@ -477,11 +498,16 @@ def main() -> None:
             logger.info("🎉 모든 단락이 이미 Neo4j 지식 그래프에 적재 완료되었습니다!")
             return
             
-        # 5. 비용 및 시간 관리를 위해 상위 40개 미처리 단락만 선별하여 진행
-        target_docs = unprocessed_documents[:40]
-        logger.info("이번 실행에서 처리할 %d개의 미처리 단락으로 그래프 빌드를 시작합니다.", len(target_docs))
+        # 5. 비용 및 시간 관리를 위해 지정된 개수만큼 미처리 단락 선별하여 진행
+        limit = args.limit
+        if limit < 0:
+            target_docs = unprocessed_documents
+            logger.info("이번 실행에서 미처리 단락 전체(%d개)를 대상으로 그래프 빌드를 시작합니다.", len(target_docs))
+        else:
+            target_docs = unprocessed_documents[:limit]
+            logger.info("이번 실행에서 처리할 %d개의 미처리 단락으로 그래프 빌드를 시작합니다.", len(target_docs))
         
-        build_knowledge_graph(llm, target_docs)
+        build_knowledge_graph(llm, target_docs, delay=args.delay)
         
     except Exception as exc:
         logger.exception("지식 그래프 생성 도중 오류 발생: %s", exc)
