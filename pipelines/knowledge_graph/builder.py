@@ -76,8 +76,11 @@ def setup_llamaindex_settings() -> tuple[GoogleGenAI, HuggingFaceEmbedding]:
             "GOOGLE_CLOUD_PROJECT가 설정되지 않았습니다. .env에 GOOGLE_CLOUD_PROJECT와 "
             "GOOGLE_APPLICATION_CREDENTIALS(서비스 계정 키 경로)를 추가하세요."
         )
+    gemini_model = os.environ.get("GEMINI_GENERATION_MODEL")
+    if not gemini_model:
+        raise RuntimeError("GEMINI_GENERATION_MODEL 환경변수가 설정되어 있지 않습니다.")
     llm = GoogleGenAI(
-        model=os.environ.get("GEMINI_GENERATION_MODEL", "gemini-2.5-flash"),
+        model=gemini_model,
         temperature=0.0,  # 결정론적 지식 추출을 위해 0.0 설정
         max_tokens=4096,
         vertexai_config={"project": project, "location": location},

@@ -404,7 +404,9 @@ class DocumentParser:
             )
             return ""
 
-        model = os.environ.get("GEMINI_VISION_MODEL", "gemini-2.5-flash")
+        model = os.environ.get("GEMINI_VISION_MODEL")
+        if not model:
+            raise RuntimeError("GEMINI_VISION_MODEL 환경변수가 설정되어 있지 않습니다.")
         dpi = int(os.environ.get("PDF_VISION_DPI", "150"))
         max_workers = int(os.environ.get("PDF_VISION_WORKERS", "8"))
         prompt = (

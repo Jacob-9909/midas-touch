@@ -74,8 +74,11 @@ class EntityRefiner:
             raise ValueError("GOOGLE_CLOUD_PROJECT 환경변수가 누락되었습니다.")
             
         logger.info("Vertex AI Gemini LLM 초기화 중...")
+        gemini_model = os.environ.get("GEMINI_GENERATION_MODEL")
+        if not gemini_model:
+            raise RuntimeError("GEMINI_GENERATION_MODEL 환경변수가 설정되어 있지 않습니다.")
         self.llm = GoogleGenAI(
-            model=os.environ.get("GEMINI_GENERATION_MODEL", "gemini-2.5-flash"),
+            model=gemini_model,
             temperature=0.0,
             max_tokens=2048,
             vertexai_config={"project": project, "location": location},

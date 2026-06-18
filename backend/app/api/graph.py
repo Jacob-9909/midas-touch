@@ -2,7 +2,7 @@
 
 - 빌드: `pipelines/knowledge_graph/builder.py`를 비동기 작업으로 실행(증분 적재).
 - 스냅샷: Neo4j에서 노드/엣지를 끌어와 포스그래프 렌더용 JSON으로 변환.
-GraphRAG 질의(근거 서브그래프 포함)는 main.py의 `/api/v1/query`가 담당한다.
+GraphRAG 질의(근거 서브그래프 포함)는 api/query.py의 `/api/v1/query`가 담당한다.
 """
 
 from __future__ import annotations

@@ -308,3 +308,29 @@ class PersonaEmbedding(PostgresBase):
     )
 
     user = relationship("User", back_populates="persona_embedding")
+
+
+class ChatSession(PostgresBase):
+    """대화 세션 메타데이터(웹 콘솔 사이드바용).
+
+    대화 상태 자체는 LangGraph 체크포인트 테이블이 보관한다. 이 테이블은 제목·유저·메시지 수·
+    갱신시각만 들고 있어, 세션 목록을 체크포인트 스캔 없이 단일 쿼리로 조회하게 한다.
+    session_id == LangGraph thread_id.
+    """
+
+    __tablename__ = "chat_sessions"
+
+    session_id = Column(String(200), primary_key=True)
+    user_uuid = Column(String(100), nullable=True, index=True)
+    title = Column(String(200), nullable=True)
+    message_count = Column(Integer, nullable=False, server_default=text("0"))
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )

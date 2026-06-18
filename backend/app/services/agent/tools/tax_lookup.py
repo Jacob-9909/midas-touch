@@ -12,16 +12,17 @@ from shared.database.connector import get_all_tax_rules, get_latest_market_snaps
 
 
 @tool
-def tax_and_market_lookup(asset_type: str | None = None) -> str:
+def tax_and_market_lookup(asset_types: list[str] | None = None) -> str:
     """한국 세법 규칙(세율·공제 한도·근거 법령)과 최신 거시경제 지표(환율·금리·자산 인덱스 등)를
     데이터베이스에서 직접 조회한다. 특정 자산의 절세 조건이나 현재 시장 수치만 필요할 때 사용하라.
 
     Args:
-        asset_type: 특정 자산(예: '주식', '채권')으로 세법 규칙을 필터링. 생략 시 전체 반환.
+        asset_types: 특정 자산(예: ['주식', '채권'])으로 세법 규칙을 필터링. 비거나 생략 시 전체 반환.
     """
     tax_rules = get_all_tax_rules()
-    if asset_type:
-        tax_rules = [r for r in tax_rules if r.get("asset_type") == asset_type]
+    if asset_types:
+        wanted = set(asset_types)
+        tax_rules = [r for r in tax_rules if r.get("asset_type") in wanted]
 
     lines: list[str] = ["### 세법 규칙"]
     if not tax_rules:

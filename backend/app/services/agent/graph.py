@@ -12,10 +12,6 @@
 
 멀티턴 영속화는 체크포인터(PostgresSaver)로 처리한다. 체크포인트 테이블은 Alembic으로 관리하므로
 setup()은 호출하지 않는다(DESIGN §6, Q3).
-
-----------------------------------------------------------------------------------------------------
-NOTE: 이전 구성(ReAct, langchain.agents.create_agent)은 아래 [LEGACY] 블록에 주석으로 보존한다.
-----------------------------------------------------------------------------------------------------
 """
 
 from __future__ import annotations
@@ -71,39 +67,3 @@ def get_agent():
     from .checkpointer import get_checkpointer
 
     return build_agent(checkpointer=get_checkpointer())
-
-
-# ══════════════════════════════════════════════════════════════════════════════════════════════
-# [LEGACY] 이전 구성: ReAct agent (langchain.agents.create_agent)
-# ──────────────────────────────────────────────────────────────────────────────────────────────
-# 도구 선택을 LLM에 위임하는 prebuilt ReAct 루프(agent ↔ tools). multi-hop/복합 도구 조합에
-# 강하지만, 도구 호출마다 LLM 라운드가 추가되어 지연·비용이 누적된다. 위 intent 분기로 대체했다.
-# 되돌리려면 위 intent 배선을 주석 처리하고 아래를 복구하면 된다.
-# ══════════════════════════════════════════════════════════════════════════════════════════════
-#
-# from langchain.agents import create_agent
-# from langchain.agents.middleware import dynamic_prompt
-# from .llm import build_chat_model
-# from .prompts import SYSTEM_PROMPT
-# from .tools import ALL_TOOLS
-#
-#
-# @dynamic_prompt
-# def _prompt_with_profile(request) -> str:
-#     """기본 시스템 프롬프트에 세션 사용자 프로필을 동적으로 합쳐 system prompt로 사용한다."""
-#     state = getattr(request, "state", {}) or {}
-#     summary = (state.get("profile_summary") or "").strip()
-#     if summary:
-#         return f"{SYSTEM_PROMPT}\n\n{summary}"
-#     return SYSTEM_PROMPT
-#
-#
-# def build_agent(checkpointer):
-#     """주어진 체크포인터로 ReAct 에이전트를 구성한다."""
-#     return create_agent(
-#         model=build_chat_model(),
-#         tools=ALL_TOOLS,
-#         middleware=[_prompt_with_profile],
-#         state_schema=AgentState,
-#         checkpointer=checkpointer,
-#     )

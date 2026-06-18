@@ -3,9 +3,6 @@
 intent 분기 그래프(StateGraph)용 상태. 세션 동안 고정되는 사용자 식별자/프로필 요약에 더해,
 턴마다 갱신되는 라우팅 결과(route)와 도구 검색 컨텍스트(tool_context)를 함께 보관한다.
 user_uuid는 필수(Q5) — API 레이어에서 보장한다.
-
-NOTE: remaining_steps는 ReAct(create_react_agent) 시절 재귀 한도 관리용 필드였다. 현재 intent
-분기 그래프에서는 쓰지 않지만, 체크포인터에 남은 기존 세션과의 호환을 위해 선택 필드로 남겨둔다.
 """
 
 from __future__ import annotations
@@ -31,8 +28,8 @@ def merge_tool_context(left: Optional[List[str]], right: Optional[List[str]]) ->
 
 class AgentState(TypedDict, total=False):
     messages: Annotated[list[BaseMessage], add_messages]
-    remaining_steps: int  # (레거시) ReAct 재귀 한도 관리 필드 — 현 그래프에선 미사용
     user_uuid: str  # 필수: Users DB 프로필 연결 키
     profile_summary: Optional[str]  # 첫 턴에 구성 후 재사용
     route: List[str]  # intent 노드가 고른 필요 도구 이름 목록
+    tax_asset_types: List[str]  # intent가 추출한 세법 조회 대상 자산 종류(없으면 전체)
     tool_context: Annotated[List[str], merge_tool_context]  # 도구 노드들이 누적한 검색 컨텍스트

@@ -7,5 +7,7 @@ from ..tools import tax_and_market_lookup
 
 
 def tax_lookup_node(state: AgentState) -> dict:
-    result = tax_and_market_lookup.invoke({})  # asset_type 생략 → 전체 조회
+    # intent가 자산 종류를 특정했으면 그 자산으로 세법 조회를 좁힌다(없으면 전체 조회).
+    asset_types = state.get("tax_asset_types") or []
+    result = tax_and_market_lookup.invoke({"asset_types": asset_types})
     return {"tool_context": [f"[tax_and_market_lookup 결과]\n{result}"]}

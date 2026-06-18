@@ -14,15 +14,18 @@ from langchain_openai import ChatOpenAI
 NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 
+def require_env(name: str) -> str:
+    """필수 환경변수를 읽고, 없으면 명확한 오류로 실패한다(하드코딩 기본값 금지)."""
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f"{name} 환경변수가 설정되어 있지 않습니다.")
+    return value
+
+
 def build_chat_model(temperature: float = 0.7, max_tokens: int = 4000) -> ChatOpenAI:
     """create_react_agent에 주입할 NIM 기반 ChatOpenAI 인스턴스를 생성한다."""
-    api_key = os.environ.get("NVIDIA_API_KEY")
-    if not api_key:
-        raise RuntimeError("NVIDIA_API_KEY 환경변수가 설정되어 있지 않습니다.")
-
-    model = os.environ.get("AGENT_LLM_MODEL")
-    if not model:
-        raise RuntimeError("AGENT_LLM_MODEL 환경변수가 설정되어 있지 않습니다.")
+    api_key = require_env("NVIDIA_API_KEY")
+    model = require_env("AGENT_LLM_MODEL")
 
     return ChatOpenAI(
         model=model,

@@ -39,9 +39,12 @@ logger = logging.getLogger("test_graph_rag")
 
 def setup_llamaindex_settings() -> tuple[NIMOpenAI, HuggingFaceEmbedding]:
     """LlamaIndex의 전역 LLM 및 임베딩 모델 설정."""
-    # 1. LLM 설정 (NVIDIA NIM - Llama3-70B Instruct 활용)
+    # 1. LLM 설정 (NVIDIA NIM) — 모델명은 .env(NIM_GENERATION_MODEL)에서만 읽는다(기본값 없음)
+    nim_model = os.environ.get("NIM_GENERATION_MODEL")
+    if not nim_model:
+        raise RuntimeError("NIM_GENERATION_MODEL 환경변수가 설정되어 있지 않습니다.")
     llm = NIMOpenAI(
-        model=os.environ.get("NIM_GENERATION_MODEL", "meta/llama-3.1-70b-instruct"),
+        model=nim_model,
         api_base="https://integrate.api.nvidia.com/v1",
         temperature=0.0,  # 정확한 조언 생성을 위해 0.0 설정
     )

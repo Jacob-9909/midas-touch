@@ -22,7 +22,11 @@ _INTENT_PROMPT = """당신은 한국인 자산관리 AI의 라우터입니다. �
 - tax_and_market_lookup: 특정 자산의 절세 조건이나 현재 시장 수치만 빠르게 확인.
 
 복합 질문이면 필요한 도구를 여러 개 고르십시오. 단순 인사·잡담 등 데이터가 필요 없는 질문이면
-아무 도구도 고르지 마십시오."""
+아무 도구도 고르지 마십시오.
+
+tax_and_market_lookup을 골랐고 질문이 특정 자산 종류(예: 주식·채권·예금·부동산)에 한정되면,
+asset_types에 해당 자산 종류명을 적으십시오(세법 조회를 그 자산으로 좁힘). 자산을 특정하지 않은
+일반 질문이면 asset_types는 비워 두십시오(전체 세법 조회)."""
 
 
 def _keyword_route(text: str) -> List[str]:
@@ -44,21 +48,28 @@ def classify_intent(state: AgentState) -> dict:
     from pydantic import BaseModel, Field
 
     class _Route(BaseModel):
-        """답변에 필요한 검색 도구 목록."""
+        """답변에 필요한 검색 도구 목록과 세법 조회 대상 자산 종류."""
 
         tools: List[Literal["persona_rag", "graph_rag", "tax_and_market_lookup"]] = Field(
             default_factory=list
         )
+        asset_types: List[str] = Field(
+            default_factory=list,
+            description="tax_and_market_lookup의 세법 조회를 특정 자산(예: 주식, 채권)으로 좁힐 때만 채운다.",
+        )
 
     user_text = latest_user_text(state)
+    asset_types: List[str] = []
     try:
         router = build_chat_model(temperature=0.0).with_structured_output(_Route)
         result = router.invoke(
             [SystemMessage(content=_INTENT_PROMPT), HumanMessage(content=user_text)]
         )
         tools = list(dict.fromkeys(result.tools))  # 중복 제거, 순서 유지
+        asset_types = list(dict.fromkeys(result.asset_types))
     except Exception:  # noqa: BLE001 - 분류 실패 시 키워드 폴백
         tools = _keyword_route(user_text)
 
     # tool_context=None → 리듀서가 빈 리스트로 리셋(이전 턴 컨텍스트 제거)
-    return {"route": tools, "tool_context": None}
+    # tax_asset_types는 매 턴 새로 덮어써 이전 턴 값이 남지 않게 한다.
+    return {"route": tools, "tax_asset_types": asset_types, "tool_context": None}

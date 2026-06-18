@@ -37,7 +37,9 @@ client = AsyncOpenAI(
     timeout=300.0
 )
 
-MODEL_NAME = os.environ.get("PERSONA_GENERATION_MODEL", "deepseek-ai/deepseek-v4-flash")
+MODEL_NAME = os.environ.get("PERSONA_GENERATION_MODEL")
+if not MODEL_NAME:
+    raise RuntimeError("PERSONA_GENERATION_MODEL 환경변수가 설정되어 있지 않습니다.")
 
 # 사용할 기존 컬럼
 SELECTED_COLUMNS = [
