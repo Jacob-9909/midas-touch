@@ -1,16 +1,24 @@
-"""DB 연결 프리미티브 — 커넥션·커서·스키마 부트스트랩.
+"""DB 연결 프리미티브 — 커넥션 풀·커서·스키마 부트스트랩.
 
 도메인 레포지토리(users/market/tax/...)는 모두 여기의 db_cursor를 통해 DB에 접근한다.
+db_cursor는 프로세스 단위 ThreadedConnectionPool에서 커넥션을 빌려 재사용한다(요청마다 새로
+psycopg2.connect 하던 비용 제거). FastAPI는 sync 핸들러를 스레드풀에서 돌리므로 스레드 안전한
+ThreadedConnectionPool이 적합하다. 풀 크기는 PG_POOL_MIN/PG_POOL_MAX(.env)로 조정한다.
 """
 
 import os
+import threading
 from contextlib import contextmanager
 from typing import Any
 
 import psycopg2
+from psycopg2 import pool as _pg_pool
 from dotenv import load_dotenv
 
 load_dotenv()
+
+_pool: _pg_pool.ThreadedConnectionPool | None = None
+_pool_lock = threading.Lock()
 
 
 def _get_database_url() -> str:
@@ -26,15 +34,33 @@ def _get_database_url() -> str:
     return url
 
 
+def _get_pool() -> _pg_pool.ThreadedConnectionPool:
+    """프로세스 수명 동안 유지되는 커넥션 풀을 1회 생성해 반환한다(지연 초기화·스레드 안전)."""
+    global _pool
+    if _pool is None:
+        with _pool_lock:
+            if _pool is None:
+                minconn = int(os.environ.get("PG_POOL_MIN", "1"))
+                maxconn = int(os.environ.get("PG_POOL_MAX", "20"))
+                _pool = _pg_pool.ThreadedConnectionPool(
+                    minconn, maxconn, dsn=_get_database_url()
+                )
+    return _pool
+
+
 def get_connection() -> psycopg2.extensions.connection:
-    """Raw psycopg2 connection (caller must close)."""
+    """Raw psycopg2 connection (caller must close). 풀을 거치지 않는 직접 연결.
+
+    헬스체크 등 짧은 수명·직접 close가 명확한 호출자용. 반복 쿼리는 db_cursor를 쓰라.
+    """
     return psycopg2.connect(_get_database_url())
 
 
 @contextmanager
 def db_cursor():
-    """Context manager: yields (conn, cursor), auto-commits or rolls back."""
-    conn = get_connection()
+    """Context manager: 풀에서 커넥션을 빌려 (conn, cursor)를 yield하고, 자동 커밋/롤백 후 반납한다."""
+    pool = _get_pool()
+    conn = pool.getconn()
     try:
         cursor = conn.cursor()
         yield conn, cursor
@@ -43,7 +69,7 @@ def db_cursor():
         conn.rollback()
         raise
     finally:
-        conn.close()
+        pool.putconn(conn)
 
 
 def apply_schema(schema_path: str | None = None) -> None:

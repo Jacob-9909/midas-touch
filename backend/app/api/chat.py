@@ -12,7 +12,7 @@ from functools import lru_cache
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend.app.services.agent.graph import get_agent
 from backend.app.services.chat_service import ChatService
@@ -29,9 +29,9 @@ def _service() -> ChatService:
 
 
 class ChatRequest(BaseModel):
-    session_id: str
-    message: str
-    user_uuid: str
+    session_id: str = Field(min_length=1, max_length=200)
+    message: str = Field(min_length=1, max_length=4000)
+    user_uuid: str = Field(min_length=1, max_length=100)
 
 
 class ChatResponse(BaseModel):

@@ -12,12 +12,15 @@ from shared.database.connector import get_all_tax_rules, get_latest_market_snaps
 
 
 @tool
-def tax_and_market_lookup(asset_types: list[str] | None = None) -> str:
+def tax_and_market_lookup(
+    asset_types: list[str] | None = None, include_market: bool = True
+) -> str:
     """한국 세법 규칙(세율·공제 한도·근거 법령)과 최신 거시경제 지표(환율·금리·자산 인덱스 등)를
     데이터베이스에서 직접 조회한다. 특정 자산의 절세 조건이나 현재 시장 수치만 필요할 때 사용하라.
 
     Args:
         asset_types: 특정 자산(예: ['주식', '채권'])으로 세법 규칙을 필터링. 비거나 생략 시 전체 반환.
+        include_market: False면 거시경제 지표 섹션을 생략한다(자산 한정 세법 질문의 컨텍스트 절감).
     """
     tax_rules = get_all_tax_rules()
     if asset_types:
@@ -37,15 +40,16 @@ def tax_and_market_lookup(asset_types: list[str] | None = None) -> str:
                 f"(지방세 {local:.2f}%), 공제한도 {deduction} | {r.get('description')} ({r.get('legal_basis')})"
             )
 
-    lines.append("\n### 최신 시장 지표")
-    snapshots = get_latest_market_snapshots()
-    if not snapshots:
-        lines.append(" - 연동된 시장 지표가 없습니다.")
-    else:
-        for ms in snapshots:
-            lines.append(
-                f" - [{ms.get('data_type')}] {ms.get('sub_key')}: "
-                f"{float(ms.get('value') or 0):,.2f} {ms.get('unit', '')} (기준일: {ms.get('snapshot_date')})"
-            )
+    if include_market:
+        lines.append("\n### 최신 시장 지표")
+        snapshots = get_latest_market_snapshots()
+        if not snapshots:
+            lines.append(" - 연동된 시장 지표가 없습니다.")
+        else:
+            for ms in snapshots:
+                lines.append(
+                    f" - [{ms.get('data_type')}] {ms.get('sub_key')}: "
+                    f"{float(ms.get('value') or 0):,.2f} {ms.get('unit', '')} (기준일: {ms.get('snapshot_date')})"
+                )
 
     return "\n".join(lines)

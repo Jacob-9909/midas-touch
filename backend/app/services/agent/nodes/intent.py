@@ -29,6 +29,36 @@ asset_types에 해당 자산 종류명을 적으십시오(세법 조회를 그 �
 일반 질문이면 asset_types는 비워 두십시오(전체 세법 조회)."""
 
 
+# 데이터 검색이 필요함을 시사하는 토큰(짧은 메시지라도 이게 있으면 잡담이 아니다).
+_DATA_TOKENS = (
+    "유사", "또래", "비슷한", "트윈", "페르소나", "자산배분", "포트폴리오", "추천",
+    "근거", "출처", "법적", "법령", "조항", "관계",
+    "세율", "세금", "절세", "공제", "환율", "금리", "시세", "시장", "지표",
+    "투자", "자산", "주식", "채권", "부동산", "예금", "수익", "전략", "얼마", "어떻게",
+)
+# 데이터가 필요 없는 인사·잡담 토큰.
+_SMALLTALK_TOKENS = (
+    "안녕", "반가", "반갑", "고마", "감사", "수고", "하이", "ㅎㅇ", "잘 지내", "좋은 아침",
+    "hello", "hi", "thanks",
+)
+
+
+def _is_smalltalk(text: str) -> bool:
+    """짧은 순수 인사·잡담이면 True. 보수적으로 판정한다(애매하면 False → 정상 분류).
+
+    분류 LLM 호출을 아끼기 위한 short-circuit용. 데이터 토큰이나 물음표가 있으면 잡담이 아니다.
+    """
+    stripped = text.strip()
+    if not stripped or len(stripped) > 15:
+        return False
+    if "?" in stripped or "？" in stripped:
+        return False
+    lowered = stripped.lower()
+    if any(tok in lowered for tok in _DATA_TOKENS):
+        return False
+    return any(tok in lowered for tok in _SMALLTALK_TOKENS)
+
+
 def _keyword_route(text: str) -> List[str]:
     """structured-output 실패 시 키워드 기반 폴백 라우팅. 모호하면 graph_rag로 근거를 확보한다."""
     route: List[str] = []
@@ -60,6 +90,11 @@ def classify_intent(state: AgentState) -> dict:
 
     user_text = latest_user_text(state)
     asset_types: List[str] = []
+
+    # 순수 인사·잡담이면 분류 LLM을 건너뛰고 곧장 작문(도구 없음)으로 보낸다(지연·비용 절감).
+    if _is_smalltalk(user_text):
+        return {"route": [], "tax_asset_types": [], "tool_context": None}
+
     try:
         router = build_chat_model(temperature=0.0).with_structured_output(_Route)
         result = router.invoke(

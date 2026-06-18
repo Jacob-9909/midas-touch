@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend.app.services.agent.llm import build_chat_model
 from backend.app.services.agent.tools.graph_rag import retrieve_graph_context
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/v1", tags=["graph-rag"])
 
 
 class QueryRequest(BaseModel):
-    query: str
+    query: str = Field(min_length=1, max_length=2000)
 
 
 class QueryResponse(BaseModel):
