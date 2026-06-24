@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Plus, TrashSimple, ArrowRight, PaperPlaneTilt } from "@phosphor-icons/react";
 import {
   apiDelete,
   apiGet,
@@ -135,9 +136,9 @@ export default function ChatPage() {
           <button
             onClick={startNewChat}
             disabled={!selected}
-            className="btn-gold mb-3 w-full px-3 py-2 text-sm"
+            className="btn-gold mb-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm"
           >
-            + 새 대화
+            <Plus weight="bold" size={16} />새 대화
           </button>
           <div className="space-y-1">
             {sessions.length === 0 && (
@@ -165,10 +166,11 @@ export default function ChatPage() {
                   </button>
                   <button
                     onClick={() => deleteSession(s.session_id)}
-                    className="text-muted opacity-0 transition hover:text-negative group-hover:opacity-100"
+                    className="flex h-6 w-6 items-center justify-center rounded-md text-muted opacity-0 transition hover:text-negative group-hover:opacity-100"
+                    aria-label="대화 삭제"
                     title="삭제"
                   >
-                    ✕
+                    <TrashSimple size={15} />
                   </button>
                 </div>
               );
@@ -181,8 +183,12 @@ export default function ChatPage() {
           {!selected ? (
             <Card className="text-center">
               <p className="text-fg">먼저 대화할 유저를 선택하세요.</p>
-              <Link href="/" className="btn-gold mt-3 inline-block px-4 py-2 text-sm">
-                유저 선택하러 가기 →
+              <Link
+                href="/"
+                className="btn-gold mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-sm"
+              >
+                유저 선택하러 가기
+                <ArrowRight weight="bold" size={15} />
               </Link>
             </Card>
           ) : !currentId ? (
@@ -212,7 +218,7 @@ export default function ChatPage() {
                           : "border border-line bg-[var(--ink-2)] text-fg"
                       }`}
                     >
-                      {m.content || (busy ? "▍" : "")}
+                      {m.content || (busy ? <span className="caret" /> : "")}
                     </div>
                   </div>
                 ))}
@@ -234,8 +240,10 @@ export default function ChatPage() {
                 <button
                   onClick={send}
                   disabled={busy || !input.trim()}
-                  className="btn-gold px-5 py-2.5 text-sm disabled:opacity-40"
+                  aria-label="전송"
+                  className="btn-gold flex items-center gap-1.5 px-5 py-2.5 text-sm disabled:opacity-40"
                 >
+                  <PaperPlaneTilt weight="fill" size={15} />
                   전송
                 </button>
               </div>

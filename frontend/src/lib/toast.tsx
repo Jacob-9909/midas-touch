@@ -5,8 +5,15 @@ import {
   useCallback,
   useContext,
   useState,
+  type ComponentType,
   type ReactNode,
 } from "react";
+import {
+  CheckCircle,
+  XCircle,
+  Info,
+  type IconProps,
+} from "@phosphor-icons/react";
 
 type ToastKind = "success" | "error" | "info";
 interface Toast {
@@ -21,10 +28,10 @@ interface ToastCtx {
 
 const Ctx = createContext<ToastCtx | undefined>(undefined);
 
-const ICONS: Record<ToastKind, string> = {
-  success: "✓",
-  error: "✕",
-  info: "ℹ",
+const ICONS: Record<ToastKind, ComponentType<IconProps>> = {
+  success: CheckCircle,
+  error: XCircle,
+  info: Info,
 };
 const ACCENT: Record<ToastKind, string> = {
   success: "text-positive",
@@ -47,17 +54,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={{ toast }}>
       {children}
       <div className="pointer-events-none fixed bottom-5 right-5 z-[100] flex w-80 max-w-[calc(100vw-2.5rem)] flex-col gap-2">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className="toast-enter glass pointer-events-auto flex items-start gap-3 px-4 py-3 text-sm"
-          >
-            <span className={`mt-0.5 font-bold ${ACCENT[t.kind]}`}>
-              {ICONS[t.kind]}
-            </span>
-            <span className="text-fg">{t.message}</span>
-          </div>
-        ))}
+        {toasts.map((t) => {
+          const Icon = ICONS[t.kind];
+          return (
+            <div
+              key={t.id}
+              className="toast-enter glass pointer-events-auto flex items-start gap-3 px-4 py-3 text-sm"
+            >
+              <Icon
+                weight="fill"
+                size={18}
+                className={`mt-0.5 shrink-0 ${ACCENT[t.kind]}`}
+              />
+              <span className="text-fg">{t.message}</span>
+            </div>
+          );
+        })}
       </div>
     </Ctx.Provider>
   );

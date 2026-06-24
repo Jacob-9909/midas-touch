@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Play, UploadSimple } from "@phosphor-icons/react";
 import { apiGet, apiPost, apiUpload, type JobState } from "@/lib/api";
 import { Card, PageTitle } from "@/components/ui";
 import { useToast } from "@/lib/toast";
@@ -101,13 +102,18 @@ export default function FinetunePage() {
           <button
             onClick={upload}
             disabled={!file || busy}
-            className="btn-ghost px-4 py-2 text-sm disabled:opacity-40"
+            className="btn-ghost flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-40"
           >
+            <UploadSimple size={15} />
             {busy ? "업로드 중…" : "업로드"}
           </button>
           {uploadedName && (
-            <button onClick={startJob} className="btn-gold px-4 py-2 text-sm">
-              파이프라인 실행 ▶
+            <button
+              onClick={startJob}
+              className="btn-gold flex items-center gap-1.5 px-4 py-2 text-sm"
+            >
+              <Play weight="fill" size={14} />
+              파이프라인 실행
             </button>
           )}
         </div>

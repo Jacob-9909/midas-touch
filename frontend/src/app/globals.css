@@ -19,6 +19,19 @@
   --font-display: var(--font-display), Georgia, serif;
 }
 
+/* ────────────────────────────────────────────────
+   SHAPE LOCK: 한 페이지 = 하나의 radius 스케일.
+   규칙: 카드 = lg, 버튼/입력 = md, 작은 칩/스켈레톤 = sm,
+        토글/아바타 등 원형 = pill. 예외 없음.
+   ──────────────────────────────────────────────── */
+:root {
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 html.dark {
   --ink: #0a0a0a;
   --ink-2: #121110;
@@ -81,7 +94,7 @@ body {
 .glass {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--r-lg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow:
@@ -97,7 +110,7 @@ html.light .glass {
   background: linear-gradient(135deg, var(--gold-soft), var(--gold));
   color: #1a1407;
   font-weight: 600;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   transition:
     transform 0.12s ease,
     box-shadow 0.2s ease,
@@ -118,28 +131,36 @@ html.light .glass {
 /* 고스트 버튼 */
 .btn-ghost {
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   color: var(--fg);
-  transition: background 0.15s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.12s ease;
 }
 .btn-ghost:hover:not(:disabled) {
   background: color-mix(in srgb, var(--gold) 10%, transparent);
+}
+.btn-ghost:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 /* 입력 필드 */
 .field {
   background: color-mix(in srgb, var(--ink) 60%, transparent);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   color: var(--fg);
   outline: none;
-  transition: border-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .field::placeholder {
   color: var(--muted);
 }
 .field:focus {
   border-color: var(--gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 14%, transparent);
 }
 
 /* 스켈레톤 시머 */
@@ -147,7 +168,7 @@ html.light .glass {
   position: relative;
   overflow: hidden;
   background: var(--surface);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
 }
 .skeleton::after {
   content: "";
@@ -209,4 +230,46 @@ html.light .glass {
 }
 .scroll-thin::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--gold) 40%, transparent);
+}
+
+/* 카드 호버 리프트 (인터랙티브 카드 전용) */
+.lift {
+  transition:
+    transform 0.18s var(--ease-out),
+    border-color 0.18s ease;
+}
+.lift:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--gold) 32%, var(--line));
+}
+
+/* 스트리밍 응답 깜빡이는 커서 (이모지/블록문자 대체) */
+.caret {
+  display: inline-block;
+  width: 0.5ch;
+  height: 1em;
+  vertical-align: -0.15em;
+  background: var(--gold);
+  border-radius: 1px;
+  animation: blink 1s steps(2, start) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* prefers-reduced-motion: 모든 모션 제거 (skill 6.B 필수) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton::after {
+    display: none;
+  }
 }

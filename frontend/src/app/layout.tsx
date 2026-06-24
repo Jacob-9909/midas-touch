@@ -14,8 +14,8 @@ const display = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Midas Touch — 자산관리 콘솔",
-  description: "금융 에이전트 · 파인튜닝셋 · 지식그래프 통합 웹 콘솔",
+  title: "Midas Touch · 자산관리 콘솔",
+  description: "금융 에이전트, 파인튜닝셋, 지식그래프 통합 웹 콘솔",
 };
 
 export default function RootLayout({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Play, MagnifyingGlass, ArrowUp } from "@phosphor-icons/react";
 import {
   apiGet,
   apiPost,
@@ -94,8 +95,12 @@ export default function GraphPage() {
               className="field ml-2 w-24 px-3 py-1.5 text-sm"
             />
           </label>
-          <button onClick={startBuild} className="btn-gold px-4 py-2 text-sm">
-            빌드 실행 ▶
+          <button
+            onClick={startBuild}
+            className="btn-gold flex items-center gap-1.5 px-4 py-2 text-sm"
+          >
+            <Play weight="fill" size={14} />
+            빌드 실행
           </button>
           <span className="text-xs text-muted">-1 입력 시 전체 처리</span>
         </div>
@@ -153,8 +158,9 @@ export default function GraphPage() {
           <button
             onClick={ask}
             disabled={asking || !query.trim()}
-            className="btn-gold px-5 py-2.5 text-sm disabled:opacity-40"
+            className="btn-gold flex items-center gap-1.5 px-5 py-2.5 text-sm disabled:opacity-40"
           >
+            <MagnifyingGlass weight="bold" size={15} />
             {asking ? "조회 중…" : "질의"}
           </button>
         </div>
@@ -174,8 +180,9 @@ export default function GraphPage() {
                     <div key={i}>{t}</div>
                   ))}
                 </div>
-                <p className="mt-2 text-xs text-muted">
-                  ↑ 위 그래프 스냅샷을 불러오면 이 근거 노드들이 강조됩니다.
+                <p className="mt-2 flex items-center gap-1 text-xs text-muted">
+                  <ArrowUp size={13} />
+                  위 그래프 스냅샷을 불러오면 이 근거 노드들이 강조됩니다.
                 </p>
               </div>
             )}

@@ -3,6 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import {
+  Sparkle,
+  UserCircle,
+  Moon,
+  Sun,
+  List,
+  X,
+} from "@phosphor-icons/react";
 import { useSelectedUser } from "@/lib/user-context";
 import { useTheme } from "@/lib/theme";
 
@@ -24,16 +32,16 @@ export default function NavBar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-[var(--ink)]/70 backdrop-blur-xl">
-      <nav className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-3 sm:px-6">
+      <nav className="mx-auto flex h-16 max-w-6xl items-center gap-1 px-4 sm:px-6">
         <Link
           href="/"
           className="mr-3 flex items-center gap-2 font-display text-lg font-semibold"
         >
-          <span className="text-gold">✦</span>
+          <Sparkle weight="fill" className="text-gold" size={20} />
           <span className="text-gradient-gold">Midas Touch</span>
         </Link>
 
-        {/* 데스크톱 링크 */}
+        {/* 데스크톱 링크 (단일 라인 유지) */}
         <div className="hidden items-center gap-1 md:flex">
           {LINKS.map((l) => (
             <Link
@@ -53,8 +61,9 @@ export default function NavBar() {
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden text-sm sm:inline">
             {selected ? (
-              <span className="rounded-full border border-line px-3 py-1 text-gold">
-                👤 {selected.label}
+              <span className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-gold">
+                <UserCircle weight="fill" size={16} />
+                {selected.label}
               </span>
             ) : (
               <span className="text-muted">유저 미선택</span>
@@ -65,18 +74,19 @@ export default function NavBar() {
           <button
             onClick={toggle}
             aria-label="테마 전환"
-            className="btn-ghost flex h-9 w-9 items-center justify-center text-base"
+            className="btn-ghost flex h-9 w-9 items-center justify-center"
           >
-            {theme === "dark" ? "☾" : "☀"}
+            {theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
           </button>
 
           {/* 모바일 햄버거 */}
           <button
             onClick={() => setOpen((o) => !o)}
             aria-label="메뉴"
+            aria-expanded={open}
             className="btn-ghost flex h-9 w-9 items-center justify-center md:hidden"
           >
-            ☰
+            {open ? <X size={18} /> : <List size={18} />}
           </button>
         </div>
       </nav>

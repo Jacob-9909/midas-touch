@@ -11,9 +11,12 @@ import {
   Legend,
 } from "recharts";
 import { apiGet, type UserDetail } from "@/lib/api";
+import { Reveal } from "@/components/Reveal";
 import { Card, PageTitle, Skeleton, fmtKRW } from "@/components/ui";
 
-const COLORS = ["#d4af37", "#5fd0a0", "#60a5fa", "#e8c873", "#a78bfa", "#fb923c"];
+// 골드 정체성에 맞춘 분할 팔레트. AI 기본 블루/퍼플 제거(skill 4.2).
+// 골드 계열 + 따뜻한 중립 + 시맨틱 그린 1포인트.
+const COLORS = ["#d4af37", "#e8c873", "#a87d18", "#6b5326", "#9aa08c", "#5fd0a0"];
 const TOOLTIP_STYLE = {
   background: "var(--ink-2)",
   border: "1px solid var(--line)",
@@ -71,7 +74,8 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 프로필 */}
-        <Card>
+        <Reveal index={0} className="h-full">
+        <Card className="h-full">
           <h2 className="mb-3 text-sm font-medium text-fg">프로필</h2>
           <dl className="grid grid-cols-2 gap-y-2 text-sm">
             <Field label="성별" value={p.sex} />
@@ -86,9 +90,11 @@ export default function DashboardPage() {
             <Field label="목표 수익률" value={`${p.target_return_percent ?? "-"}%`} />
           </dl>
         </Card>
+        </Reveal>
 
         {/* 자산 배분 */}
-        <Card>
+        <Reveal index={1} className="h-full">
+        <Card className="h-full">
           <h2 className="mb-3 text-sm font-medium text-fg">현재 자산 배분</h2>
           {assetData.length === 0 ? (
             <p className="text-sm text-muted">자산 데이터가 없습니다.</p>
@@ -118,10 +124,12 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           )}
         </Card>
+        </Reveal>
       </div>
 
       {/* 권장 포트폴리오 */}
       {activePf && (
+        <Reveal index={2}>
         <Card>
           <h2 className="mb-3 text-sm font-medium text-fg">
             포트폴리오: {activePf.name ?? activePf.strategy_name ?? "전략"}
@@ -171,6 +179,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </Card>
+        </Reveal>
       )}
     </div>
   );

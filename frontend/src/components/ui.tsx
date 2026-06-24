@@ -17,12 +17,24 @@ export function PageTitle({
   title: string;
   subtitle?: string;
 }) {
+  // 큰 헤더에 그라디언트 텍스트는 지양(skill 9.A). 위계는 무게·색으로.
+  // 골드는 헤드라인 옆 얇은 마커로만 사용.
   return (
-    <div className="mb-7 animate-rise">
-      <h1 className="font-display text-gradient-gold text-4xl font-semibold leading-tight">
-        {title}
-      </h1>
-      {subtitle && <p className="mt-1.5 text-sm text-muted">{subtitle}</p>}
+    <div className="mb-8 animate-rise">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden
+          className="h-7 w-1 shrink-0 rounded-full bg-gradient-to-b from-gold-soft to-gold"
+        />
+        <h1 className="font-display text-3xl font-semibold leading-tight text-fg sm:text-4xl">
+          {title}
+        </h1>
+      </div>
+      {subtitle && (
+        <p className="mt-2 max-w-[65ch] pl-4 text-sm leading-relaxed text-muted">
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 }
