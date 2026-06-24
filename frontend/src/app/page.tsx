@@ -66,6 +66,7 @@ export default function HomePage() {
   return (
     <div className="space-y-10">
       <PageTitle
+        eyebrow="Midas Touch"
         title="자산관리 콘솔"
         subtitle="유저를 선택하면 챗봇·대시보드가 해당 유저 기준으로 동작합니다."
       />
@@ -152,8 +153,8 @@ export default function HomePage() {
                         key={u.uuid}
                         className={`border-t border-line/60 transition ${
                           isSel
-                            ? "bg-[color-mix(in_srgb,var(--gold)_8%,transparent)]"
-                            : "hover:bg-[color-mix(in_srgb,var(--gold)_5%,transparent)]"
+                            ? "bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]"
+                            : "hover:bg-[color-mix(in_srgb,var(--accent)_5%,transparent)]"
                         }`}
                       >
                         <td className="px-4 py-3">
@@ -176,7 +177,7 @@ export default function HomePage() {
                           <div className="flex justify-end gap-2">
                             <Link
                               href={`/dashboard/${u.uuid}`}
-                              className="rounded-md px-2 py-1 text-xs text-muted hover:text-gold"
+                              className="rounded-md px-2 py-1 text-xs text-muted hover:text-accent"
                             >
                               상세
                             </Link>
@@ -187,8 +188,8 @@ export default function HomePage() {
                               }}
                               className={
                                 isSel
-                                  ? "inline-flex items-center gap-1 rounded-md border border-line px-3 py-1 text-xs text-gold"
-                                  : "btn-gold inline-flex items-center gap-1 px-3 py-1 text-xs"
+                                  ? "inline-flex items-center gap-1 rounded-md border border-line px-3 py-1 text-xs text-accent"
+                                  : "btn-accent inline-flex items-center gap-1 px-3 py-1 text-xs"
                               }
                             >
                               {isSel ? "선택됨, 대화" : "선택 후 대화"}

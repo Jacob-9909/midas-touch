@@ -14,15 +14,16 @@ import { apiGet, type UserDetail } from "@/lib/api";
 import { Reveal } from "@/components/Reveal";
 import { Card, PageTitle, Skeleton, fmtKRW } from "@/components/ui";
 
-// 골드 정체성에 맞춘 분할 팔레트. AI 기본 블루/퍼플 제거(skill 4.2).
-// 골드 계열 + 따뜻한 중립 + 시맨틱 그린 1포인트.
-const COLORS = ["#d4af37", "#e8c873", "#a87d18", "#6b5326", "#9aa08c", "#5fd0a0"];
+// 사파이어 블루 정체성에 맞춘 분할 팔레트(은행권 무드).
+// 블루 계열 + 쿨 중립 + 시맨틱 그린 1포인트.
+const COLORS = ["#4f8df9", "#88b6ff", "#1f5fd0", "#2a3a5c", "#9aa3b5", "#58c8a0"];
 const TOOLTIP_STYLE = {
   background: "var(--ink-2)",
   border: "1px solid var(--line)",
-  borderRadius: 10,
+  borderRadius: 14,
   color: "var(--fg)",
   fontSize: 12,
+  boxShadow: "var(--shadow-float)",
 } as const;
 
 export default function DashboardPage() {
@@ -68,6 +69,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageTitle
+        eyebrow="Dashboard"
         title={`${p.occupation ?? "유저"} · ${p.age ?? "?"}세 대시보드`}
         subtitle={String(uuid)}
       />
@@ -169,7 +171,7 @@ export default function DashboardPage() {
                     <tr key={i} className="border-t border-line/60">
                       <td className="py-1.5">{it.name ?? it.ticker ?? "-"}</td>
                       <td className="py-1.5 text-muted">{it.asset_type}</td>
-                      <td className="py-1.5 font-mono text-gold">
+                      <td className="py-1.5 font-mono text-accent">
                         {Number(it.allocation_pct)}%
                       </td>
                     </tr>

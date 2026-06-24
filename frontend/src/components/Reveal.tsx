@@ -25,13 +25,14 @@ export function Reveal({
   return (
     <motion.div
       className={className}
-      initial={reduce ? false : { opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      // soft-skill 5.C: 부드러운 blur 페이드-업 (물성감 있는 감속)
+      initial={reduce ? false : { opacity: 0, y: 20, filter: "blur(6px)" }}
+      whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
       viewport={{ once, amount: 0.2 }}
       transition={{
-        duration: 0.5,
-        delay: reduce ? 0 : index * 0.06,
-        ease: [0.16, 1, 0.3, 1],
+        duration: 0.7,
+        delay: reduce ? 0 : index * 0.07,
+        ease: [0.32, 0.72, 0, 1],
       }}
     >
       {children}

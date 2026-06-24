@@ -36,7 +36,7 @@ const ICONS: Record<ToastKind, ComponentType<IconProps>> = {
 const ACCENT: Record<ToastKind, string> = {
   success: "text-positive",
   error: "text-negative",
-  info: "text-gold",
+  info: "text-accent",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {

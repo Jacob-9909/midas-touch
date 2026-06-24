@@ -1,7 +1,10 @@
 @import "tailwindcss";
 
 /* ────────────────────────────────────────────────
-   디자인 토큰 (럭셔리 골드 × 다크 / 라이트)
+   디자인 토큰 — PREMIUM SOFT (신뢰감 있는 사파이어 블루 × 부드러운 깊이)
+   taste-skill / soft-skill 적용: 순수 블랙 금지 → 쿨 네이비 톤,
+   거친 드롭섀도 금지 → 확산된 앰비언트 + 내부 하이라이트.
+   은행권 무드: 차분한 사파이어 액센트로 신뢰감 전달.
    html.dark / html.light 에서 팔레트를 교체한다.
    ──────────────────────────────────────────────── */
 @theme inline {
@@ -11,8 +14,8 @@
   --color-line: var(--line);
   --color-fg: var(--fg);
   --color-muted: var(--muted);
-  --color-gold: var(--gold);
-  --color-gold-soft: var(--gold-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
@@ -21,44 +24,67 @@
 
 /* ────────────────────────────────────────────────
    SHAPE LOCK: 한 페이지 = 하나의 radius 스케일.
+   소프트 전환으로 한 단계 키움(큰 squircle).
    규칙: 카드 = lg, 버튼/입력 = md, 작은 칩/스켈레톤 = sm,
         토글/아바타 등 원형 = pill. 예외 없음.
    ──────────────────────────────────────────────── */
 :root {
-  --r-sm: 8px;
-  --r-md: 10px;
-  --r-lg: 16px;
+  --r-sm: 10px;
+  --r-md: 13px;
+  --r-lg: 20px;
+  --r-xl: 26px;
   --r-pill: 999px;
+  /* 마이크로 인터랙션용(짧고 또렷) */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* 큰 모션용(부드럽고 물성감 있는 감속) — soft-skill */
+  --ease-soft: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 html.dark {
-  --ink: #0a0a0a;
-  --ink-2: #121110;
-  --surface: rgba(255, 255, 255, 0.035);
-  --line: rgba(212, 175, 55, 0.16);
-  --fg: #f5f3ee;
-  --muted: #a39d92;
-  --gold: #d4af37;
-  --gold-soft: #e8c873;
-  --positive: #5fd0a0;
-  --negative: #f0867a;
-  --glow: rgba(212, 175, 55, 0.1);
+  /* 순수 블랙 대신 깊은 네이비-슬레이트 베이스 */
+  --ink: #0a0e17;
+  --ink-2: #121826;
+  --surface: rgba(255, 255, 255, 0.04);
+  --line: rgba(96, 148, 230, 0.16);
+  --fg: #eef2f8;
+  --muted: #8b94a8;
+  --accent: #4f8df9;
+  --accent-soft: #88b6ff;
+  --positive: #58c8a0;
+  --negative: #f08a8a;
+  --glow: rgba(79, 141, 249, 0.14);
+  /* 부드럽게 확산된 앰비언트 섀도 (배경 색조와 동일 계열) */
+  --shadow-soft:
+    0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
+    0 2px 6px -3px rgba(2, 6, 18, 0.45),
+    0 26px 60px -34px rgba(2, 6, 18, 0.78);
+  --shadow-float:
+    0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
+    0 18px 50px -22px rgba(2, 6, 18, 0.82);
   color-scheme: dark;
 }
 
 html.light {
-  --ink: #f7f4ec;
+  /* 클린 쿨 화이트 페이퍼 (은행권) */
+  --ink: #eef2f8;
   --ink-2: #ffffff;
   --surface: #ffffff;
-  --line: rgba(150, 115, 30, 0.18);
-  --fg: #1c1a14;
-  --muted: #6f695e;
-  --gold: #a87d18;
-  --gold-soft: #b8860b;
+  --line: rgba(40, 90, 180, 0.16);
+  --fg: #0f1b2d;
+  --muted: #5b6678;
+  --accent: #1f5fd0;
+  --accent-soft: #2f74e6;
   --positive: #1a9c6a;
   --negative: #c64537;
-  --glow: rgba(168, 125, 24, 0.08);
+  --glow: rgba(31, 95, 208, 0.09);
+  /* 라이트: 쿨 블루 색조의 확산 섀도 (검정 금지) */
+  --shadow-soft:
+    0 1px 0 0 rgba(255, 255, 255, 0.8) inset,
+    0 2px 8px -4px rgba(20, 60, 140, 0.12),
+    0 26px 56px -30px rgba(20, 60, 140, 0.2);
+  --shadow-float:
+    0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
+    0 18px 46px -20px rgba(20, 60, 140, 0.22);
   color-scheme: light;
 }
 
@@ -69,98 +95,120 @@ html {
 body {
   font-family: var(--font-sans);
   color: var(--fg);
-  /* 상단에 은은한 골드 글로우가 깔린 깊은 배경 */
+  /* 상단에 은은한 블루 글로우가 깔린 깊은 배경 */
   background:
-    radial-gradient(120% 70% at 50% -10%, var(--glow) 0%, transparent 55%),
+    radial-gradient(125% 75% at 50% -12%, var(--glow) 0%, transparent 58%),
     var(--ink);
   background-attachment: fixed;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
 }
 
-/* 골드 그라디언트 텍스트 (로고/타이틀) */
-.text-gradient-gold {
-  background: linear-gradient(135deg, var(--gold-soft), var(--gold) 55%, #9a7b22);
+/* 아이브로우 태그 (헤딩 위 마이크로 라벨) — soft-skill */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  padding: 0.25rem 0.7rem;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* 블루 그라디언트 텍스트 (로고/타이틀) */
+.text-gradient-accent {
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent) 55%, #1746a0);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* 글래스 카드 */
+/* 글래스 카드 — 더블베젤(외피 + 내부 하이라이트) + 확산 섀도 */
 .glass {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
-    0 8px 30px -12px rgba(0, 0, 0, 0.5);
-}
-html.light .glass {
-  box-shadow: 0 8px 30px -16px rgba(120, 90, 20, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-soft);
 }
 
-/* 골드 버튼 */
-.btn-gold {
-  background: linear-gradient(135deg, var(--gold-soft), var(--gold));
-  color: #1a1407;
+/* 블루 버튼 — 소프트 필 + 내부 하이라이트, 누름 시 물리적 수축.
+   흰 텍스트 가독성을 위해 액센트→딥네이비 그라디언트로 깊이를 준다. */
+.btn-accent {
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 68%, #050b1e)
+  );
+  color: #ffffff;
   font-weight: 600;
-  border-radius: var(--r-md);
+  border-radius: var(--r-pill);
   transition:
-    transform 0.12s ease,
-    box-shadow 0.2s ease,
-    filter 0.2s ease;
-  box-shadow: 0 4px 16px -6px var(--gold);
+    transform 0.18s var(--ease-soft),
+    box-shadow 0.25s var(--ease-soft),
+    filter 0.25s ease;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.35) inset,
+    0 6px 20px -8px var(--accent);
 }
-.btn-gold:hover:not(:disabled) {
-  filter: brightness(1.06);
-  box-shadow: 0 6px 22px -6px var(--gold);
+.btn-accent:hover:not(:disabled) {
+  filter: brightness(1.05);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.4) inset,
+    0 10px 28px -8px var(--accent);
 }
-.btn-gold:active:not(:disabled) {
-  transform: translateY(1px);
+.btn-accent:active:not(:disabled) {
+  transform: scale(0.98);
 }
-.btn-gold:disabled {
+.btn-accent:disabled {
   opacity: 0.4;
 }
 
-/* 고스트 버튼 */
+/* 고스트 버튼 — 소프트 필 */
 .btn-ghost {
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-pill);
   color: var(--fg);
   transition:
-    background 0.15s ease,
-    transform 0.12s ease;
+    background 0.2s var(--ease-soft),
+    border-color 0.2s ease,
+    transform 0.18s var(--ease-soft);
 }
 .btn-ghost:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--line));
 }
 .btn-ghost:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: scale(0.98);
 }
 
-/* 입력 필드 */
+/* 입력 필드 — 부드러운 라운드, 포커스 링은 은은하게 확산 */
 .field {
-  background: color-mix(in srgb, var(--ink) 60%, transparent);
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   color: var(--fg);
   outline: none;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color 0.2s ease,
+    box-shadow 0.2s var(--ease-soft);
 }
 .field::placeholder {
   color: var(--muted);
 }
 .field:focus {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 14%, transparent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 /* 스켈레톤 시머 */
@@ -178,10 +226,10 @@ html.light .glass {
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--gold) 12%, transparent),
+    color-mix(in srgb, var(--accent) 12%, transparent),
     transparent
   );
-  animation: shimmer 1.4s infinite;
+  animation: shimmer 1.6s infinite;
 }
 @keyframes shimmer {
   100% {
@@ -201,14 +249,14 @@ html.light .glass {
   }
 }
 .toast-enter {
-  animation: toast-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: toast-in 0.28s var(--ease-soft);
 }
 
 /* 페이드/슬라이드 인 (콘텐츠) */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -216,7 +264,7 @@ html.light .glass {
   }
 }
 .animate-rise {
-  animation: rise 0.4s ease both;
+  animation: rise 0.55s var(--ease-soft) both;
 }
 
 /* 가는 스크롤바 */
@@ -229,18 +277,20 @@ html.light .glass {
   border-radius: 4px;
 }
 .scroll-thin::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--gold) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
-/* 카드 호버 리프트 (인터랙티브 카드 전용) */
+/* 카드 호버 리프트 (인터랙티브 카드 전용) — 부드럽게 떠오름 */
 .lift {
   transition:
-    transform 0.18s var(--ease-out),
-    border-color 0.18s ease;
+    transform 0.3s var(--ease-soft),
+    box-shadow 0.3s var(--ease-soft),
+    border-color 0.3s ease;
 }
 .lift:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--gold) 32%, var(--line));
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-float);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
 }
 
 /* 스트리밍 응답 깜빡이는 커서 (이모지/블록문자 대체) */
@@ -249,7 +299,7 @@ html.light .glass {
   width: 0.5ch;
   height: 1em;
   vertical-align: -0.15em;
-  background: var(--gold);
+  background: var(--accent);
   border-radius: 1px;
   animation: blink 1s steps(2, start) infinite;
 }

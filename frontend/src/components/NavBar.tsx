@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  Sparkle,
+  ShieldChevron,
   UserCircle,
   Moon,
   Sun,
@@ -31,14 +31,14 @@ export default function NavBar() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-[var(--ink)]/70 backdrop-blur-xl">
-      <nav className="mx-auto flex h-16 max-w-6xl items-center gap-1 px-4 sm:px-6">
+    <header className="sticky top-3 z-50 mx-auto mt-3 w-[calc(100%-1.5rem)] max-w-6xl rounded-[var(--r-xl)] border border-line bg-[var(--ink-2)]/70 backdrop-blur-2xl [box-shadow:var(--shadow-float)] sm:top-4 sm:mt-4">
+      <nav className="flex h-15 items-center gap-1 px-3 py-2.5 sm:px-4">
         <Link
           href="/"
           className="mr-3 flex items-center gap-2 font-display text-lg font-semibold"
         >
-          <Sparkle weight="fill" className="text-gold" size={20} />
-          <span className="text-gradient-gold">Midas Touch</span>
+          <ShieldChevron weight="fill" className="text-accent" size={22} />
+          <span className="text-gradient-accent">Midas Touch</span>
         </Link>
 
         {/* 데스크톱 링크 (단일 라인 유지) */}
@@ -47,10 +47,10 @@ export default function NavBar() {
             <Link
               key={l.href}
               href={l.href}
-              className={`rounded-lg px-3 py-1.5 text-sm transition ${
+              className={`rounded-full px-3.5 py-1.5 text-sm transition-colors duration-200 ${
                 isActive(l.href)
-                  ? "bg-[color-mix(in_srgb,var(--gold)_14%,transparent)] text-gold"
-                  : "text-muted hover:text-fg"
+                  ? "bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] text-accent"
+                  : "text-muted hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] hover:text-fg"
               }`}
             >
               {l.label}
@@ -61,7 +61,7 @@ export default function NavBar() {
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden text-sm sm:inline">
             {selected ? (
-              <span className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-gold">
+              <span className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-accent">
                 <UserCircle weight="fill" size={16} />
                 {selected.label}
               </span>
@@ -93,14 +93,16 @@ export default function NavBar() {
 
       {/* 모바일 메뉴 */}
       {open && (
-        <div className="border-t border-line px-4 py-2 md:hidden">
+        <div className="border-t border-line px-3 py-2 md:hidden">
           {LINKS.map((l) => (
             <Link
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className={`block rounded-lg px-3 py-2 text-sm ${
-                isActive(l.href) ? "text-gold" : "text-muted"
+              className={`block rounded-xl px-3 py-2 text-sm transition-colors ${
+                isActive(l.href)
+                  ? "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-accent"
+                  : "text-muted hover:text-fg"
               }`}
             >
               {l.label}

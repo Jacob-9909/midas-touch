@@ -87,6 +87,7 @@ export default function FinetunePage() {
   return (
     <div className="space-y-6">
       <PageTitle
+        eyebrow="Fine-tune"
         title="파인튜닝셋 생성"
         subtitle="금융 문서(PDF·TXT·MD)를 올리면 대조학습 triplet 데이터셋을 생성합니다."
       />
@@ -110,7 +111,7 @@ export default function FinetunePage() {
           {uploadedName && (
             <button
               onClick={startJob}
-              className="btn-gold flex items-center gap-1.5 px-4 py-2 text-sm"
+              className="btn-accent flex items-center gap-1.5 px-4 py-2 text-sm"
             >
               <Play weight="fill" size={14} />
               파이프라인 실행
@@ -175,7 +176,7 @@ function TripletTable({ rows }: { rows: Triplet[] }) {
               <td className="max-w-[260px] px-3 py-2 text-negative">
                 {truncate(t.negative_text)}
               </td>
-              <td className="px-3 py-2 font-mono text-gold">
+              <td className="px-3 py-2 font-mono text-accent">
                 {Number(t.margin).toFixed(3)}
               </td>
             </tr>

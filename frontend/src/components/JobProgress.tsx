@@ -63,7 +63,7 @@ export default function JobProgress({
       ? "text-positive"
       : job.status === "failed"
         ? "text-negative"
-        : "text-gold";
+        : "text-accent";
 
   return (
     <div className="space-y-3">
@@ -81,7 +81,7 @@ export default function JobProgress({
             background:
               job.status === "failed"
                 ? "var(--negative)"
-                : "linear-gradient(90deg, var(--gold-soft), var(--gold))",
+                : "linear-gradient(90deg, var(--accent-soft), var(--accent))",
           }}
         />
       </div>

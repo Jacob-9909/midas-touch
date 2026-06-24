@@ -129,14 +129,14 @@ export default function ChatPage() {
 
   return (
     <div>
-      <PageTitle title="에이전트 챗봇" subtitle="MidasAdviser · 멀티턴 · 실시간 스트리밍" />
+      <PageTitle eyebrow="AI Advisor" title="에이전트 챗봇" subtitle="MidasAdviser · 멀티턴 · 실시간 스트리밍" />
       <div className="flex gap-4">
         {/* 세션 사이드바 */}
         <aside className="w-60 shrink-0">
           <button
             onClick={startNewChat}
             disabled={!selected}
-            className="btn-gold mb-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm"
+            className="btn-accent mb-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm"
           >
             <Plus weight="bold" size={16} />새 대화
           </button>
@@ -151,8 +151,8 @@ export default function ChatPage() {
                   key={s.session_id}
                   className={`group flex items-center gap-1 rounded-lg px-2 py-2 text-sm transition ${
                     active
-                      ? "bg-[color-mix(in_srgb,var(--gold)_12%,transparent)]"
-                      : "hover:bg-[color-mix(in_srgb,var(--gold)_6%,transparent)]"
+                      ? "bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]"
+                      : "hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)]"
                   }`}
                 >
                   <button
@@ -185,7 +185,7 @@ export default function ChatPage() {
               <p className="text-fg">먼저 대화할 유저를 선택하세요.</p>
               <Link
                 href="/"
-                className="btn-gold mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-sm"
+                className="btn-accent mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-sm"
               >
                 유저 선택하러 가기
                 <ArrowRight weight="bold" size={15} />
@@ -193,7 +193,7 @@ export default function ChatPage() {
             </Card>
           ) : !currentId ? (
             <Card className="text-center text-muted">
-              왼쪽에서 대화를 선택하거나 <b className="text-gold">+ 새 대화</b>를 시작하세요.
+              왼쪽에서 대화를 선택하거나 <b className="text-accent">+ 새 대화</b>를 시작하세요.
             </Card>
           ) : (
             <Card className="flex h-[60vh] flex-col p-0">
@@ -212,10 +212,10 @@ export default function ChatPage() {
                     className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                      className={`max-w-[80%] whitespace-pre-wrap rounded-[var(--r-lg)] px-4 py-3 text-sm leading-relaxed [box-shadow:var(--shadow-soft)] ${
                         m.role === "user"
-                          ? "bg-[color-mix(in_srgb,var(--gold)_18%,transparent)] text-fg"
-                          : "border border-line bg-[var(--ink-2)] text-fg"
+                          ? "rounded-br-md bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-fg"
+                          : "rounded-bl-md border border-line bg-[var(--ink-2)] text-fg"
                       }`}
                     >
                       {m.content || (busy ? <span className="caret" /> : "")}
@@ -241,7 +241,7 @@ export default function ChatPage() {
                   onClick={send}
                   disabled={busy || !input.trim()}
                   aria-label="전송"
-                  className="btn-gold flex items-center gap-1.5 px-5 py-2.5 text-sm disabled:opacity-40"
+                  className="btn-accent flex items-center gap-1.5 px-5 py-2.5 text-sm disabled:opacity-40"
                 >
                   <PaperPlaneTilt weight="fill" size={15} />
                   전송

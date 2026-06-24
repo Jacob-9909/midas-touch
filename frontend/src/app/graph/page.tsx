@@ -78,6 +78,7 @@ export default function GraphPage() {
   return (
     <div className="space-y-6">
       <PageTitle
+        eyebrow="Knowledge Graph"
         title="지식그래프"
         subtitle="세법·금융 지식그래프를 빌드하고, 구조를 탐색하고, GraphRAG로 질의합니다."
       />
@@ -97,7 +98,7 @@ export default function GraphPage() {
           </label>
           <button
             onClick={startBuild}
-            className="btn-gold flex items-center gap-1.5 px-4 py-2 text-sm"
+            className="btn-accent flex items-center gap-1.5 px-4 py-2 text-sm"
           >
             <Play weight="fill" size={14} />
             빌드 실행
@@ -158,7 +159,7 @@ export default function GraphPage() {
           <button
             onClick={ask}
             disabled={asking || !query.trim()}
-            className="btn-gold flex items-center gap-1.5 px-5 py-2.5 text-sm disabled:opacity-40"
+            className="btn-accent flex items-center gap-1.5 px-5 py-2.5 text-sm disabled:opacity-40"
           >
             <MagnifyingGlass weight="bold" size={15} />
             {asking ? "조회 중…" : "질의"}
