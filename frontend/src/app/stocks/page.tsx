@@ -23,6 +23,7 @@ import {
   ArrowUp,
   ArrowDown,
   Minus,
+  ClockCounterClockwise,
 } from "@phosphor-icons/react";
 import {
   apiGet,
@@ -576,6 +577,62 @@ export default function StocksPage() {
                       )}
                     </div>
                   )}
+                </Card>
+              )}
+
+              {/* 과거 유사 패턴 (분석 메모리) */}
+              {qa.similar_patterns?.length > 0 && (
+                <Card>
+                  <SectionLabel>
+                    <span className="inline-flex items-center gap-1.5">
+                      <ClockCounterClockwise size={14} /> 과거 유사 패턴
+                    </span>
+                  </SectionLabel>
+                  <p className="mt-1 text-xs text-muted">
+                    현재와 비슷한 지표 조건이었던 과거 분석입니다. AI 전망에 컨텍스트로 반영됩니다.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2">
+                    {qa.similar_patterns.map((p) => {
+                      const decColor =
+                        p.decision === "BUY"
+                          ? "text-[#58c8a0]"
+                          : p.decision === "SELL"
+                            ? "text-[#e2607b]"
+                            : "text-muted";
+                      const decKo = p.decision === "BUY" ? "매수" : p.decision === "SELL" ? "매도" : "보유";
+                      return (
+                        <div
+                          key={p.id}
+                          className="rounded-xl border border-line bg-[var(--ink-2)]/40 px-3 py-2"
+                        >
+                          <div className="flex items-center justify-between gap-2 text-xs">
+                            <span className="text-muted">{(p.created_at ?? "").slice(0, 10)}</span>
+                            <div className="flex items-center gap-2">
+                              <span className={`font-medium ${decColor}`}>{decKo}</span>
+                              <span className="text-muted">유사도 {(p.similarity * 100).toFixed(0)}%</span>
+                              {p.was_correct !== null && (
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                    p.was_correct
+                                      ? "bg-[#58c8a0]/10 text-[#58c8a0]"
+                                      : "bg-[#e2607b]/10 text-[#e2607b]"
+                                  }`}
+                                >
+                                  {p.was_correct ? "적중" : "빗나감"}
+                                  {p.actual_return_pct !== null
+                                    ? ` ${p.actual_return_pct >= 0 ? "+" : ""}${p.actual_return_pct.toFixed(1)}%`
+                                    : ""}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {p.summary && (
+                            <p className="mt-1 line-clamp-2 text-xs text-fg/70">{p.summary}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </Card>
               )}
             </>

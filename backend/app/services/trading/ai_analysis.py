@@ -64,10 +64,36 @@ def generate_analysis(
     return content if isinstance(content, str) else str(content)
 
 
-def generate_quick_report(ticker: str, indicators: dict) -> dict:
+def _format_similar_patterns(patterns: list[dict] | None) -> str:
+    """유사 과거 분석을 프롬프트용 텍스트로. 없으면 빈 문자열."""
+    if not patterns:
+        return ""
+    lines = ["[유사한 과거 분석 사례 — 현재와 비슷한 지표 조건이었을 때]"]
+    for p in patterns:
+        dec = p.get("decision") or "?"
+        sim = p.get("similarity")
+        when = (p.get("created_at") or "")[:10]
+        outcome = ""
+        if p.get("was_correct") is not None:
+            ret = p.get("actual_return_pct")
+            mark = "적중" if p.get("was_correct") else "빗나감"
+            outcome = f" → 결과: {mark}" + (f" ({ret:+.1f}%)" if ret is not None else "")
+        summary = (p.get("summary") or "").strip().replace("\n", " ")
+        if len(summary) > 80:
+            summary = summary[:80] + "…"
+        lines.append(f"- {when} 당시 판단: {dec} (유사도 {sim}){outcome}. {summary}")
+    return "\n".join(lines)
+
+
+def generate_quick_report(
+    ticker: str,
+    indicators: dict,
+    similar_patterns: list[dict] | None = None,
+) -> dict:
     """Multi-horizon outlook (24h/3d/1w/1m) from technical snapshot.
 
     QuantDinger fast_analysis style: one LLM call with structured JSON output.
+    similar_patterns가 주어지면 '과거 유사 사례'를 프롬프트에 컨텍스트로 주입한다.
     Returns dict with decision/confidence/outlook/key_reasons/risks.
     Fails gracefully: returns {"error": reason} without raising.
     """
@@ -76,6 +102,7 @@ def generate_quick_report(ticker: str, indicators: dict) -> dict:
     fng_text = _fetch_fng()
     vix_text = _fetch_vix()
     profile_text = _fetch_profile(ticker)
+    memory_text = _format_similar_patterns(similar_patterns)
 
     rsi = indicators.get("rsi", {})
     macd = indicators.get("macd", {})
@@ -98,6 +125,8 @@ def generate_quick_report(ticker: str, indicators: dict) -> dict:
         f"지지선: {lvl.get('support')}, 저항선: {lvl.get('resistance')}"
     )
 
+    memory_block = f"\n{memory_text}\n" if memory_text else ""
+
     prompt = f"""당신은 기술적 분석 전문가입니다. {ticker} 종목의 기술적 지표를 분석해 JSON으로 응답하세요.
 
 시장 환경:
@@ -109,7 +138,7 @@ def generate_quick_report(ticker: str, indicators: dict) -> dict:
 
 기술적 지표:
 {ind_block}
-
+{memory_block}
 아래 JSON 형식으로만 응답하세요(설명·마크다운 없이 순수 JSON):
 {{
   "decision": "BUY" 또는 "SELL" 또는 "HOLD",

@@ -241,6 +241,18 @@ export interface QuickOutlook {
   error?: string;
 }
 
+export interface SimilarPattern {
+  id: number;
+  decision: "BUY" | "SELL" | "HOLD";
+  confidence: string;
+  price: number | null;
+  summary: string;
+  created_at: string | null;
+  was_correct: boolean | null;
+  actual_return_pct: number | null;
+  similarity: number;
+}
+
 export interface QuickAnalysis {
   ticker: string;
   current_price: number;
@@ -258,6 +270,7 @@ export interface QuickAnalysis {
   atr: { value: number; pct: number; volatility: "high" | "medium" | "low" };
   levels: { support: number; resistance: number };
   outlook: QuickOutlook;
+  similar_patterns: SimilarPattern[];
 }
 
 export function getStrategies(): Promise<{ strategies: StockStrategy[] }> {

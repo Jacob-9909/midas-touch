@@ -21,6 +21,7 @@ from backend.app.services.trading import (
     StockAnalyzer,
 )
 from backend.app.services.trading.ai_analysis import generate_analysis, generate_quick_report
+from backend.app.services.trading.analysis_memory import get_analysis_memory
 
 router = APIRouter(prefix="/api/v1/stocks", tags=["stocks"])
 
@@ -73,8 +74,17 @@ def quick_analysis(ticker: str = Query(min_length=1, max_length=20)) -> dict:
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"지표 계산 실패: {exc}")
 
-    outlook = generate_quick_report(symbol, indicators)
-    return {**indicators, "outlook": outlook}
+    # 과거 유사 패턴 검색 → LLM 프롬프트 컨텍스트로 주입(메모리 미가용이면 빈 리스트).
+    memory = get_analysis_memory()
+    similar = memory.get_similar_patterns(symbol, indicators)
+
+    outlook = generate_quick_report(symbol, indicators, similar_patterns=similar)
+
+    # 이번 분석을 메모리에 저장(다음 분석의 유사 패턴 후보가 됨). 실패해도 응답엔 영향 없음.
+    if not outlook.get("error"):
+        memory.store(symbol, indicators, outlook, price=indicators.get("current_price"))
+
+    return {**indicators, "outlook": outlook, "similar_patterns": similar}
 
 
 @router.get("/strategies")
@@ -160,3 +170,15 @@ def run_analysis(req: AnalysisRequest) -> dict:
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"리포트 생성 실패: {exc}")
     return {"ticker": req.ticker, "strategy": req.strategy, "report": report}
+
+
+@router.get("/memory/stats")
+def memory_stats(ticker: str | None = None, days: int = 90) -> dict:
+    """분석 메모리 정확도·분포 통계. DB 미가용이면 0 통계(200)."""
+    return get_analysis_memory().get_stats(ticker=ticker, days=days)
+
+
+@router.post("/memory/validate")
+def memory_validate(min_age_days: int = 7, limit: int = 50) -> dict:
+    """미검증 과거 분석을 현재가와 비교해 적중 여부를 채운다(best-effort)."""
+    return get_analysis_memory().validate_recent(min_age_days=min_age_days, limit=limit)

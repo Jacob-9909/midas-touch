@@ -214,6 +214,95 @@ class TestQuickAnalysis(unittest.TestCase):
             self.assertIn("pnl_pct", t)
 
 
+class TestAnalysisMemory(unittest.TestCase):
+    """분석 메모리 유사도 로직 + graceful degrade (DB 미사용)."""
+
+    def _ind(self, rsi=55, macd="bullish", ma="bullish", vol="medium") -> dict:
+        return {
+            "rsi": {"value": rsi},
+            "macd": {"signal": macd},
+            "moving_averages": {"trend": ma},
+            "atr": {"volatility": vol},
+        }
+
+    def test_extract(self) -> None:
+        from backend.app.services.trading.analysis_memory import _extract
+
+        rsi, macd, ma, vol = _extract(self._ind(62, "bullish", "mixed", "high"))
+        self.assertEqual(rsi, 62)
+        self.assertEqual(macd, "bullish")
+        self.assertEqual(ma, "mixed")
+        self.assertEqual(vol, "high")
+
+    def test_extract_defaults_on_empty(self) -> None:
+        from backend.app.services.trading.analysis_memory import _extract
+
+        rsi, macd, ma, vol = _extract({})
+        self.assertEqual(rsi, 50)
+        self.assertEqual((macd, ma, vol), ("neutral", "mixed", "medium"))
+
+    def test_similarity_identical_is_max(self) -> None:
+        from backend.app.services.trading.analysis_memory import _similarity
+
+        a = self._ind(55, "bullish", "bullish", "medium")
+        # 동일 지표 → 0.3(rsi 만점) + 0.3 + 0.25 + 0.15 = 1.0
+        self.assertAlmostEqual(_similarity(a, a), 1.0, places=6)
+
+    def test_similarity_opposite_low(self) -> None:
+        from backend.app.services.trading.analysis_memory import _SIM_THRESHOLD, _similarity
+
+        cur = self._ind(20, "bullish", "bullish", "low")
+        hist = self._ind(80, "bearish", "bearish", "high")  # RSI 60차 → rsi_score 0, 나머지 불일치
+        sim = _similarity(cur, hist)
+        self.assertLess(sim, _SIM_THRESHOLD)
+
+    def test_similarity_rsi_partial(self) -> None:
+        from backend.app.services.trading.analysis_memory import _similarity
+
+        cur = self._ind(50, "bearish", "mixed", "low")
+        hist = self._ind(65, "bullish", "bullish", "high")  # RSI 15차 → 0.3*(1-0.5)=0.15
+        self.assertAlmostEqual(_similarity(cur, hist), 0.15, places=6)
+
+    def test_vol_similar(self) -> None:
+        from backend.app.services.trading.analysis_memory import _vol_similar
+
+        self.assertTrue(_vol_similar("high", "high"))
+        self.assertTrue(_vol_similar("medium", "high"))  # medium은 약하게 근접
+        self.assertFalse(_vol_similar("high", "low"))
+
+    def test_safe_json(self) -> None:
+        from backend.app.services.trading.analysis_memory import _safe_json
+
+        self.assertEqual(_safe_json({"a": 1}, {}), {"a": 1})  # 이미 dict
+        self.assertEqual(_safe_json('{"a": 1}', {}), {"a": 1})  # 문자열 파싱
+        self.assertEqual(_safe_json("not json", {"d": 1}), {"d": 1})  # 실패 → default
+        self.assertEqual(_safe_json(None, []), [])
+
+    def test_format_similar_patterns(self) -> None:
+        from backend.app.services.trading.ai_analysis import _format_similar_patterns
+
+        self.assertEqual(_format_similar_patterns([]), "")
+        self.assertEqual(_format_similar_patterns(None), "")
+        txt = _format_similar_patterns([
+            {"decision": "BUY", "similarity": 0.8, "created_at": "2024-01-02T00:00:00",
+             "was_correct": True, "actual_return_pct": 3.5, "summary": "상승 모멘텀"},
+        ])
+        self.assertIn("BUY", txt)
+        self.assertIn("적중", txt)
+        self.assertIn("+3.5%", txt)
+
+    def test_memory_graceful_degrade(self) -> None:
+        """_available=False면 모든 작업이 안전한 기본값(빈 결과)을 반환."""
+        from backend.app.services.trading.analysis_memory import AnalysisMemory
+
+        m = AnalysisMemory.__new__(AnalysisMemory)  # __init__(DB 접근) 건너뜀
+        m._available = False
+        self.assertEqual(m.get_similar_patterns("AAPL", self._ind()), [])
+        self.assertIsNone(m.store("AAPL", self._ind(), {"decision": "BUY"}))
+        self.assertEqual(m.validate_recent()["validated"], 0)
+        self.assertEqual(m.get_stats()["total"], 0)
+
+
 class TestCheongyakParsing(unittest.TestCase):
     """공공데이터 row → 프론트 dict 평탄화 + 상태 판정(네트워크 미사용)."""
 
