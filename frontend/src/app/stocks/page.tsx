@@ -24,17 +24,21 @@ import {
   ArrowDown,
   Minus,
   ClockCounterClockwise,
+  Target,
+  CheckCircle,
 } from "@phosphor-icons/react";
 import {
   apiGet,
   getStrategies,
   getQuickAnalysis,
   runBacktest,
+  runGridSearch,
   runStockAnalysis,
   type StockStrategy,
   type BacktestResult,
   type BacktestMetrics,
   type BacktestPeriod,
+  type GridSearchResult,
   type QuickAnalysis,
   type OutlookHorizon,
   type UserDetail,
@@ -44,6 +48,7 @@ import { seedChat } from "@/lib/chat-seed";
 import { Card, PageTitle, SectionLabel, Skeleton } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import TickerAutocomplete from "./TickerAutocomplete";
+import MemoryStatsCard from "./MemoryStatsCard";
 
 const TOOLTIP_STYLE = {
   background: "var(--ink-2)",
@@ -217,6 +222,8 @@ export default function StocksPage() {
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<string | null>(null);
   const [reportBusy, setReportBusy] = useState(false);
+  const [gridResult, setGridResult] = useState<GridSearchResult | null>(null);
+  const [gridBusy, setGridBusy] = useState(false);
 
   useEffect(() => {
     getStrategies()
@@ -234,6 +241,10 @@ export default function StocksPage() {
   }, [selected]);
 
   const tickers = useMemo(() => portfolioTickers(detail), [detail]);
+  const currentStrategy = useMemo(
+    () => strategies.find((s) => s.name === strategy),
+    [strategies, strategy],
+  );
 
   // ── Quick analysis ──────────────────────────────────────────────────────────
   const runQuick = useCallback(async (tk?: string) => {
@@ -267,24 +278,55 @@ export default function StocksPage() {
   };
 
   // ── Backtest ────────────────────────────────────────────────────────────────
-  const run = useCallback(async (tk?: string, strat?: string) => {
-    const symbol = (tk ?? ticker).trim().toUpperCase();
-    const stratName = strat ?? strategy;
+  const run = useCallback(
+    async (tk?: string, strat?: string, params?: Record<string, Record<string, number>>) => {
+      const symbol = (tk ?? ticker).trim().toUpperCase();
+      const stratName = strat ?? strategy;
+      if (!symbol) return;
+      setTicker(symbol);
+      setBusy(true);
+      setReport(null);
+      setTradesOpen(false);
+      try {
+        const res = await runBacktest({ ticker: symbol, strategy: stratName, period, params });
+        setResult(res);
+        toast(`${res.ticker} 백테스트 완료`, "success");
+      } catch (e) {
+        toast(`백테스트 실패: ${e instanceof Error ? e.message : e}`, "error");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [ticker, strategy, period, toast],
+  );
+
+  // 전략·기간 바뀌면 직전 그리드 결과는 무효화.
+  useEffect(() => {
+    setGridResult(null);
+  }, [strategy, period, ticker]);
+
+  const optimize = async () => {
+    const symbol = ticker.trim().toUpperCase();
     if (!symbol) return;
-    setTicker(symbol);
-    setBusy(true);
-    setReport(null);
-    setTradesOpen(false);
+    setGridBusy(true);
+    setGridResult(null);
     try {
-      const res = await runBacktest({ ticker: symbol, strategy: stratName, period });
-      setResult(res);
-      toast(`${res.ticker} 백테스트 완료`, "success");
+      const res = await runGridSearch({ ticker: symbol, strategy, period });
+      setGridResult(res);
+      toast(`${res.results_count}개 조합 탐색 완료`, "success");
     } catch (e) {
-      toast(`백테스트 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`그리드 서치 실패: ${e instanceof Error ? e.message : e}`, "error");
     } finally {
-      setBusy(false);
+      setGridBusy(false);
     }
-  }, [ticker, strategy, period, toast]);
+  };
+
+  const applyGrid = () => {
+    if (!gridResult) return;
+    void run(gridResult.ticker, gridResult.strategy, {
+      [gridResult.strategy]: gridResult.best_params,
+    });
+  };
 
   const analyze = async (metrics: BacktestMetrics) => {
     if (!result) return;
@@ -637,6 +679,9 @@ export default function StocksPage() {
               )}
             </>
           )}
+
+          {/* 분석 메모리 누적 현황(데이터 있을 때만 표시) */}
+          <MemoryStatsCard ticker={qa?.ticker} />
         </div>
       )}
 
@@ -680,6 +725,61 @@ export default function StocksPage() {
                 </div>
               </div>
             </div>
+
+            {/* 그리드 서치 — 지원 전략만 */}
+            {currentStrategy?.grid_supported && (
+              <div className="mt-4 rounded-2xl border border-line bg-[var(--ink-2)]/30 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-fg">
+                      <Target size={15} /> 파라미터 최적화 (그리드 서치)
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {currentStrategy.label} 전략의 파라미터 조합을 전수 탐색해 최고 수익 조합을 찾습니다.
+                    </p>
+                  </div>
+                  <button
+                    onClick={optimize}
+                    disabled={gridBusy}
+                    className="btn-ghost flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-50"
+                  >
+                    <Target size={14} className={gridBusy ? "animate-pulse" : ""} />
+                    {gridBusy ? "탐색 중…" : "최적 파라미터 탐색"}
+                  </button>
+                </div>
+
+                {gridResult && (
+                  <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-muted">최적:</span>
+                      {Object.entries(gridResult.best_params).map(([k, v]) => (
+                        <span
+                          key={k}
+                          className="rounded-full border border-accent/40 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-2.5 py-0.5 font-mono text-xs text-accent"
+                        >
+                          {k}={v}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="text-xs">
+                      수익률{" "}
+                      <span
+                        className={`font-semibold ${gridResult.best_return >= 0 ? "text-[#58c8a0]" : "text-[#e2607b]"}`}
+                      >
+                        {pct(gridResult.best_return)}
+                      </span>{" "}
+                      <span className="text-muted">({gridResult.results_count}개 조합)</span>
+                    </span>
+                    <button
+                      onClick={applyGrid}
+                      className="btn-accent ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm"
+                    >
+                      <CheckCircle size={14} /> 이 파라미터로 백테스트
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           {busy && <Skeleton className="h-80 w-full rounded-2xl" />}

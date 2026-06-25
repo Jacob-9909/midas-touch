@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from backend.app.services.trading import (
     DEFAULT_PARAMS,
+    GRID_RANGES,
     STRATEGY_LABELS,
     StockAnalyzer,
 )
@@ -48,6 +49,15 @@ class AnalysisRequest(BaseModel):
     ticker: str = Field(min_length=1, max_length=20)
     strategy: str = "sma_crossover"
     metrics: dict
+
+
+class GridSearchRequest(BaseModel):
+    ticker: str = Field(min_length=1, max_length=20)
+    strategy: str = "sma_crossover"
+    period: Literal["1mo", "3mo", "6mo", "1y", "2y"] = "1y"
+    start_date: str | None = None
+    end_date: str | None = None
+    initial_capital: int = 100_000_000
 
 
 @router.get("/quick-analysis")
@@ -89,13 +99,14 @@ def quick_analysis(ticker: str = Query(min_length=1, max_length=20)) -> dict:
 
 @router.get("/strategies")
 def list_strategies() -> dict:
-    """지원 전략 목록(라벨 + 기본 파라미터)."""
+    """지원 전략 목록(라벨 + 기본 파라미터 + 그리드서치 지원 여부)."""
     return {
         "strategies": [
             {
                 "name": name,
                 "label": label,
                 "default_params": DEFAULT_PARAMS.get(name, {}),
+                "grid_supported": name in GRID_RANGES,
             }
             for name, label in STRATEGY_LABELS.items()
         ]
@@ -160,6 +171,48 @@ def run_backtest(req: BacktestRequest) -> dict:
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"백테스트 실패: {exc}")
+
+
+@router.post("/grid-search")
+def grid_search(req: GridSearchRequest) -> dict:
+    """전략 파라미터 그리드 서치 → 최적 파라미터 + 수익률.
+
+    GRID_RANGES에 정의된 전략(sma_crossover/macd/rsi/bollinger/obv)만 지원한다.
+    데이터를 1회 받아 모든 조합을 재사용 시뮬레이션한다.
+    """
+    if req.strategy not in GRID_RANGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"그리드 서치를 지원하지 않는 전략: {req.strategy} (지원: {', '.join(GRID_RANGES)})",
+        )
+
+    end = req.end_date or datetime.today().strftime("%Y-%m-%d")
+    if req.start_date:
+        start = req.start_date
+    else:
+        days = _PERIOD_DAYS.get(req.period, 370)
+        start = (datetime.today() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+    analyzer = StockAnalyzer(
+        ticker=req.ticker,
+        start_date=start,
+        end_date=end,
+        initial_capital=req.initial_capital,
+    )
+    try:
+        analyzer.fetch_data()
+        result = analyzer.grid_search(req.strategy)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"그리드 서치 실패: {exc}")
+
+    return {
+        "ticker": req.ticker.upper(),
+        "strategy": req.strategy,
+        "default_params": DEFAULT_PARAMS.get(req.strategy, {}),
+        **result,  # best_params, best_return, results_count
+    }
 
 
 @router.post("/analysis")

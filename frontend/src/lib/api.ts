@@ -163,6 +163,30 @@ export interface StockStrategy {
   name: string;
   label: string;
   default_params: Record<string, number>;
+  grid_supported: boolean;
+}
+
+export interface GridSearchResult {
+  ticker: string;
+  strategy: string;
+  default_params: Record<string, number>;
+  best_params: Record<string, number>;
+  best_return: number;
+  results_count: number;
+}
+
+export interface MemoryStats {
+  total: number;
+  validated: number;
+  accuracy_pct: number;
+  avg_return_pct: number;
+}
+
+export interface MemoryValidateResult {
+  validated: number;
+  correct: number;
+  incorrect: number;
+  errors: number;
 }
 
 export interface BacktestMetrics {
@@ -210,6 +234,8 @@ export interface BacktestRequest {
   start_date?: string;
   end_date?: string;
   initial_capital?: number;
+  /** 전략 파라미터 override. {전략명: {파라미터}} 형태로 보낸다(그리드서치 최적값 적용 등). */
+  params?: Record<string, Record<string, number>>;
 }
 
 export interface TickerSearchItem {
@@ -287,6 +313,23 @@ export function getQuickAnalysis(ticker: string): Promise<QuickAnalysis> {
 
 export function runBacktest(body: BacktestRequest): Promise<BacktestResult> {
   return apiPost("/api/v1/stocks/backtest", body);
+}
+
+export function runGridSearch(body: {
+  ticker: string;
+  strategy: string;
+  period?: BacktestPeriod;
+}): Promise<GridSearchResult> {
+  return apiPost("/api/v1/stocks/grid-search", body);
+}
+
+export function getMemoryStats(ticker?: string): Promise<MemoryStats> {
+  const q = ticker ? `?ticker=${encodeURIComponent(ticker)}` : "";
+  return apiGet(`/api/v1/stocks/memory/stats${q}`);
+}
+
+export function validateMemory(): Promise<MemoryValidateResult> {
+  return apiPost("/api/v1/stocks/memory/validate", {});
 }
 
 export function runStockAnalysis(body: {
