@@ -252,6 +252,14 @@ export interface OutlookHorizon {
   note: string;
 }
 
+export interface CalibrationInfo {
+  level: "high" | "medium" | "low";
+  raw_pct: number;
+  calibrated_pct: number;
+  sample_size: number;
+  scope: "ticker" | "global";
+}
+
 export interface QuickOutlook {
   decision: "BUY" | "SELL" | "HOLD";
   confidence: "high" | "medium" | "low";
@@ -264,6 +272,7 @@ export interface QuickOutlook {
   };
   key_reasons: string[];
   risks: string[];
+  calibration?: CalibrationInfo;
   error?: string;
 }
 

@@ -93,6 +93,10 @@ def quick_analysis(ticker: str = Query(min_length=1, max_length=20)) -> dict:
     # 이번 분석을 메모리에 저장(다음 분석의 유사 패턴 후보가 됨). 실패해도 응답엔 영향 없음.
     if not outlook.get("error"):
         memory.store(symbol, indicators, outlook, price=indicators.get("current_price"))
+        # 신뢰도 캘리브레이션: 같은 자신감 레벨의 과거 적중률로 보정(표본 부족 시 None).
+        calibration = memory.calibrate(outlook.get("confidence"), ticker=symbol)
+        if calibration:
+            outlook["calibration"] = calibration
 
     return {**indicators, "outlook": outlook, "similar_patterns": similar}
 

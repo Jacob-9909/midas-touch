@@ -48,6 +48,11 @@ _VOL_WEIGHT = 0.15
 _SIM_THRESHOLD = 0.25
 _CORRECT_BONUS = 0.1
 
+# 신뢰도 캘리브레이션: AI가 텍스트(high/medium/low)로 내는 자신감의 '암묵적 %'.
+# 보정값은 같은 레벨 과거 분석의 실제 적중률로 대체한다(QuantDinger get_adjusted_confidence 적응).
+_LEVEL_RAW_PCT = {"high": 80, "medium": 65, "low": 50}
+_MIN_CALIB_SAMPLES = 5  # 이만큼 검증돼야 보정(콜드스타트 방지)
+
 
 def _safe_json(val: Any, default: Any) -> Any:
     """psycopg2가 JSONB를 dict/list로 줄 수도, 문자열로 줄 수도 있어 둘 다 처리."""
@@ -92,6 +97,23 @@ def _similarity(current: dict, hist: dict) -> float:
     ma_score = _MA_WEIGHT if h_ma == ma else 0.0
     vol_score = _VOL_WEIGHT if h_vol == vol else (_VOL_WEIGHT * 0.5 if _vol_similar(vol, h_vol) else 0.0)
     return rsi_score + macd_score + ma_score + vol_score
+
+
+def _accuracy_by_level(rows: list[tuple[str, bool]]) -> dict[str, dict]:
+    """(confidence_level, was_correct) 목록 → 레벨별 {적중률, 표본수}. 순수 함수(DB 무관).
+
+    예: [("high", True), ("high", False), ("low", True)]
+        → {"high": {"accuracy": 0.5, "n": 2}, "low": {"accuracy": 1.0, "n": 1}}
+    """
+    agg: dict[str, list[bool]] = {}
+    for level, correct in rows:
+        agg.setdefault(str(level or "").lower(), []).append(bool(correct))
+    out: dict[str, dict] = {}
+    for level, results in agg.items():
+        if not results:
+            continue
+        out[level] = {"accuracy": sum(results) / len(results), "n": len(results)}
+    return out
 
 
 class AnalysisMemory:
@@ -319,6 +341,60 @@ class AnalysisMemory:
             }
         except Exception:  # noqa: BLE001
             return empty
+
+    # ── 신뢰도 캘리브레이션 ──────────────────────────────
+    def calibrate(
+        self,
+        level: Optional[str],
+        ticker: Optional[str] = None,
+        days: int = 180,
+    ) -> Optional[dict]:
+        """AI 자신감(level)을 같은 레벨 과거 적중률로 보정한다.
+
+        반환: {level, raw_pct(AI 암묵 자신감), calibrated_pct(과거 실제 적중률), sample_size}.
+        표본이 _MIN_CALIB_SAMPLES 미만이거나 미가용/미지원 레벨이면 None(보정 불가 → 원본 사용).
+        ticker 한정으로 먼저 보고, 표본 부족하면 전체로 폴백한다.
+        """
+        lvl = str(level or "").lower()
+        if not self._available or lvl not in _LEVEL_RAW_PCT:
+            return None
+        try:
+            from shared.database.repositories.connection import db_cursor
+
+            def _rows(scope_ticker: Optional[str]) -> list[tuple[str, bool]]:
+                where = ["validated_at IS NOT NULL", "was_correct IS NOT NULL", "confidence = %s",
+                         "created_at > NOW() - (%s || ' days')::interval"]
+                params: list[Any] = [lvl, int(days)]
+                if scope_ticker:
+                    where.append("ticker = %s")
+                    params.append(scope_ticker.upper())
+                with db_cursor() as (_, cur):
+                    cur.execute(
+                        f"SELECT confidence, was_correct FROM stock_analysis_memory WHERE {' AND '.join(where)}",
+                        tuple(params),
+                    )
+                    return [(r[0], r[1]) for r in (cur.fetchall() or [])]
+
+            # ticker 한정 → 부족하면 전체 폴백
+            rows = _rows(ticker) if ticker else []
+            scope = "ticker"
+            if len(rows) < _MIN_CALIB_SAMPLES:
+                rows = _rows(None)
+                scope = "global"
+
+            acc = _accuracy_by_level(rows).get(lvl)
+            if not acc or acc["n"] < _MIN_CALIB_SAMPLES:
+                return None
+
+            return {
+                "level": lvl,
+                "raw_pct": _LEVEL_RAW_PCT[lvl],
+                "calibrated_pct": round(acc["accuracy"] * 100),
+                "sample_size": acc["n"],
+                "scope": scope,
+            }
+        except Exception:  # noqa: BLE001
+            return None
 
 
 # ── 싱글턴 ──────────────────────────────────────────────

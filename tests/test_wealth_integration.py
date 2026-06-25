@@ -301,6 +301,28 @@ class TestAnalysisMemory(unittest.TestCase):
         self.assertIsNone(m.store("AAPL", self._ind(), {"decision": "BUY"}))
         self.assertEqual(m.validate_recent()["validated"], 0)
         self.assertEqual(m.get_stats()["total"], 0)
+        self.assertIsNone(m.calibrate("high", "AAPL"))
+
+    def test_accuracy_by_level(self) -> None:
+        from backend.app.services.trading.analysis_memory import _accuracy_by_level
+
+        rows = [("high", True), ("high", False), ("high", True), ("low", True), ("low", False)]
+        out = _accuracy_by_level(rows)
+        self.assertAlmostEqual(out["high"]["accuracy"], 2 / 3, places=6)
+        self.assertEqual(out["high"]["n"], 3)
+        self.assertAlmostEqual(out["low"]["accuracy"], 0.5, places=6)
+        self.assertEqual(_accuracy_by_level([]), {})
+
+    def test_calibrate_unknown_level_or_degrade(self) -> None:
+        from backend.app.services.trading.analysis_memory import AnalysisMemory, _LEVEL_RAW_PCT
+
+        # 매핑 검증
+        self.assertEqual(set(_LEVEL_RAW_PCT), {"high", "medium", "low"})
+        # _available=True여도 미지원 레벨이면 None(DB 접근 전에 차단)
+        m = AnalysisMemory.__new__(AnalysisMemory)
+        m._available = True
+        self.assertIsNone(m.calibrate("unknown", "AAPL"))
+        self.assertIsNone(m.calibrate(None))
 
 
 class TestCheongyakParsing(unittest.TestCase):

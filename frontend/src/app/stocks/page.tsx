@@ -26,6 +26,8 @@ import {
   ClockCounterClockwise,
   Target,
   CheckCircle,
+  ChartBar,
+  ArrowRight,
 } from "@phosphor-icons/react";
 import {
   apiGet,
@@ -579,6 +581,29 @@ export default function StocksPage() {
                       </span>
                     </div>
                   </div>
+
+                  {/* 신뢰도 캘리브레이션 — 과거 적중률로 보정된 자신감 */}
+                  {qa.outlook.calibration && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-line bg-[var(--ink-2)]/40 px-3 py-2 text-xs">
+                      <ChartBar size={14} className="text-accent" />
+                      <span className="text-muted">신뢰도 보정:</span>
+                      <span className="text-fg/70">AI 자신감 {qa.outlook.calibration.raw_pct}%</span>
+                      <ArrowRight size={12} className="text-muted" />
+                      <span
+                        className={`font-semibold ${
+                          qa.outlook.calibration.calibrated_pct >= qa.outlook.calibration.raw_pct
+                            ? "text-[#58c8a0]"
+                            : "text-[#e2607b]"
+                        }`}
+                      >
+                        실측 {qa.outlook.calibration.calibrated_pct}%
+                      </span>
+                      <span className="text-muted">
+                        ({qa.outlook.calibration.scope === "ticker" ? qa.ticker : "전체"} 과거{" "}
+                        {qa.outlook.calibration.sample_size}건 기준)
+                      </span>
+                    </div>
+                  )}
 
                   {qa.outlook.outlook && (
                     <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
