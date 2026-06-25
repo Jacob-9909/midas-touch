@@ -42,6 +42,7 @@ import { useSelectedUser } from "@/lib/user-context";
 import { seedChat } from "@/lib/chat-seed";
 import { Card, PageTitle, SectionLabel, Skeleton } from "@/components/ui";
 import { useToast } from "@/lib/toast";
+import TickerAutocomplete from "./TickerAutocomplete";
 
 const TOOLTIP_STYLE = {
   background: "var(--ink-2)",
@@ -334,19 +335,11 @@ export default function StocksPage() {
       <Card className="mb-6">
         <SectionLabel>종목 설정</SectionLabel>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <label className="flex flex-1 flex-col gap-1.5">
-            <span className="text-xs text-muted">티커 (야후 심볼)</span>
-            <input
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value)}
-              onKeyDown={(e) =>
-                e.key === "Enter" &&
-                (activeTab === "quick" ? runQuick() : run())
-              }
-              placeholder="예: AAPL, 005930.KS, TSLA, 7203.T"
-              className="rounded-xl border border-line bg-[var(--ink-2)]/50 px-3 py-2 text-sm text-fg outline-none focus:border-accent"
-            />
-          </label>
+          <TickerAutocomplete
+            value={ticker}
+            onChange={setTicker}
+            onSubmit={(sym) => (activeTab === "quick" ? runQuick(sym) : run(sym))}
+          />
           <button
             onClick={() => (activeTab === "quick" ? runQuick() : run())}
             disabled={qaBusy || busy}

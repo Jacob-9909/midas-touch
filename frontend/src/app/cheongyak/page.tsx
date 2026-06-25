@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Buildings, MapPin, CalendarBlank, ChatCircleText } from "@phosphor-icons/react";
+import {
+  Buildings,
+  MapPin,
+  CalendarBlank,
+  ChatCircleText,
+  MagnifyingGlassPlus,
+} from "@phosphor-icons/react";
 import {
   apiGet,
   listCheongyak,
@@ -14,6 +20,7 @@ import { useSelectedUser } from "@/lib/user-context";
 import { seedChat } from "@/lib/chat-seed";
 import { Card, PageTitle, Skeleton } from "@/components/ui";
 import { useToast } from "@/lib/toast";
+import DetailModal from "./DetailModal";
 
 const TABS: { kind: CheongyakKind; label: string }[] = [
   { kind: "apt", label: "APT" },
@@ -42,16 +49,21 @@ function StatusBadge({ status }: { status: string }) {
 function CheongyakCard({
   item,
   onConsult,
+  onDetail,
 }: {
   item: CheongyakSummary;
   onConsult: (item: CheongyakSummary) => void;
+  onDetail: (item: CheongyakSummary) => void;
 }) {
   return (
     <Card className="flex flex-col gap-2">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="font-display text-base font-semibold leading-snug text-fg">
+        <button
+          onClick={() => onDetail(item)}
+          className="text-left font-display text-base font-semibold leading-snug text-fg transition hover:text-accent"
+        >
           {item.house_nm || "(이름 없음)"}
-        </h3>
+        </button>
         <StatusBadge status={item.status} />
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
@@ -76,14 +88,21 @@ function CheongyakCard({
         {item.winner_date && <span>당첨발표 {item.winner_date}</span>}
       </div>
       <div className="mt-1 flex items-center gap-3">
+        <button
+          onClick={() => onDetail(item)}
+          className="inline-flex items-center gap-1 text-xs text-accent transition hover:underline"
+          title="주택형·경쟁률·가점 상세 보기"
+        >
+          <MagnifyingGlassPlus size={13} /> 상세 보기
+        </button>
         {item.pblanc_url && (
           <a
             href={item.pblanc_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-accent hover:underline"
+            className="text-xs text-muted transition hover:text-accent"
           >
-            공고문 보기 →
+            공고문 →
           </a>
         )}
         <button
@@ -107,6 +126,7 @@ export default function CheongyakPage() {
   const [error, setError] = useState<string | null>(null);
   const [district, setDistrict] = useState<string | null>(null);
   const [onlyMyRegion, setOnlyMyRegion] = useState(false);
+  const [detailItem, setDetailItem] = useState<CheongyakSummary | null>(null);
 
   // 선택 유저의 거주 지역(개인화).
   useEffect(() => {
@@ -232,9 +252,22 @@ export default function CheongyakPage() {
               key={`${item.house_manage_no}-${item.pblanc_no}`}
               item={item}
               onConsult={consult}
+              onDetail={setDetailItem}
             />
           ))}
         </div>
+      )}
+
+      {detailItem && (
+        <DetailModal
+          item={detailItem}
+          kind={kind}
+          onClose={() => setDetailItem(null)}
+          onConsult={(it) => {
+            setDetailItem(null);
+            consult(it);
+          }}
+        />
       )}
     </main>
   );

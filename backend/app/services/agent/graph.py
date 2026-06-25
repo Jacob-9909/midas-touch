@@ -31,6 +31,7 @@ from .nodes import (
     persona_rag_node,
     product_research_node,
     stock_backtest_node,
+    stock_quick_node,
     synthesize_node,
     tax_lookup_node,
 )
@@ -49,8 +50,9 @@ def build_agent(checkpointer):
     builder.add_node("product_research", product_research_node)
     builder.add_node("news_research", news_research_node)
     builder.add_node("nts_law_research", nts_law_research_node)
-    # 대화형 액션 노드(주식 백테스트·청약 조회)
+    # 대화형 액션 노드(주식 백테스트·기술지표 분석·청약 조회)
     builder.add_node("stock_backtest", stock_backtest_node)
+    builder.add_node("stock_quick", stock_quick_node)
     builder.add_node("cheongyak_lookup", cheongyak_lookup_node)
     builder.add_node("synthesize", synthesize_node)
 

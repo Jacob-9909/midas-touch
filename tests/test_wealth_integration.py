@@ -95,11 +95,26 @@ class TestConversationalActionNodes(unittest.TestCase):
         self.assertEqual(len(ctx), 1)
         self.assertIn("cheongyak_lookup 미수행", ctx[0])
 
+    def test_stock_quick_no_ticker_guides(self) -> None:
+        from backend.app.services.agent.nodes import stock_quick_node
+
+        ctx = stock_quick_node({"messages": [HumanMessage(content="기술적 분석 해줘")]})["tool_context"]
+        self.assertEqual(len(ctx), 1)
+        self.assertIn("stock_quick 안내", ctx[0])
+
     def test_keyword_route_action_tools(self) -> None:
         from backend.app.services.agent.nodes.intent import _keyword_route
 
         self.assertIn("stock_backtest", _keyword_route("삼성전자 백테스트 해줘"))
         self.assertIn("cheongyak_lookup", _keyword_route("요즘 분양 청약 뭐 있어"))
+
+    def test_keyword_route_stock_quick(self) -> None:
+        from backend.app.services.agent.nodes.intent import _keyword_route
+
+        self.assertIn("stock_quick", _keyword_route("엔비디아 지금 어때?"))
+        self.assertIn("stock_quick", _keyword_route("삼성전자 RSI 알려줘"))  # 대문자 RSI
+        # 백테스트와 구분되는지(서로 침범 안 함)
+        self.assertNotIn("stock_backtest", _keyword_route("엔비디아 지금 어때?"))
 
 
 class TestStockAnalyzer(unittest.TestCase):

@@ -24,11 +24,12 @@ _INTENT_PROMPT = """당신은 한국인 자산관리 AI의 라우터입니다. �
 - news_research: 미국·일본·한국 기준금리/거시 금리 '동향'을 라이브로(웹 검색) — 최신 금리 흐름·정책 맥락이 필요할 때.
 - nts_law_research: 국세청 법령해석(유권해석) 목록을 포털에서 라이브로 — 특정 세목의 최신 해석 사례·근거가 필요할 때.
 - stock_backtest: 사용자가 특정 종목의 과거 성과/백테스트를 물을 때(예: "애플 백테스트 해줘", "테슬라 1년 수익률"). 이때 ticker도 함께 채우십시오.
+- stock_quick: 사용자가 특정 종목의 '현재' 기술적 지표/상태를 물을 때(예: "엔비디아 지금 어때?", "삼성전자 RSI 알려줘", "테슬라 기술적 분석"). 과거 시뮬레이션이 아니라 현 시점 지표(RSI·MACD·이동평균 등) 진단. 이때 ticker도 함께 채우십시오.
 - cheongyak_lookup: 최근/예정 청약(분양) 공고를 물을 때(예: "요즘 청약 뭐 있어?", "분양 공고 알려줘").
 
 복합 질문이면 필요한 도구를 여러 개 고르십시오. 단순 인사·잡담 등 데이터가 필요 없는 질문이면
 아무 도구도 고르지 마십시오. 내부 DB(persona_rag/graph_rag/tax_and_market_lookup)로 충분하면
-라이브 도구(product_research/news_research/nts_law_research/stock_backtest/cheongyak_lookup)는 굳이 고르지 마십시오.
+라이브 도구(product_research/news_research/nts_law_research/stock_backtest/stock_quick/cheongyak_lookup)는 굳이 고르지 마십시오.
 
 tax_and_market_lookup을 골랐고 질문이 특정 자산 종류(예: 주식·채권·예금·부동산)에 한정되면,
 asset_types에 해당 자산 종류명을 적으십시오(세법 조회를 그 자산으로 좁힘). 자산을 특정하지 않은
@@ -83,6 +84,8 @@ def _keyword_route(text: str) -> List[str]:
         route.append("nts_law_research")
     if any(k in text for k in ("백테스트", "백테스팅", "backtest", "수익률 시뮬", "전략 수익")):
         route.append("stock_backtest")
+    if any(k in text.lower() for k in ("기술적 분석", "기술분석", "rsi", "macd", "지금 어때", "현재 지표", "이동평균", "볼린저", "kdj")):
+        route.append("stock_quick")
     if any(k in text for k in ("청약", "분양", "분양가", "당첨", "경쟁률")):
         route.append("cheongyak_lookup")
     return route or ["graph_rag"]
@@ -106,6 +109,7 @@ def classify_intent(state: AgentState) -> dict:
                 "news_research",
                 "nts_law_research",
                 "stock_backtest",
+                "stock_quick",
                 "cheongyak_lookup",
             ]
         ] = Field(default_factory=list)
@@ -116,8 +120,8 @@ def classify_intent(state: AgentState) -> dict:
         ticker: str = Field(
             default="",
             description=(
-                "stock_backtest를 골랐고 사용자가 특정 종목을 지목하면 야후 파이낸스 티커로 변환해 적는다 "
-                "(예: 애플→AAPL, 삼성전자→005930.KS, 테슬라→TSLA). 종목이 불명확하면 빈 문자열."
+                "stock_backtest 또는 stock_quick을 골랐고 사용자가 특정 종목을 지목하면 야후 파이낸스 "
+                "티커로 변환해 적는다 (예: 애플→AAPL, 삼성전자→005930.KS, 테슬라→TSLA). 종목이 불명확하면 빈 문자열."
             ),
         )
 

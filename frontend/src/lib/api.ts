@@ -323,6 +323,88 @@ export function listCheongyak(
   );
 }
 
+// ---- 청약 상세 ----
+export interface CheongyakHousingType {
+  house_ty: string;
+  supply_area: string;
+  supply_count: number;
+  special_count: number;
+  general_count: number;
+  lttot_top_amount: string;
+}
+
+export interface CheongyakCompetition {
+  house_ty: string;
+  supply_count: number;
+  rank?: string;
+  region_name?: string;
+  applicants: string;
+  competition_rate: string;
+}
+
+export interface CheongyakScore {
+  house_ty: string;
+  supply_count: number;
+  region_name: string;
+  min_score: string;
+  max_score: string;
+  avg_score: string;
+}
+
+export interface CheongyakSpecialSupply {
+  house_ty: string;
+  special_total: number;
+  multi_child: number;
+  newlywed: number;
+  first_life: number;
+  elderly_parent: number;
+  institution: number;
+  result: string;
+}
+
+/** 경쟁률 조회 시 종류별 엔드포인트 분기(apt 외엔 competition?kind= 사용). */
+type CompetitionKind = "apt" | "officetel" | "public-rent" | "opt";
+
+const _COMPETITION_KIND: Record<CheongyakKind, CompetitionKind> = {
+  apt: "apt",
+  officetel: "officetel",
+  remaining: "apt",
+  opt: "opt",
+  "public-rent": "public-rent",
+};
+
+export function getCheongyakHousingTypes(
+  houseManageNo: string,
+  pblancNo: string,
+): Promise<CheongyakHousingType[]> {
+  return apiGet(`/api/v1/cheongyak/detail/${houseManageNo}/${pblancNo}/housing-types`);
+}
+
+export function getCheongyakCompetition(
+  houseManageNo: string,
+  pblancNo: string,
+  kind: CheongyakKind = "apt",
+): Promise<CheongyakCompetition[]> {
+  const ck = _COMPETITION_KIND[kind];
+  return apiGet(
+    `/api/v1/cheongyak/detail/${houseManageNo}/${pblancNo}/competition?kind=${ck}`,
+  );
+}
+
+export function getCheongyakScores(
+  houseManageNo: string,
+  pblancNo: string,
+): Promise<CheongyakScore[]> {
+  return apiGet(`/api/v1/cheongyak/detail/${houseManageNo}/${pblancNo}/scores`);
+}
+
+export function getCheongyakSpecialSupply(
+  houseManageNo: string,
+  pblancNo: string,
+): Promise<CheongyakSpecialSupply[]> {
+  return apiGet(`/api/v1/cheongyak/detail/${houseManageNo}/${pblancNo}/special-supply`);
+}
+
 // ---- 라이브 시장 리서치 (대시보드 브리핑) ----
 export interface RateBriefing {
   available: boolean;
