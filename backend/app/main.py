@@ -13,6 +13,9 @@ from backend.app.api.users import router as users_router
 from backend.app.api.finetune import router as finetune_router
 from backend.app.api.graph import router as graph_router
 from backend.app.api.query import router as query_router
+from backend.app.api.stocks import router as stocks_router
+from backend.app.api.cheongyak import router as cheongyak_router
+from backend.app.api.research import router as research_router
 
 app = FastAPI(
     title="Midas Touch API Server",
@@ -38,6 +41,10 @@ app.include_router(users_router)
 app.include_router(finetune_router)
 app.include_router(graph_router)
 app.include_router(query_router)
+# 라이브 기능 라우터 (wealth_advisor 이식: 주식 백테스트/분석, 청약 조회, 시장 리서치)
+app.include_router(stocks_router)
+app.include_router(cheongyak_router)
+app.include_router(research_router)
 
 
 @app.get("/")

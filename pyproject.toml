@@ -39,6 +39,9 @@ dependencies = [
     "langchain>=1.0",
     "psycopg[binary]>=3.3.4",
     "python-multipart>=0.0.32",
+    # Live web research (Tavily 금리 동향) + 주식 분석(공포탐욕지수)
+    "langchain-tavily>=0.2.0",
+    "fear-and-greed>=0.4",
 ]
 
 [dependency-groups]

@@ -32,4 +32,5 @@ class AgentState(TypedDict, total=False):
     profile_summary: Optional[str]  # 첫 턴에 구성 후 재사용
     route: List[str]  # intent 노드가 고른 필요 도구 이름 목록
     tax_asset_types: List[str]  # intent가 추출한 세법 조회 대상 자산 종류(없으면 전체)
+    ticker: Optional[str]  # intent가 추출한 종목 티커(stock_backtest용; 없으면 None)
     tool_context: Annotated[List[str], merge_tool_context]  # 도구 노드들이 누적한 검색 컨텍스트

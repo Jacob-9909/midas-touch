@@ -20,9 +20,15 @@ _INTENT_PROMPT = """당신은 한국인 자산관리 AI의 라우터입니다. �
 - persona_rag: 또래 벤치마킹 — "나와 비슷한 투자자들은 어떻게 하나", 권장 자산배분 비율, 또래의 종목/섹터 선호. (의뢰인 본인 유형은 이미 알고 있으니, '비교 대상 또래'가 필요할 때만.)
 - graph_rag: 세법 조항의 법적 근거, 세율·공제 한도의 '출처/근거', 자산 간 관계.
 - tax_and_market_lookup: 특정 자산의 절세 조건이나 현재 시장 수치만 빠르게 확인.
+- product_research: 국내 금융상품의 '현재 금리/조건'을 라이브로(네이버 검색) — 정기예금·적금·연금저축·국채 ETF 등 실시간 상품 비교가 필요할 때.
+- news_research: 미국·일본·한국 기준금리/거시 금리 '동향'을 라이브로(웹 검색) — 최신 금리 흐름·정책 맥락이 필요할 때.
+- nts_law_research: 국세청 법령해석(유권해석) 목록을 포털에서 라이브로 — 특정 세목의 최신 해석 사례·근거가 필요할 때.
+- stock_backtest: 사용자가 특정 종목의 과거 성과/백테스트를 물을 때(예: "애플 백테스트 해줘", "테슬라 1년 수익률"). 이때 ticker도 함께 채우십시오.
+- cheongyak_lookup: 최근/예정 청약(분양) 공고를 물을 때(예: "요즘 청약 뭐 있어?", "분양 공고 알려줘").
 
 복합 질문이면 필요한 도구를 여러 개 고르십시오. 단순 인사·잡담 등 데이터가 필요 없는 질문이면
-아무 도구도 고르지 마십시오.
+아무 도구도 고르지 마십시오. 내부 DB(persona_rag/graph_rag/tax_and_market_lookup)로 충분하면
+라이브 도구(product_research/news_research/nts_law_research/stock_backtest/cheongyak_lookup)는 굳이 고르지 마십시오.
 
 tax_and_market_lookup을 골랐고 질문이 특정 자산 종류(예: 주식·채권·예금·부동산)에 한정되면,
 asset_types에 해당 자산 종류명을 적으십시오(세법 조회를 그 자산으로 좁힘). 자산을 특정하지 않은
@@ -68,6 +74,17 @@ def _keyword_route(text: str) -> List[str]:
         route.append("graph_rag")
     if any(k in text for k in ("세율", "세금", "절세", "공제", "환율", "금리", "시세", "시장", "지표")):
         route.append("tax_and_market_lookup")
+    # 라이브 웹 리서치(현재 금리/상품·금리 동향·국세청 해석)
+    if any(k in text for k in ("예금", "적금", "연금저축", "국채", "상품", "가입", "이율", "우대")):
+        route.append("product_research")
+    if any(k in text for k in ("동향", "전망", "흐름", "인상", "인하", "기준금리", "연준", "한국은행")):
+        route.append("news_research")
+    if any(k in text for k in ("유권해석", "법령해석", "국세청", "홈택스", "예규", "판례")):
+        route.append("nts_law_research")
+    if any(k in text for k in ("백테스트", "백테스팅", "backtest", "수익률 시뮬", "전략 수익")):
+        route.append("stock_backtest")
+    if any(k in text for k in ("청약", "분양", "분양가", "당첨", "경쟁률")):
+        route.append("cheongyak_lookup")
     return route or ["graph_rag"]
 
 
@@ -80,20 +97,37 @@ def classify_intent(state: AgentState) -> dict:
     class _Route(BaseModel):
         """답변에 필요한 검색 도구 목록과 세법 조회 대상 자산 종류."""
 
-        tools: List[Literal["persona_rag", "graph_rag", "tax_and_market_lookup"]] = Field(
-            default_factory=list
-        )
+        tools: List[
+            Literal[
+                "persona_rag",
+                "graph_rag",
+                "tax_and_market_lookup",
+                "product_research",
+                "news_research",
+                "nts_law_research",
+                "stock_backtest",
+                "cheongyak_lookup",
+            ]
+        ] = Field(default_factory=list)
         asset_types: List[str] = Field(
             default_factory=list,
             description="tax_and_market_lookup의 세법 조회를 특정 자산(예: 주식, 채권)으로 좁힐 때만 채운다.",
         )
+        ticker: str = Field(
+            default="",
+            description=(
+                "stock_backtest를 골랐고 사용자가 특정 종목을 지목하면 야후 파이낸스 티커로 변환해 적는다 "
+                "(예: 애플→AAPL, 삼성전자→005930.KS, 테슬라→TSLA). 종목이 불명확하면 빈 문자열."
+            ),
+        )
 
     user_text = latest_user_text(state)
     asset_types: List[str] = []
+    ticker: str = ""
 
     # 순수 인사·잡담이면 분류 LLM을 건너뛰고 곧장 작문(도구 없음)으로 보낸다(지연·비용 절감).
     if _is_smalltalk(user_text):
-        return {"route": [], "tax_asset_types": [], "tool_context": None}
+        return {"route": [], "tax_asset_types": [], "ticker": None, "tool_context": None}
 
     try:
         router = build_chat_model(temperature=0.0).with_structured_output(_Route)
@@ -102,9 +136,15 @@ def classify_intent(state: AgentState) -> dict:
         )
         tools = list(dict.fromkeys(result.tools))  # 중복 제거, 순서 유지
         asset_types = list(dict.fromkeys(result.asset_types))
+        ticker = (result.ticker or "").strip()
     except Exception:  # noqa: BLE001 - 분류 실패 시 키워드 폴백
         tools = _keyword_route(user_text)
 
     # tool_context=None → 리듀서가 빈 리스트로 리셋(이전 턴 컨텍스트 제거)
-    # tax_asset_types는 매 턴 새로 덮어써 이전 턴 값이 남지 않게 한다.
-    return {"route": tools, "tax_asset_types": asset_types, "tool_context": None}
+    # tax_asset_types/ticker는 매 턴 새로 덮어써 이전 턴 값이 남지 않게 한다.
+    return {
+        "route": tools,
+        "tax_asset_types": asset_types,
+        "ticker": ticker or None,
+        "tool_context": None,
+    }

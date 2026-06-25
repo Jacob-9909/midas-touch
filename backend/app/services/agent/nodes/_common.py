@@ -7,7 +7,17 @@ from langchain_core.messages import HumanMessage
 from ..state import AgentState
 
 # 도구 이름 == 그래프 노드 이름 (추적을 쉽게 하려고 동일하게 맞춘다).
-TOOL_NODES = ("persona_rag", "graph_rag", "tax_and_market_lookup")
+# 앞 3개: 내부 DB(RAG) 도구 / 가운데 3개: 라이브 웹 리서치 / 뒤 2개: 대화형 액션(wealth_advisor 이식).
+TOOL_NODES = (
+    "persona_rag",
+    "graph_rag",
+    "tax_and_market_lookup",
+    "product_research",
+    "news_research",
+    "nts_law_research",
+    "stock_backtest",
+    "cheongyak_lookup",
+)
 
 
 def latest_user_text(state: AgentState) -> str:

@@ -14,12 +14,15 @@ import {
 import { useSelectedUser } from "@/lib/user-context";
 import { useTheme } from "@/lib/theme";
 
+// group: "main" 유저대면(현황·상담·분석) / "engine" 내부 엔진(데이터·학습)
 const LINKS = [
-  { href: "/", label: "대시보드" },
-  { href: "/chat", label: "에이전트 챗봇" },
-  { href: "/finetune", label: "파인튜닝셋" },
-  { href: "/graph", label: "지식그래프" },
-];
+  { href: "/", label: "대시보드", group: "main" },
+  { href: "/chat", label: "에이전트 챗봇", group: "main" },
+  { href: "/stocks", label: "주식분석", group: "main" },
+  { href: "/cheongyak", label: "청약", group: "main" },
+  { href: "/graph", label: "지식그래프", group: "engine" },
+  { href: "/finetune", label: "파인튜닝셋", group: "engine" },
+] as const;
 
 export default function NavBar() {
   const pathname = usePathname();
@@ -41,20 +44,24 @@ export default function NavBar() {
           <span className="text-gradient-accent">Midas Touch</span>
         </Link>
 
-        {/* 데스크톱 링크 (단일 라인 유지) */}
+        {/* 데스크톱 링크 (단일 라인 유지) — 유저대면/엔진 사이 옅은 구분선 */}
         <div className="hidden items-center gap-1 md:flex">
-          {LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`rounded-full px-3.5 py-1.5 text-sm transition-colors duration-200 ${
-                isActive(l.href)
-                  ? "bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] text-accent"
-                  : "text-muted hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] hover:text-fg"
-              }`}
-            >
-              {l.label}
-            </Link>
+          {LINKS.map((l, i) => (
+            <span key={l.href} className="flex items-center">
+              {i > 0 && LINKS[i - 1].group !== l.group && (
+                <span aria-hidden className="mx-1.5 h-4 w-px bg-line" />
+              )}
+              <Link
+                href={l.href}
+                className={`rounded-full px-3.5 py-1.5 text-sm transition-colors duration-200 ${
+                  isActive(l.href)
+                    ? "bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] text-accent"
+                    : "text-muted hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] hover:text-fg"
+                }`}
+              >
+                {l.label}
+              </Link>
+            </span>
           ))}
         </div>
 

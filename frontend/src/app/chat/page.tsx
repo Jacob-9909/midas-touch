@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { useToast } from "@/lib/toast";
+import { consumeChatSeed } from "@/lib/chat-seed";
 import { Card, PageTitle } from "@/components/ui";
 
 interface Msg {
@@ -28,7 +29,9 @@ export default function ChatPage() {
   const [busy, setBusy] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const initedFor = useRef<string | null>(null);
+  const seedRef = useRef<string | null>(null);
 
   const refreshSessions = useCallback(async () => {
     try {
@@ -61,6 +64,20 @@ export default function ChatPage() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, busy]);
+
+  // 분석 페이지에서 넘어온 상담 seed를 1회 소비(마운트 시).
+  useEffect(() => {
+    seedRef.current = consumeChatSeed();
+  }, []);
+
+  // 챗 준비(유저 선택 + 세션 생성)되면 seed를 입력창에 프리필 + 포커스.
+  useEffect(() => {
+    if (seedRef.current && selected && currentId) {
+      setInput(seedRef.current);
+      seedRef.current = null;
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [selected, currentId]);
 
   const openSession = async (s: ChatSessionMeta) => {
     setCurrentId(s.session_id);
@@ -226,6 +243,7 @@ export default function ChatPage() {
               </div>
               <div className="flex gap-2 border-t border-line p-3">
                 <input
+                  ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {

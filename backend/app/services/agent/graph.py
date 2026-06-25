@@ -22,10 +22,15 @@ from langgraph.graph import END, START, StateGraph
 
 from .nodes import (
     TOOL_NODES,
+    cheongyak_lookup_node,
     classify_intent,
     dispatch,
     graph_rag_node,
+    news_research_node,
+    nts_law_research_node,
     persona_rag_node,
+    product_research_node,
+    stock_backtest_node,
     synthesize_node,
     tax_lookup_node,
 )
@@ -40,6 +45,13 @@ def build_agent(checkpointer):
     builder.add_node("persona_rag", persona_rag_node)
     builder.add_node("graph_rag", graph_rag_node)
     builder.add_node("tax_and_market_lookup", tax_lookup_node)
+    # 라이브 웹 리서치 도구 노드(wealth_advisor 이식)
+    builder.add_node("product_research", product_research_node)
+    builder.add_node("news_research", news_research_node)
+    builder.add_node("nts_law_research", nts_law_research_node)
+    # 대화형 액션 노드(주식 백테스트·청약 조회)
+    builder.add_node("stock_backtest", stock_backtest_node)
+    builder.add_node("cheongyak_lookup", cheongyak_lookup_node)
     builder.add_node("synthesize", synthesize_node)
 
     builder.add_edge(START, "intent")
