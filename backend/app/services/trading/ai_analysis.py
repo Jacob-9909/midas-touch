@@ -205,17 +205,17 @@ def _fetch_profile(ticker: str) -> str:
     try:
         import requests
 
-        url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={fmp_key}"
+        url = f"https://financialmodelingprep.com/stable/profile?symbol={ticker}&apikey={fmp_key}"
         resp = requests.get(url, timeout=5)
         data = resp.json()
         if data and isinstance(data, list):
             p = data[0]
             return (
                 f"Beta: {p.get('beta', 'N/A')}\n"
-                f"Average Volume: {p.get('volAvg', 'N/A')}\n"
-                f"Market Cap: {p.get('mktCap', 'N/A')}\n"
+                f"Average Volume: {p.get('averageVolume', 'N/A')}\n"
+                f"Market Cap: {p.get('marketCap', 'N/A')}\n"
                 f"52-Week Range: {p.get('range', 'N/A')}\n"
-                f"DCF Value: {p.get('dcf', 'N/A')}"
+                f"Price: {p.get('price', 'N/A')}"
             )
     except Exception:
         pass

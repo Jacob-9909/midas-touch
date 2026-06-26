@@ -68,8 +68,8 @@ export default function NavBar() {
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden text-sm sm:inline">
             {selected ? (
-              <span className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-accent">
-                <UserCircle weight="fill" size={16} />
+              <span className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-3 py-1 text-accent">
+                <UserCircle weight="fill" size={16} className="shrink-0" />
                 {selected.label}
               </span>
             ) : (

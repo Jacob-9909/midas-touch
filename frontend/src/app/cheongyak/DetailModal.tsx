@@ -107,8 +107,8 @@ export default function DetailModal({ item, kind, onClose, onConsult }: DetailMo
       >
         {/* 헤더 */}
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-display text-lg font-semibold leading-snug text-fg">
+          <div className="min-w-0">
+            <h3 className="break-words font-display text-lg font-semibold leading-snug text-fg">
               {item.house_nm || "(이름 없음)"}
             </h3>
             <p className="mt-0.5 text-xs text-muted">

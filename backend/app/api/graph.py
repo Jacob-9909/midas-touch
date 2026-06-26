@@ -45,7 +45,7 @@ def get_build_job(job_id: str) -> dict:
 
 
 @router.get("/snapshot")
-def graph_snapshot(limit: int = 100) -> dict:
+def graph_snapshot(limit: int = 200) -> dict:
     """Neo4j에서 (n)-[r]-(m) 관계를 끌어와 포스그래프용 nodes/links로 변환한다."""
     try:
         return fetch_graph_snapshot(limit=limit)

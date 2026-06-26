@@ -30,6 +30,10 @@ const TABS: { kind: CheongyakKind; label: string }[] = [
   { kind: "public-rent", label: "공공임대" },
 ];
 
+// 상태 필터 (백엔드 status 값과 일치). "전체"는 미필터.
+const STATUS_FILTERS = ["전체", "접수중", "접수예정", "마감"] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
 const STATUS_TONE: Record<string, string> = {
   접수중: "text-[#58c8a0] border-[#58c8a0]/40 bg-[#58c8a0]/10",
   접수예정: "text-accent border-accent/40 bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]",
@@ -40,7 +44,9 @@ const STATUS_TONE: Record<string, string> = {
 function StatusBadge({ status }: { status: string }) {
   const tone = STATUS_TONE[status] ?? STATUS_TONE["일정미정"];
   return (
-    <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${tone}`}>
+    <span
+      className={`shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${tone}`}
+    >
       {status || "-"}
     </span>
   );
@@ -60,7 +66,7 @@ function CheongyakCard({
       <div className="flex items-start justify-between gap-3">
         <button
           onClick={() => onDetail(item)}
-          className="text-left font-display text-base font-semibold leading-snug text-fg transition hover:text-accent"
+          className="min-w-0 break-words text-left font-display text-base font-semibold leading-snug text-fg transition hover:text-accent"
         >
           {item.house_nm || "(이름 없음)"}
         </button>
@@ -126,6 +132,7 @@ export default function CheongyakPage() {
   const [error, setError] = useState<string | null>(null);
   const [district, setDistrict] = useState<string | null>(null);
   const [onlyMyRegion, setOnlyMyRegion] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("전체");
   const [detailItem, setDetailItem] = useState<CheongyakSummary | null>(null);
 
   // 선택 유저의 거주 지역(개인화).
@@ -152,7 +159,7 @@ export default function CheongyakPage() {
     let alive = true;
     setItems(null);
     setError(null);
-    listCheongyak(kind)
+    listCheongyak(kind, 120, 120)
       .then((data) => alive && setItems(data))
       .catch((e) => {
         if (!alive) return;
@@ -165,16 +172,26 @@ export default function CheongyakPage() {
     };
   }, [kind, toast]);
 
-  // district 매칭 우선 정렬 + (옵션) 내 지역만 필터.
+  // 상태별 개수(필터 칩 배지용) — 지역 필터와 무관하게 전체 기준.
+  const statusCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    (items ?? []).forEach((it) => {
+      c[it.status] = (c[it.status] ?? 0) + 1;
+    });
+    return c;
+  }, [items]);
+
+  // 상태 필터 → district 매칭 우선 정렬 + (옵션) 내 지역만 필터.
   const view = useMemo(() => {
     if (!items) return null;
     const key = (district || "").replace(/특별시|광역시|특별자치시|특별자치도|도$/g, "").trim();
     const matches = (it: CheongyakSummary) =>
       key.length >= 2 && (it.region?.includes(key) || it.address?.includes(key));
     let list = items;
-    if (onlyMyRegion && key) list = items.filter(matches);
+    if (statusFilter !== "전체") list = list.filter((it) => it.status === statusFilter);
+    if (onlyMyRegion && key) list = list.filter(matches);
     return [...list].sort((a, b) => Number(matches(b)) - Number(matches(a)));
-  }, [items, district, onlyMyRegion]);
+  }, [items, district, onlyMyRegion, statusFilter]);
 
   const consult = (item: CheongyakSummary) => {
     const text =
@@ -222,6 +239,30 @@ export default function CheongyakPage() {
         )}
       </div>
 
+      {/* 상태 필터: 접수중 / 접수예정 / 마감 */}
+      {items && items.length > 0 && (
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          {STATUS_FILTERS.map((s) => {
+            const count = s === "전체" ? items.length : statusCounts[s] ?? 0;
+            const active = statusFilter === s;
+            return (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${
+                  active
+                    ? "border-accent/50 bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-accent"
+                    : "border-line text-muted hover:text-fg"
+                }`}
+              >
+                {s}
+                <span className={active ? "text-accent/80" : "text-muted/70"}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {error && (
         <Card className="border-[#e2607b]/40">
           <p className="text-sm text-[#e2607b]">조회 실패: {error}</p>
@@ -232,7 +273,7 @@ export default function CheongyakPage() {
       )}
 
       {!view && !error && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-40 w-full rounded-2xl" />
           ))}
@@ -241,12 +282,16 @@ export default function CheongyakPage() {
 
       {view && view.length === 0 && (
         <p className="text-sm text-muted">
-          {onlyMyRegion ? "내 지역 매칭 공고가 없습니다." : "해당 기간에 공고가 없습니다."}
+          {statusFilter !== "전체"
+            ? `'${statusFilter}' 상태의 공고가 없습니다.`
+            : onlyMyRegion
+              ? "내 지역 매칭 공고가 없습니다."
+              : "해당 기간에 공고가 없습니다."}
         </p>
       )}
 
       {view && view.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {view.map((item) => (
             <CheongyakCard
               key={`${item.house_manage_no}-${item.pblanc_no}`}

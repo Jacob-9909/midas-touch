@@ -153,8 +153,14 @@ export interface QueryResponse {
   source_texts: string[];
 }
 
+export interface GraphNode {
+  id: string;
+  group: string;
+  props?: Record<string, string | number | boolean>;
+}
+
 export interface GraphSnapshot {
-  nodes: { id: string; group: string }[];
+  nodes: GraphNode[];
   links: { source: string; target: string; rel: string }[];
 }
 

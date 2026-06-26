@@ -39,15 +39,35 @@ def get_driver():
     return _driver
 
 
-def fetch_graph_snapshot(limit: int = 100) -> dict:
-    """(n)-[r]-(m) 관계를 끌어와 포스그래프 렌더용 nodes/links로 변환한다."""
+def fetch_graph_snapshot(limit: int = 200) -> dict:
+    """엔티티 간 의미관계를 끌어와 포스그래프 렌더용 nodes/links로 변환한다.
+
+    - 노드 group: 구조 라벨(`__Entity__`/`__Node__`/`Chunk`)을 걸러낸 **도메인 라벨**
+      (예: TAXRULE, ASSETCLASS)을 쓴다. labels()[0]은 항상 `__Entity__`라 타입이 뭉개졌다.
+    - 관계: 명명된 엔티티 사이의 **방향성** 관계만(무방향 중복·`MENTIONS`(Chunk→Entity) 제외).
+    - 상세정보: 노드 속성(source/file_type/description 등 임베딩 외 스칼라)을 함께 내려준다.
+    """
     cypher = """
-    MATCH (n)-[r]-(m)
-    RETURN n.name AS source, labels(n)[0] AS s_label,
+    MATCH (n)-[r]->(m)
+    WHERE n.name IS NOT NULL AND m.name IS NOT NULL AND type(r) <> 'MENTIONS'
+    RETURN n.name AS source,
+           [l IN labels(n) WHERE NOT l STARTS WITH '__' AND l <> 'Chunk'][0] AS s_label,
            type(r) AS rel,
-           m.name AS target, labels(m)[0] AS t_label
+           m.name AS target,
+           [l IN labels(m) WHERE NOT l STARTS WITH '__' AND l <> 'Chunk'][0] AS t_label,
+           properties(n) AS s_props,
+           properties(m) AS t_props
     LIMIT $limit
     """
+    _DROP = {"embedding", "name", "id"}
+
+    def _detail(props: dict) -> dict:
+        return {
+            k: v
+            for k, v in (props or {}).items()
+            if k not in _DROP and not isinstance(v, list) and v is not None
+        }
+
     nodes: dict[str, dict] = {}
     links: list[dict] = []
     driver = get_driver()
@@ -56,7 +76,13 @@ def fetch_graph_snapshot(limit: int = 100) -> dict:
             src, tgt = rec["source"], rec["target"]
             if src is None or tgt is None:
                 continue
-            nodes.setdefault(src, {"id": src, "group": rec["s_label"] or "Entity"})
-            nodes.setdefault(tgt, {"id": tgt, "group": rec["t_label"] or "Entity"})
+            nodes.setdefault(
+                src,
+                {"id": src, "group": rec["s_label"] or "Entity", "props": _detail(rec["s_props"])},
+            )
+            nodes.setdefault(
+                tgt,
+                {"id": tgt, "group": rec["t_label"] or "Entity", "props": _detail(rec["t_props"])},
+            )
             links.append({"source": src, "target": tgt, "rel": rec["rel"]})
     return {"nodes": list(nodes.values()), "links": links}
