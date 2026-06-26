@@ -1,7 +1,7 @@
 """백엔드 에이전트용 LLM 팩토리.
 
 NVIDIA NIM은 OpenAI 호환 엔드포인트이므로 LangChain의 ChatOpenAI 래퍼를 그대로 사용한다.
-모델 자체는 교체하지 않으며(.env의 AGENT_LLM_MODEL, 현재 openai/gpt-oss-120b),
+모델 자체는 교체하지 않으며(.env의 AGENT_LLM_MODEL, 현재 deepseek-ai/deepseek-v4-pro),
 function-calling(tools) 포맷을 네이티브로 지원함을 실호출로 확인했다.
 """
 
