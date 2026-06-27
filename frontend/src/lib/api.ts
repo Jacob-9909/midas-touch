@@ -3,6 +3,10 @@
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
+// ngrok 무료 터널의 브라우저 경고 페이지(ERR_NGROK_6024)를 건너뛴다.
+// 로컬/다른 환경에선 백엔드가 무시하는 무해한 헤더라 항상 붙여도 됨.
+const DEFAULT_HEADERS = { "ngrok-skip-browser-warning": "true" };
+
 async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let detail = res.statusText;
@@ -18,14 +22,17 @@ async function handle<T>(res: Response): Promise<T> {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+  const res = await fetch(`${API_BASE}${path}`, {
+    cache: "no-store",
+    headers: DEFAULT_HEADERS,
+  });
   return handle<T>(res);
 }
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...DEFAULT_HEADERS },
     body: JSON.stringify(body),
   });
   return handle<T>(res);
@@ -34,12 +41,19 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
 export async function apiUpload<T>(path: string, file: File): Promise<T> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${API_BASE}${path}`, { method: "POST", body: form });
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    body: form,
+    headers: DEFAULT_HEADERS,
+  });
   return handle<T>(res);
 }
 
 export async function apiDelete<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { method: "DELETE" });
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "DELETE",
+    headers: DEFAULT_HEADERS,
+  });
   return handle<T>(res);
 }
 
@@ -50,7 +64,7 @@ export async function streamChat(
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/api/v1/chat/stream`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...DEFAULT_HEADERS },
     body: JSON.stringify(body),
   });
   if (!res.ok || !res.body) {
