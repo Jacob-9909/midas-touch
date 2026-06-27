@@ -3,6 +3,7 @@
 // job_id를 주기적으로 폴링해 진행률 바 + 로그 콘솔을 렌더한다.
 
 import { useEffect, useRef, useState } from "react";
+import { errMsg } from "@/lib/async";
 import { apiGet, type JobState } from "@/lib/api";
 
 export default function JobProgress({
@@ -38,7 +39,7 @@ export default function JobProgress({
         }
       } catch (e) {
         if (!active) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(errMsg(e));
         timer = setTimeout(poll, 4000);
       }
     };

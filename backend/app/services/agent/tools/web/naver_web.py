@@ -18,9 +18,16 @@ def strip_html_bold(s: str) -> str:
     return re.sub(r"<[^>]+>", "", t)
 
 
+def _naver_creds() -> tuple[str, str]:
+    """(client_id, client_secret)를 .env에서 읽어 공백 제거 후 반환."""
+    return (
+        (os.environ.get("NAVER_CLIENT_ID") or "").strip(),
+        (os.environ.get("NAVER_CLIENT_SECRET") or "").strip(),
+    )
+
+
 def require_naver_search_keys() -> None:
-    cid = (os.environ.get("NAVER_CLIENT_ID") or "").strip()
-    csec = (os.environ.get("NAVER_CLIENT_SECRET") or "").strip()
+    cid, csec = _naver_creds()
     if not cid or not csec:
         raise ValueError(
             "네이버 검색 API 키가 필요합니다. .env 에 NAVER_CLIENT_ID 와 "
@@ -47,8 +54,7 @@ def naver_query_suffix(profile: dict[str, Any]) -> str: # 목표 기간(개월) 
 
 
 def naver_web_search_once(query: str, max_results: int = 4) -> str:
-    cid = (os.environ.get("NAVER_CLIENT_ID") or "").strip()
-    csec = (os.environ.get("NAVER_CLIENT_SECRET") or "").strip()
+    cid, csec = _naver_creds()
     display = min(max(1, max_results), 20)
     log_body_cap = 12_000
 

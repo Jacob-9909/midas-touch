@@ -8,7 +8,7 @@ thread마다 get_state()로 역설계했다(N+1). 이제 대화 메타데이터(
 (checkpoints 레포지토리의 delete_checkpoint_thread + 여기의 delete_chat_session).
 """
 
-from .connection import db_cursor
+from .connection import db_cursor, fetchall_dicts
 
 _UPSERT_SQL = """
 INSERT INTO chat_sessions (session_id, user_uuid, title, message_count, created_at, updated_at)
@@ -50,9 +50,7 @@ def list_chat_sessions(user_uuid: str | None = None, limit: int = 50) -> list[di
     """
     with db_cursor() as (_, cursor):
         cursor.execute(sql, params)
-        rows = cursor.fetchall()
-        cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, r)) for r in rows]
+        return fetchall_dicts(cursor)
 
 
 def delete_chat_session(session_id: str) -> int:

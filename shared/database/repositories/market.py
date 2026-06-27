@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from .connection import db_cursor
+from .connection import db_cursor, fetchall_dicts
 
 _MARKET_UPSERT_SQL = """
 INSERT INTO market_snapshots (
@@ -78,6 +78,4 @@ def get_latest_market_snapshots() -> list[dict]:
     """
     with db_cursor() as (_, cursor):
         cursor.execute(sql)
-        rows = cursor.fetchall()
-        cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, r)) for r in rows]
+        return fetchall_dicts(cursor)

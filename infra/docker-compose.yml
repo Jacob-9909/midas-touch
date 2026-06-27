@@ -20,7 +20,7 @@ services:
       - "7474:7474" # HTTP Web Console
       - "7687:7687" # Bolt binary protocol
     environment:
-      - NEO4J_AUTH=neo4j/PG_develop_2026_Secure
+      - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
       - NEO4J_PLUGINS=["apoc"]
     volumes:
       - neo4j_data:/data

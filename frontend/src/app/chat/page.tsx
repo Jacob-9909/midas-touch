@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { errMsg } from "@/lib/async";
 import Link from "next/link";
 import { Plus, TrashSimple, ArrowRight, PaperPlaneTilt } from "@phosphor-icons/react";
 import {
@@ -92,7 +93,7 @@ export default function ChatPage() {
       );
       setMessages(res.messages);
     } catch (e) {
-      toast(`기록 로드 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`기록 로드 실패: ${errMsg(e)}`, "error");
       setMessages([]);
     } finally {
       setLoadingHistory(false);
@@ -109,7 +110,7 @@ export default function ChatPage() {
       await refreshSessions();
       toast("대화를 삭제했습니다.", "success");
     } catch (e) {
-      toast(`삭제 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`삭제 실패: ${errMsg(e)}`, "error");
     }
   };
 
@@ -134,7 +135,7 @@ export default function ChatPage() {
       );
       await refreshSessions();
     } catch (e) {
-      toast(`응답 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`응답 실패: ${errMsg(e)}`, "error");
       setMessages((m) => m.slice(0, -1)); // 빈 assistant 버블 제거
     } finally {
       setBusy(false);

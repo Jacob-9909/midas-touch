@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { errMsg } from "@/lib/async";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -46,7 +47,7 @@ export default function DashboardPage() {
       try {
         setDetail(await apiGet<UserDetail>(`/api/v1/users/${uuid}`));
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(errMsg(e));
       }
     })();
   }, [uuid]);

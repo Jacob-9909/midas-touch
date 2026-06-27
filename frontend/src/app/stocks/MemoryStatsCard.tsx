@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { errMsg } from "@/lib/async";
 import { Brain, ArrowsClockwise } from "@phosphor-icons/react";
 import { getMemoryStats, validateMemory, type MemoryStats } from "@/lib/api";
 import { Card, SectionLabel } from "@/components/ui";
@@ -34,7 +35,7 @@ export default function MemoryStatsCard({ ticker }: { ticker?: string }) {
       );
       load();
     } catch (e) {
-      toast(`검증 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`검증 실패: ${errMsg(e)}`, "error");
     } finally {
       setBusy(false);
     }

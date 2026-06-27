@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { errMsg } from "@/lib/async";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MagnifyingGlass, ArrowRight } from "@phosphor-icons/react";
@@ -37,7 +38,7 @@ export default function HomePage() {
         setMarket(m.snapshots);
       } catch (e) {
         toast(
-          `백엔드 연결 실패: ${e instanceof Error ? e.message : e}. 서버(:8000) 확인`,
+          `백엔드 연결 실패: ${errMsg(e)}. 서버(:8000) 확인`,
           "error",
         );
       } finally {

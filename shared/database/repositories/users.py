@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from .connection import db_cursor
+from .connection import db_cursor, fetchall_dicts, fetchone_dict
 
 _USERS_UPSERT_SQL = """
 INSERT INTO users (
@@ -118,11 +118,7 @@ def bulk_upsert_users(rows: list[dict[str, Any]]) -> int:
 def get_user_by_uuid(uuid: str) -> dict | None:
     with db_cursor() as (_, cursor):
         cursor.execute("SELECT * FROM users WHERE uuid = %s", [uuid])
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        cols = [d[0] for d in cursor.description]
-        return dict(zip(cols, row))
+        return fetchone_dict(cursor)
 
 
 def list_users(limit: int = 50, offset: int = 0) -> list[dict]:
@@ -138,9 +134,7 @@ def list_users(limit: int = 50, offset: int = 0) -> list[dict]:
     """
     with db_cursor() as (_, cursor):
         cursor.execute(sql, [limit, offset])
-        rows = cursor.fetchall()
-        cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, r)) for r in rows]
+        return fetchall_dicts(cursor)
 
 
 def get_portfolios_by_user_uuid(uuid: str) -> list[dict]:
@@ -162,10 +156,8 @@ def get_portfolios_by_user_uuid(uuid: str) -> list[dict]:
     """
     with db_cursor() as (_, cursor):
         cursor.execute(pf_sql, [uuid])
-        pf_cols = [d[0] for d in cursor.description]
-        portfolios = [dict(zip(pf_cols, r)) for r in cursor.fetchall()]
+        portfolios = fetchall_dicts(cursor)
         for pf in portfolios:
             cursor.execute(item_sql, [pf["id"]])
-            item_cols = [d[0] for d in cursor.description]
-            pf["items"] = [dict(zip(item_cols, r)) for r in cursor.fetchall()]
+            pf["items"] = fetchall_dicts(cursor)
     return portfolios

@@ -35,6 +35,16 @@ _PERIOD_DAYS: dict[str, int] = {
 }
 
 
+def _resolve_window(req) -> tuple[str, str]:
+    """(start, end) 날짜 문자열을 계산한다. start_date가 있으면 그대로, 없으면 period로 역산."""
+    end = req.end_date or datetime.today().strftime("%Y-%m-%d")
+    if req.start_date:
+        return req.start_date, end
+    days = _PERIOD_DAYS.get(req.period, 370)
+    start = (datetime.today() - timedelta(days=days)).strftime("%Y-%m-%d")
+    return start, end
+
+
 class BacktestRequest(BaseModel):
     ticker: str = Field(min_length=1, max_length=20)
     strategy: str = "sma_crossover"
@@ -154,13 +164,7 @@ def run_backtest(req: BacktestRequest) -> dict:
     if req.strategy not in STRATEGY_LABELS:
         raise HTTPException(status_code=400, detail=f"지원하지 않는 전략: {req.strategy}")
 
-    end = req.end_date or datetime.today().strftime("%Y-%m-%d")
-    if req.start_date:
-        start = req.start_date
-    else:
-        days = _PERIOD_DAYS.get(req.period, 370)
-        start = (datetime.today() - timedelta(days=days)).strftime("%Y-%m-%d")
-
+    start, end = _resolve_window(req)
     analyzer = StockAnalyzer(
         ticker=req.ticker,
         start_date=start,
@@ -190,13 +194,7 @@ def grid_search(req: GridSearchRequest) -> dict:
             detail=f"그리드 서치를 지원하지 않는 전략: {req.strategy} (지원: {', '.join(GRID_RANGES)})",
         )
 
-    end = req.end_date or datetime.today().strftime("%Y-%m-%d")
-    if req.start_date:
-        start = req.start_date
-    else:
-        days = _PERIOD_DAYS.get(req.period, 370)
-        start = (datetime.today() - timedelta(days=days)).strftime("%Y-%m-%d")
-
+    start, end = _resolve_window(req)
     analyzer = StockAnalyzer(
         ticker=req.ticker,
         start_date=start,

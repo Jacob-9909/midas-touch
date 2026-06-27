@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { errMsg } from "@/lib/async";
 import { useRouter } from "next/navigation";
 import {
   Buildings,
@@ -163,7 +164,7 @@ export default function CheongyakPage() {
       .then((data) => alive && setItems(data))
       .catch((e) => {
         if (!alive) return;
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = errMsg(e);
         setError(msg);
         toast(`청약 조회 실패: ${msg}`, "error");
       });

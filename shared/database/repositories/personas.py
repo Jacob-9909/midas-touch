@@ -1,6 +1,6 @@
 """Personas 레포지토리 — pgvector 유사 페르소나 검색."""
 
-from .connection import db_cursor
+from .connection import db_cursor, fetchall_dicts
 
 
 def search_similar_personas_db(embedding: list[float], top_k: int = 3) -> list[dict]:
@@ -11,6 +11,4 @@ def search_similar_personas_db(embedding: list[float], top_k: int = 3) -> list[d
     """
     with db_cursor() as (_, cursor):
         cursor.execute(sql, (embedding, top_k))
-        rows = cursor.fetchall()
-        cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, r)) for r in rows]
+        return fetchall_dicts(cursor)

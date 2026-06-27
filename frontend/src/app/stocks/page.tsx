@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { errMsg } from "@/lib/async";
 import { useRouter } from "next/navigation";
 import {
   LineChart,
@@ -230,7 +231,7 @@ export default function StocksPage() {
   useEffect(() => {
     getStrategies()
       .then((r) => setStrategies(r.strategies))
-      .catch((e) => toast(`전략 목록 로드 실패: ${e instanceof Error ? e.message : e}`, "error"));
+      .catch((e) => toast(`전략 목록 로드 실패: ${errMsg(e)}`, "error"));
   }, [toast]);
 
   useEffect(() => {
@@ -259,7 +260,7 @@ export default function StocksPage() {
       const res = await getQuickAnalysis(symbol);
       setQa(res);
     } catch (e) {
-      toast(`빠른 분석 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`빠른 분석 실패: ${errMsg(e)}`, "error");
     } finally {
       setQaBusy(false);
     }
@@ -294,7 +295,7 @@ export default function StocksPage() {
         setResult(res);
         toast(`${res.ticker} 백테스트 완료`, "success");
       } catch (e) {
-        toast(`백테스트 실패: ${e instanceof Error ? e.message : e}`, "error");
+        toast(`백테스트 실패: ${errMsg(e)}`, "error");
       } finally {
         setBusy(false);
       }
@@ -317,7 +318,7 @@ export default function StocksPage() {
       setGridResult(res);
       toast(`${res.results_count}개 조합 탐색 완료`, "success");
     } catch (e) {
-      toast(`그리드 서치 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`그리드 서치 실패: ${errMsg(e)}`, "error");
     } finally {
       setGridBusy(false);
     }
@@ -337,7 +338,7 @@ export default function StocksPage() {
       const res = await runStockAnalysis({ ticker: result.ticker, strategy: result.strategy, metrics });
       setReport(res.report);
     } catch (e) {
-      toast(`리포트 생성 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`리포트 생성 실패: ${errMsg(e)}`, "error");
     } finally {
       setReportBusy(false);
     }

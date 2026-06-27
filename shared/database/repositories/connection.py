@@ -72,6 +72,21 @@ def db_cursor():
         pool.putconn(conn)
 
 
+def fetchall_dicts(cursor) -> list[dict]:
+    """cursor.fetchall() 결과를 컬럼명 키의 dict 리스트로 매핑."""
+    cols = [d[0] for d in cursor.description]
+    return [dict(zip(cols, r)) for r in cursor.fetchall()]
+
+
+def fetchone_dict(cursor) -> dict | None:
+    """cursor.fetchone() 결과를 컬럼명 키의 dict로 매핑(없으면 None)."""
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    cols = [d[0] for d in cursor.description]
+    return dict(zip(cols, row))
+
+
 def apply_schema(schema_path: str | None = None) -> None:
     """Run consolidated postgres_schema.sql against the database.
 
@@ -92,4 +107,7 @@ def apply_schema(schema_path: str | None = None) -> None:
     print("Schema applied successfully!")
 
 
-__all__ = ["_get_database_url", "get_connection", "db_cursor", "apply_schema", "Any"]
+__all__ = [
+    "_get_database_url", "get_connection", "db_cursor",
+    "fetchall_dicts", "fetchone_dict", "apply_schema", "Any",
+]

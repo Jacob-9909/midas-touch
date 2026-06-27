@@ -111,15 +111,15 @@ class NIMOpenAI(OpenAI):
             old_key[:10], new_key[:10]
         )
 
-    # 동기 메소드 오버라이딩 인터셉트
-    def chat(self, *args, **kwargs):
+    # 키 회전 + 동적 딜레이 retry 루프 (sync/async 공통 골격)
+    def _with_retry(self, call):
         max_retries = len(self._rotator.keys) * 2
         for attempt in range(1, max_retries + 1):
             try:
                 self._apply_delay()
                 if attempt == 1:
                     self._rotate_key_proactive()
-                res = super().chat(*args, **kwargs)
+                res = call()
                 self._handle_success()
                 return res
             except RETRY_EXCEPTIONS as exc:
@@ -130,61 +130,35 @@ class NIMOpenAI(OpenAI):
             except Exception as e:
                 logger.error("[NIM API] 동기 호출 중 일반 예외 발생: %s", e)
                 raise
+
+    async def _awith_retry(self, acall):
+        max_retries = len(self._rotator.keys) * 2
+        for attempt in range(1, max_retries + 1):
+            try:
+                await self._apply_adelay()
+                if attempt == 1:
+                    self._rotate_key_proactive()
+                res = await acall()
+                self._handle_success()
+                return res
+            except RETRY_EXCEPTIONS as exc:
+                self._handle_api_error(exc)
+                if attempt == max_retries:
+                    raise
+                logger.info("[NIM API] %d번째 비동기 재시도 대기...", attempt)
+            except Exception as e:
+                logger.error("[NIM API] 비동기 호출 중 일반 예외 발생: %s", e)
+                raise
+
+    # 동기/비동기 메소드 오버라이딩 인터셉트
+    def chat(self, *args, **kwargs):
+        return self._with_retry(lambda: super(NIMOpenAI, self).chat(*args, **kwargs))
 
     def complete(self, *args, **kwargs):
-        max_retries = len(self._rotator.keys) * 2
-        for attempt in range(1, max_retries + 1):
-            try:
-                self._apply_delay()
-                if attempt == 1:
-                    self._rotate_key_proactive()
-                res = super().complete(*args, **kwargs)
-                self._handle_success()
-                return res
-            except RETRY_EXCEPTIONS as exc:
-                self._handle_api_error(exc)
-                if attempt == max_retries:
-                    raise
-                logger.info("[NIM API] %d번째 재시도 대기...", attempt)
-            except Exception as e:
-                logger.error("[NIM API] 동기 호출 중 일반 예외 발생: %s", e)
-                raise
+        return self._with_retry(lambda: super(NIMOpenAI, self).complete(*args, **kwargs))
 
-    # 비동기 메소드 오버라이딩 인터셉트
     async def achat(self, *args, **kwargs):
-        max_retries = len(self._rotator.keys) * 2
-        for attempt in range(1, max_retries + 1):
-            try:
-                await self._apply_adelay()
-                if attempt == 1:
-                    self._rotate_key_proactive()
-                res = await super().achat(*args, **kwargs)
-                self._handle_success()
-                return res
-            except RETRY_EXCEPTIONS as exc:
-                self._handle_api_error(exc)
-                if attempt == max_retries:
-                    raise
-                logger.info("[NIM API] %d번째 비동기 재시도 대기...", attempt)
-            except Exception as e:
-                logger.error("[NIM API] 비동기 호출 중 일반 예외 발생: %s", e)
-                raise
+        return await self._awith_retry(lambda: super(NIMOpenAI, self).achat(*args, **kwargs))
 
     async def acomplete(self, *args, **kwargs):
-        max_retries = len(self._rotator.keys) * 2
-        for attempt in range(1, max_retries + 1):
-            try:
-                await self._apply_adelay()
-                if attempt == 1:
-                    self._rotate_key_proactive()
-                res = await super().acomplete(*args, **kwargs)
-                self._handle_success()
-                return res
-            except RETRY_EXCEPTIONS as exc:
-                self._handle_api_error(exc)
-                if attempt == max_retries:
-                    raise
-                logger.info("[NIM API] %d번째 비동기 재시도 대기...", attempt)
-            except Exception as e:
-                logger.error("[NIM API] 비동기 호출 중 일반 예외 발생: %s", e)
-                raise
+        return await self._awith_retry(lambda: super(NIMOpenAI, self).acomplete(*args, **kwargs))

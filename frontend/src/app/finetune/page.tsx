@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { errMsg } from "@/lib/async";
 import { Play, UploadSimple } from "@phosphor-icons/react";
 import { apiGet, apiPost, apiUpload, type JobState } from "@/lib/api";
 import { Card, PageTitle } from "@/components/ui";
@@ -46,7 +47,7 @@ export default function FinetunePage() {
       setJobId(null);
       toast(`업로드 완료: ${res.filename}`, "success");
     } catch (e) {
-      toast(`업로드 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`업로드 실패: ${errMsg(e)}`, "error");
     } finally {
       setBusy(false);
     }
@@ -63,7 +64,7 @@ export default function FinetunePage() {
       setSubDir(res.sub_dir);
       toast("파이프라인을 시작했습니다.", "info");
     } catch (e) {
-      toast(`실행 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`실행 실패: ${errMsg(e)}`, "error");
     }
   };
 
@@ -80,7 +81,7 @@ export default function FinetunePage() {
       );
       setPreview(p);
     } catch (e) {
-      toast(`프리뷰 로드 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`프리뷰 로드 실패: ${errMsg(e)}`, "error");
     }
   };
 

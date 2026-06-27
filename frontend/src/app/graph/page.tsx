@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { errMsg } from "@/lib/async";
 import { Play, MagnifyingGlass, ArrowUp } from "@phosphor-icons/react";
 import {
   apiGet,
@@ -31,7 +32,7 @@ export default function GraphPage() {
       setBuildJobId(res.job_id);
       toast("그래프 빌드를 시작했습니다.", "info");
     } catch (e) {
-      toast(`빌드 실행 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`빌드 실행 실패: ${errMsg(e)}`, "error");
     }
   };
 
@@ -42,7 +43,7 @@ export default function GraphPage() {
       setSnapshot(s);
       if (s.nodes.length === 0) toast("그래프가 비어 있습니다. 먼저 빌드하세요.", "info");
     } catch (e) {
-      toast(`스냅샷 로드 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`스냅샷 로드 실패: ${errMsg(e)}`, "error");
     } finally {
       setSnapLoading(false);
     }
@@ -58,7 +59,7 @@ export default function GraphPage() {
       });
       setAnswer(res);
     } catch (e) {
-      toast(`질의 실패: ${e instanceof Error ? e.message : e}`, "error");
+      toast(`질의 실패: ${errMsg(e)}`, "error");
     } finally {
       setAsking(false);
     }

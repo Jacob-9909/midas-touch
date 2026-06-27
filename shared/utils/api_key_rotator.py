@@ -60,21 +60,15 @@ class APIKeyRotator:
 
     def get_key(self) -> str:
         """현재 인덱스의 API 키를 가져옵니다. 현재 키가 쿨다운 중이면 가장 빠른 활성 키로 이동합니다."""
-        active = self._get_get_active_keys_safely()
+        active = self._get_active_keys()  # 항상 비어있지 않음(쿨다운 전부 만료 시 self.keys 반환)
         current_key = self.keys[self.index]
         if current_key not in active:
             self.index = self.keys.index(active[0])
         return self.keys[self.index]
 
-    def _get_get_active_keys_safely(self) -> list[str]:
-        active = self._get_active_keys()
-        if not active:
-            return self.keys
-        return active
-
     def rotate(self) -> str:
         """인덱스를 다음 활성 API 키로 회전하고 반환합니다."""
-        active = self._get_get_active_keys_safely()
+        active = self._get_active_keys()
         if len(active) <= 1:
             self.index = self.keys.index(active[0])
             return self.get_key()

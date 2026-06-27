@@ -1,6 +1,6 @@
 """Tax 레포지토리 — 세법 규칙 조회."""
 
-from .connection import db_cursor
+from .connection import db_cursor, fetchall_dicts
 
 
 def get_all_tax_rules() -> list[dict]:
@@ -11,6 +11,4 @@ def get_all_tax_rules() -> list[dict]:
     """
     with db_cursor() as (_, cursor):
         cursor.execute(sql)
-        rows = cursor.fetchall()
-        cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, r)) for r in rows]
+        return fetchall_dicts(cursor)
