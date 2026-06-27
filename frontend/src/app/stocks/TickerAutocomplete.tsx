@@ -26,13 +26,14 @@ export default function TickerAutocomplete({ value, onChange, onSubmit }: Ticker
       return;
     }
     const q = value.trim();
-    if (q.length < 1) {
-      setResults([]);
-      setOpen(false);
-      return;
-    }
     let alive = true;
     const t = setTimeout(() => {
+      if (!alive) return;
+      if (q.length < 1) {
+        setResults([]);
+        setOpen(false);
+        return;
+      }
       searchTickers(q)
         .then((r) => {
           if (!alive) return;

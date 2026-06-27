@@ -139,8 +139,10 @@ export default function CheongyakPage() {
   // 선택 유저의 거주 지역(개인화).
   useEffect(() => {
     if (!selected) {
+      /* eslint-disable react-hooks/set-state-in-effect -- 유저 해제 시 지역 개인화 상태 초기화 */
       setDistrict(null);
       setOnlyMyRegion(false);
+      /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
     let alive = true;
@@ -158,8 +160,10 @@ export default function CheongyakPage() {
 
   useEffect(() => {
     let alive = true;
+    /* eslint-disable react-hooks/set-state-in-effect -- kind 변경 시 로딩 리셋 후 재요청 */
     setItems(null);
     setError(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
     listCheongyak(kind, 120, 120)
       .then((data) => alive && setItems(data))
       .catch((e) => {

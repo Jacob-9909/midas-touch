@@ -23,6 +23,11 @@ from backend.app.services.trading import (
 )
 from backend.app.services.trading.ai_analysis import generate_analysis, generate_quick_report
 from backend.app.services.trading.analysis_memory import get_analysis_memory
+from shared.database.repositories.watchlist import (
+    add_watchlist,
+    list_watchlist,
+    remove_watchlist,
+)
 
 router = APIRouter(prefix="/api/v1/stocks", tags=["stocks"])
 
@@ -237,3 +242,26 @@ def memory_stats(ticker: str | None = None, days: int = 90) -> dict:
 def memory_validate(min_age_days: int = 7, limit: int = 50) -> dict:
     """미검증 과거 분석을 현재가와 비교해 적중 여부를 채운다(best-effort)."""
     return get_analysis_memory().validate_recent(min_age_days=min_age_days, limit=limit)
+
+
+class WatchlistRequest(BaseModel):
+    user_uuid: str = Field(min_length=1)
+    ticker: str = Field(min_length=1, max_length=20)
+
+
+@router.get("/watchlist")
+def get_watchlist(user_uuid: str) -> list[str]:
+    """유저 관심종목 티커 목록(최근 추가 순)."""
+    return list_watchlist(user_uuid)
+
+
+@router.post("/watchlist")
+def post_watchlist(req: WatchlistRequest) -> list[str]:
+    """관심종목 추가 후 갱신된 목록 반환."""
+    return add_watchlist(req.user_uuid, req.ticker)
+
+
+@router.delete("/watchlist")
+def delete_watchlist(user_uuid: str, ticker: str) -> list[str]:
+    """관심종목 제거 후 갱신된 목록 반환."""
+    return remove_watchlist(user_uuid, ticker)

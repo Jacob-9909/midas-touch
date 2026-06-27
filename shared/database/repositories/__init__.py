@@ -20,6 +20,7 @@ from .market import (
 from .personas import search_similar_personas_db
 from .sessions import delete_chat_session, list_chat_sessions, upsert_chat_session
 from .tax import get_all_tax_rules
+from .watchlist import add_watchlist, list_watchlist, remove_watchlist
 from .users import (
     bulk_upsert_users,
     get_portfolios_by_user_uuid,
@@ -46,6 +47,10 @@ __all__ = [
     "get_latest_market_snapshots",
     # tax
     "get_all_tax_rules",
+    # watchlist
+    "add_watchlist",
+    "list_watchlist",
+    "remove_watchlist",
     # personas
     "search_similar_personas_db",
     # checkpoints

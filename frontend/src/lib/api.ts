@@ -347,6 +347,21 @@ export function validateMemory(): Promise<MemoryValidateResult> {
   return apiPost("/api/v1/stocks/memory/validate", {});
 }
 
+// ---- 관심종목 (watchlist) ----  모든 함수가 갱신된 티커 목록을 반환
+export function getWatchlist(userUuid: string): Promise<string[]> {
+  return apiGet(`/api/v1/stocks/watchlist?user_uuid=${encodeURIComponent(userUuid)}`);
+}
+
+export function addWatchlist(userUuid: string, ticker: string): Promise<string[]> {
+  return apiPost("/api/v1/stocks/watchlist", { user_uuid: userUuid, ticker });
+}
+
+export function removeWatchlist(userUuid: string, ticker: string): Promise<string[]> {
+  return apiDelete(
+    `/api/v1/stocks/watchlist?user_uuid=${encodeURIComponent(userUuid)}&ticker=${encodeURIComponent(ticker)}`,
+  );
+}
+
 export function runStockAnalysis(body: {
   ticker: string;
   strategy: string;

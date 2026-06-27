@@ -26,6 +26,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const current = document.documentElement.classList.contains("light")
       ? "light"
       : "dark";
+    // 마운트 1회 DOM 동기화. lazy init은 SSR(서버엔 document 없음) 하이드레이션 불일치라 effect가 정답.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(current);
   }, []);
 

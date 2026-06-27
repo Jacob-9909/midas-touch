@@ -59,6 +59,7 @@ export default function DetailModal({ item, kind, onClose, onConsult }: DetailMo
 
   useEffect(() => {
     let alive = true;
+    /* eslint-disable-next-line react-hooks/set-state-in-effect -- kind/item 변경 시 로딩 리셋 후 재요청 */
     setData(null);
     setError(null);
 

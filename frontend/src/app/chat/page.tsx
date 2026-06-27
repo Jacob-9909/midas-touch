@@ -55,11 +55,13 @@ export default function ChatPage() {
   // 선택 유저가 바뀌면 세션 목록 갱신 + 새 대화 준비 (유저당 1회)
   useEffect(() => {
     if (!selected) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- 유저 변경 시 세션 목록 동기화 + 새 대화 준비(외부 동기) */
     void refreshSessions();
     if (initedFor.current !== selected.uuid) {
       initedFor.current = selected.uuid;
       startNewChat();
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [selected, refreshSessions, startNewChat]);
 
   useEffect(() => {

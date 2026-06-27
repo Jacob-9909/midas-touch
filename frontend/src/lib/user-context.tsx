@@ -30,6 +30,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       try {
+        // 마운트 1회 localStorage 복원. 서버엔 localStorage 없어 lazy init 불가 → effect가 정답.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedState(JSON.parse(raw));
       } catch {
         /* ignore */

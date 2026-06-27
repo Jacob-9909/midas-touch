@@ -52,6 +52,7 @@ import { Card, PageTitle, SectionLabel, Skeleton } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import TickerAutocomplete from "./TickerAutocomplete";
 import MemoryStatsCard from "./MemoryStatsCard";
+import WatchlistCard from "./WatchlistCard";
 
 const TOOLTIP_STYLE = {
   background: "var(--ink-2)",
@@ -226,6 +227,7 @@ export default function StocksPage() {
   const [report, setReport] = useState<string | null>(null);
   const [reportBusy, setReportBusy] = useState(false);
   const [gridResult, setGridResult] = useState<GridSearchResult | null>(null);
+  const [gridShownKey, setGridShownKey] = useState("");
   const [gridBusy, setGridBusy] = useState(false);
 
   useEffect(() => {
@@ -235,7 +237,8 @@ export default function StocksPage() {
   }, [toast]);
 
   useEffect(() => {
-    if (!selected) { setDetail(null); return; }
+    // 유저 미선택 시 보유종목 블록이 selected로 가드되므로 stale detail은 렌더되지 않음 → 동기 리셋 불필요.
+    if (!selected) return;
     let alive = true;
     apiGet<UserDetail>(`/api/v1/users/${selected.uuid}`)
       .then((d) => alive && setDetail(d))
@@ -303,10 +306,12 @@ export default function StocksPage() {
     [ticker, strategy, period, toast],
   );
 
-  // 전략·기간 바뀌면 직전 그리드 결과는 무효화.
-  useEffect(() => {
-    setGridResult(null);
-  }, [strategy, period, ticker]);
+  // 전략·기간·티커가 바뀌면 직전 그리드 결과는 무효 — 렌더 중 키 비교로 리셋(effect 불필요).
+  const gridKey = `${strategy}|${period}|${ticker}`;
+  if (gridShownKey !== gridKey) {
+    setGridShownKey(gridKey);
+    if (gridResult !== null) setGridResult(null);
+  }
 
   const optimize = async () => {
     const symbol = ticker.trim().toUpperCase();
@@ -357,10 +362,12 @@ export default function StocksPage() {
     seedChat(router, text);
   };
 
-  // ?ticker= deeplink
+  // ?ticker= deeplink — 마운트 1회 URL 읽기(클라이언트 전용). lazy init은 SSR 하이드레이션
+  // 불일치를 유발해 effect가 정답: 1회성 외부값 init이라 cascading-render 우려는 해당 없음.
   useEffect(() => {
     const tk = new URLSearchParams(window.location.search).get("ticker");
     if (tk) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab("backtest");
       void run(tk.toUpperCase(), "sma_crossover");
     }
@@ -422,6 +429,12 @@ export default function StocksPage() {
           </p>
         )}
       </Card>
+
+      <WatchlistCard
+        userUuid={selected?.uuid}
+        currentTicker={ticker}
+        onPick={(t) => (activeTab === "quick" ? runQuick(t) : run(t, strategy))}
+      />
 
       {/* ── 탭 선택 ──────────────────────────────────────────────────────── */}
       <div className="mb-6 flex gap-1 rounded-2xl border border-line bg-[var(--ink-2)]/30 p-1">
