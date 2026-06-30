@@ -297,10 +297,14 @@ class TestAnalysisMemory(unittest.TestCase):
 
         m = AnalysisMemory.__new__(AnalysisMemory)  # __init__(DB 접근) 건너뜀
         m._available = False
+        m._vec_available = False
         self.assertEqual(m.get_similar_patterns("AAPL", self._ind()), [])
         self.assertIsNone(m.store("AAPL", self._ind(), {"decision": "BUY"}))
         self.assertEqual(m.validate_recent()["validated"], 0)
+        self.assertEqual(m.validate_horizons()["validated"], 0)
         self.assertEqual(m.get_stats()["total"], 0)
+        self.assertEqual(m.get_horizon_stats()["horizons"], {})
+        self.assertEqual(m.get_level_accuracy(), {})
         self.assertIsNone(m.calibrate("high", "AAPL"))
 
     def test_accuracy_by_level(self) -> None:
@@ -323,6 +327,89 @@ class TestAnalysisMemory(unittest.TestCase):
         m._available = True
         self.assertIsNone(m.calibrate("unknown", "AAPL"))
         self.assertIsNone(m.calibrate(None))
+
+    def test_close_on_or_after(self) -> None:
+        from datetime import date
+
+        from backend.app.services.trading.analysis_memory import _close_on_or_after
+
+        dates = [date(2024, 1, 1), date(2024, 1, 3), date(2024, 1, 8)]
+        closes = [100.0, 110.0, 120.0]
+        # 정확히 일치하는 날
+        self.assertEqual(_close_on_or_after(dates, closes, date(2024, 1, 3)), 110.0)
+        # 주말/휴일 → 다음 거래일로 이월
+        self.assertEqual(_close_on_or_after(dates, closes, date(2024, 1, 5)), 120.0)
+        # 첫 봉 이전 target → 첫 봉
+        self.assertEqual(_close_on_or_after(dates, closes, date(2023, 12, 31)), 100.0)
+        # target이 미래(데이터 없음) → None
+        self.assertIsNone(_close_on_or_after(dates, closes, date(2024, 1, 9)))
+        self.assertIsNone(_close_on_or_after([], [], date(2024, 1, 1)))
+
+    def test_judge_outcome(self) -> None:
+        from backend.app.services.trading.analysis_memory import _judge_outcome
+
+        # BUY: +2% 초과만 적중
+        self.assertTrue(_judge_outcome("BUY", 3.0))
+        self.assertFalse(_judge_outcome("BUY", 1.5))
+        self.assertFalse(_judge_outcome("buy", -5.0))  # 대소문자 무관
+        # SELL: -2% 미만만 적중
+        self.assertTrue(_judge_outcome("SELL", -3.0))
+        self.assertFalse(_judge_outcome("SELL", -1.0))
+        # HOLD: |수익률| ≤ 5% 적중
+        self.assertTrue(_judge_outcome("HOLD", 4.0))
+        self.assertTrue(_judge_outcome("HOLD", -5.0))
+        self.assertFalse(_judge_outcome("HOLD", 7.0))
+        # 알 수 없는/빈 결정 → 미적중
+        self.assertFalse(_judge_outcome("강력매수", 10.0))
+        self.assertFalse(_judge_outcome(None, 10.0))
+
+    def test_feature_vector(self) -> None:
+        from backend.app.services.trading.analysis_memory import _FEATURE_DIM, _feature_vector
+
+        ind = {
+            "rsi": {"value": 70}, "macd": {"signal": "bullish"},
+            "moving_averages": {"trend": "bullish"}, "atr": {"volatility": "high", "pct": 0.025},
+            "bollinger": {"pct_b": 0.8}, "kdj": {"j": 90}, "change_pct": 0.02,
+        }
+        vec = _feature_vector(ind)
+        # 고정 차원 + 전부 [0,1] 범위
+        self.assertEqual(len(vec), _FEATURE_DIM)
+        self.assertTrue(all(0.0 <= x <= 1.0 for x in vec))
+        # 결정적: 같은 입력 같은 벡터
+        self.assertEqual(vec, _feature_vector(ind))
+        # 범주형 인코딩: macd/ma bullish=1.0
+        self.assertEqual(vec[1], 1.0)
+        self.assertEqual(vec[2], 1.0)
+        # 빈 입력도 안 죽고 중립값(neutral=0.5)
+        empty_vec = _feature_vector({})
+        self.assertEqual(len(empty_vec), _FEATURE_DIM)
+        self.assertEqual(empty_vec[1], 0.5)
+
+    def test_calibrated_level(self) -> None:
+        from backend.app.services.trading.analysis_memory import calibrated_level
+
+        self.assertEqual(calibrated_level(80), "high")
+        self.assertEqual(calibrated_level(70), "high")
+        self.assertEqual(calibrated_level(60), "medium")
+        self.assertEqual(calibrated_level(55), "medium")
+        self.assertEqual(calibrated_level(40), "low")
+        self.assertIsNone(calibrated_level(None))
+
+    def test_format_level_accuracy(self) -> None:
+        from backend.app.services.trading.ai_analysis import _format_level_accuracy
+
+        self.assertEqual(_format_level_accuracy(None), "")
+        self.assertEqual(_format_level_accuracy({}), "")
+        txt = _format_level_accuracy({"high": {"accuracy": 0.5, "n": 8}, "low": {"accuracy": 0.9, "n": 0}})
+        self.assertIn("high", txt)
+        self.assertIn("50%", txt)
+        self.assertIn("8건", txt)
+        self.assertNotIn("low", txt)  # n=0이면 노출 안 함
+
+    def test_horizon_days_map(self) -> None:
+        from backend.app.services.trading.analysis_memory import _HORIZON_DAYS
+
+        self.assertEqual(_HORIZON_DAYS, {"24h": 1, "3d": 3, "1w": 7, "1m": 30})
 
 
 class TestCheongyakParsing(unittest.TestCase):

@@ -293,6 +293,8 @@ export interface QuickOutlook {
   key_reasons: string[];
   risks: string[];
   calibration?: CalibrationInfo;
+  // 캘리브레이션으로 confidence가 보정된 경우, 보정 전 원본 자신감.
+  raw_confidence?: "high" | "medium" | "low";
   error?: string;
 }
 
@@ -305,7 +307,19 @@ export interface SimilarPattern {
   created_at: string | null;
   was_correct: boolean | null;
   actual_return_pct: number | null;
+  // 교차종목 검색 시 해당 사례의 종목(현재 분석 종목과 다를 수 있음).
+  ticker?: string;
   similarity: number;
+}
+
+export interface HorizonStat {
+  n: number;
+  accuracy_pct: number;
+  avg_return_pct: number;
+}
+
+export interface HorizonStats {
+  horizons: Partial<Record<"24h" | "3d" | "1w" | "1m", HorizonStat>>;
 }
 
 export interface QuickAnalysis {
@@ -355,6 +369,11 @@ export function runGridSearch(body: {
 export function getMemoryStats(ticker?: string): Promise<MemoryStats> {
   const q = ticker ? `?ticker=${encodeURIComponent(ticker)}` : "";
   return apiGet(`/api/v1/stocks/memory/stats${q}`);
+}
+
+export function getHorizonStats(ticker?: string): Promise<HorizonStats> {
+  const q = ticker ? `?ticker=${encodeURIComponent(ticker)}` : "";
+  return apiGet(`/api/v1/stocks/memory/horizon-stats${q}`);
 }
 
 export function validateMemory(): Promise<MemoryValidateResult> {

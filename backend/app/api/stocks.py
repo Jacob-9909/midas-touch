@@ -22,7 +22,7 @@ from backend.app.services.trading import (
     StockAnalyzer,
 )
 from backend.app.services.trading.ai_analysis import generate_analysis, generate_quick_report
-from backend.app.services.trading.analysis_memory import get_analysis_memory
+from backend.app.services.trading.analysis_memory import calibrated_level, get_analysis_memory
 from shared.database.repositories.watchlist import (
     add_watchlist,
     list_watchlist,
@@ -99,11 +99,14 @@ def quick_analysis(ticker: str = Query(min_length=1, max_length=20)) -> dict:
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"지표 계산 실패: {exc}")
 
-    # 과거 유사 패턴 검색 → LLM 프롬프트 컨텍스트로 주입(메모리 미가용이면 빈 리스트).
+    # 과거 유사 패턴(교차종목) + 자신감별 적중률 → LLM 프롬프트 컨텍스트로 주입(미가용이면 빈 값).
     memory = get_analysis_memory()
     similar = memory.get_similar_patterns(symbol, indicators)
+    level_accuracy = memory.get_level_accuracy(ticker=symbol)
 
-    outlook = generate_quick_report(symbol, indicators, similar_patterns=similar)
+    outlook = generate_quick_report(
+        symbol, indicators, similar_patterns=similar, level_accuracy=level_accuracy
+    )
 
     # 이번 분석을 메모리에 저장(다음 분석의 유사 패턴 후보가 됨). 실패해도 응답엔 영향 없음.
     if not outlook.get("error"):
@@ -112,6 +115,11 @@ def quick_analysis(ticker: str = Query(min_length=1, max_length=20)) -> dict:
         calibration = memory.calibrate(outlook.get("confidence"), ticker=symbol)
         if calibration:
             outlook["calibration"] = calibration
+            # 보정 적중률을 실제 자신감 레벨로 반영(결정에 피드백). 원본은 raw_confidence로 보존.
+            adjusted = calibrated_level(calibration.get("calibrated_pct"))
+            if adjusted and adjusted != outlook.get("confidence"):
+                outlook["raw_confidence"] = outlook.get("confidence")
+                outlook["confidence"] = adjusted
 
     return {**indicators, "outlook": outlook, "similar_patterns": similar}
 
@@ -238,10 +246,25 @@ def memory_stats(ticker: str | None = None, days: int = 90) -> dict:
     return get_analysis_memory().get_stats(ticker=ticker, days=days)
 
 
+@router.get("/memory/horizon-stats")
+def memory_horizon_stats(ticker: str | None = None, days: int = 180) -> dict:
+    """다중 시간축(24h/3d/1w/1m)별 적중률·평균수익. DB 미가용이면 빈 horizons(200)."""
+    return get_analysis_memory().get_horizon_stats(ticker=ticker, days=days)
+
+
 @router.post("/memory/validate")
-def memory_validate(min_age_days: int = 7, limit: int = 50) -> dict:
-    """미검증 과거 분석을 현재가와 비교해 적중 여부를 채운다(best-effort)."""
-    return get_analysis_memory().validate_recent(min_age_days=min_age_days, limit=limit)
+def memory_validate(horizon_days: int = 7, limit: int = 50) -> dict:
+    """미검증 과거 분석을 '분석시점 +horizon_days 영업일' 종가와 비교해 적중 여부를 채운다.
+
+    백그라운드 스케줄러(main.py lifespan)가 주기적으로 같은 작업을 돌리며, 이 엔드포인트는 수동 트리거용.
+    """
+    return get_analysis_memory().validate_recent(horizon_days=horizon_days, limit=limit)
+
+
+@router.post("/memory/validate-horizons")
+def memory_validate_horizons(limit: int = 50) -> dict:
+    """다중 시간축(24h/3d/1w/1m) 전망을 각 구간 종가로 개별 채점한다(스케줄러가 주기 실행, 수동 트리거용)."""
+    return get_analysis_memory().validate_horizons(limit=limit)
 
 
 class WatchlistRequest(BaseModel):
