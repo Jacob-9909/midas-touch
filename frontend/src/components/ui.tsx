@@ -56,6 +56,37 @@ export function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`skeleton ${className}`} />;
 }
 
+/** 회전 스피너. 크기·색은 className으로 (예: "h-4 w-4 text-accent"). border-current를 쓴다. */
+export function Spinner({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <span
+      role="status"
+      aria-label="로딩 중"
+      className={`inline-block shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent ${className}`}
+    />
+  );
+}
+
+/** 로딩 중 영역 표시 — 스피너 + "로딩중입니다…" 라벨(스켈레톤 대신 진행감을 준다). */
+export function LoadingBlock({
+  label = "로딩중입니다…",
+  className = "",
+}: {
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={`flex flex-col items-center justify-center gap-3 py-12 text-muted ${className}`}
+    >
+      <Spinner className="h-7 w-7 text-accent" />
+      <span className="text-sm">{label}</span>
+    </div>
+  );
+}
+
 export function fmtKRW(n: number | null | undefined): string {
   if (n == null) return "-";
   return new Intl.NumberFormat("ko-KR").format(n) + "원";

@@ -13,7 +13,8 @@ import {
 import { useSelectedUser } from "@/lib/user-context";
 import { useToast } from "@/lib/toast";
 import { consumeChatSeed } from "@/lib/chat-seed";
-import { Card, PageTitle } from "@/components/ui";
+import { Card, PageTitle, Spinner } from "@/components/ui";
+import { Markdown } from "@/components/Markdown";
 
 interface Msg {
   role: "user" | "assistant";
@@ -232,13 +233,22 @@ export default function ChatPage() {
                     className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[80%] whitespace-pre-wrap rounded-[var(--r-lg)] px-4 py-3 text-sm leading-relaxed [box-shadow:var(--shadow-soft)] ${
+                      className={`max-w-[80%] rounded-[var(--r-lg)] px-4 py-3 text-sm leading-relaxed [box-shadow:var(--shadow-soft)] ${
                         m.role === "user"
-                          ? "rounded-br-md bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-fg"
+                          ? "whitespace-pre-wrap rounded-br-md bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-fg"
                           : "rounded-bl-md border border-line bg-[var(--ink-2)] text-fg"
                       }`}
                     >
-                      {m.content || (busy ? <span className="caret" /> : "")}
+                      {/* 유저 입력은 평문 그대로, 어시스턴트 응답은 마크다운 렌더(평문이면 그대로 잘 나옴) */}
+                      {m.role === "assistant" ? (
+                        m.content ? (
+                          <Markdown>{m.content}</Markdown>
+                        ) : busy ? (
+                          <span className="caret" />
+                        ) : null
+                      ) : (
+                        m.content
+                      )}
                     </div>
                   </div>
                 ))}
@@ -264,8 +274,8 @@ export default function ChatPage() {
                   aria-label="전송"
                   className="btn-accent flex items-center gap-1.5 px-5 py-2.5 text-sm disabled:opacity-40"
                 >
-                  <PaperPlaneTilt weight="fill" size={15} />
-                  전송
+                  {busy ? <Spinner className="h-3.5 w-3.5" /> : <PaperPlaneTilt weight="fill" size={15} />}
+                  {busy ? "응답 중…" : "전송"}
                 </button>
               </div>
             </Card>

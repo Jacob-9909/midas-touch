@@ -49,7 +49,7 @@ import {
 } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { seedChat } from "@/lib/chat-seed";
-import { Card, PageTitle, SectionLabel, Skeleton } from "@/components/ui";
+import { Card, PageTitle, SectionLabel, Spinner, LoadingBlock } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import TickerAutocomplete from "./TickerAutocomplete";
 import MemoryStatsCard from "./MemoryStatsCard";
@@ -489,7 +489,7 @@ export default function StocksPage() {
             disabled={qaBusy || busy}
             className="btn-accent flex h-10 items-center justify-center gap-2 px-5 text-sm disabled:opacity-50"
           >
-            <Play weight="fill" size={16} />
+            {qaBusy || busy ? <Spinner className="h-4 w-4" /> : <Play weight="fill" size={16} />}
             {qaBusy || busy ? "분석 중…" : activeTab === "quick" ? "빠른 분석" : "백테스트 실행"}
           </button>
         </div>
@@ -564,7 +564,11 @@ export default function StocksPage() {
               </p>
             </Card>
           )}
-          {qaBusy && <Skeleton className="h-80 w-full rounded-2xl" />}
+          {qaBusy && (
+            <Card>
+              <LoadingBlock label="기술적 지표와 AI 전망을 분석 중입니다…" />
+            </Card>
+          )}
 
           {qa && (
             <>
@@ -920,7 +924,7 @@ export default function StocksPage() {
                     disabled={gridBusy}
                     className="btn-ghost flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-50"
                   >
-                    <Target size={14} className={gridBusy ? "animate-pulse" : ""} />
+                    {gridBusy ? <Spinner className="h-3.5 w-3.5" /> : <Target size={14} />}
                     {gridBusy ? "탐색 중…" : "최적 파라미터 탐색"}
                   </button>
                 </div>
@@ -959,7 +963,11 @@ export default function StocksPage() {
             )}
           </Card>
 
-          {busy && <Skeleton className="h-80 w-full rounded-2xl" />}
+          {busy && (
+            <Card>
+              <LoadingBlock label="백테스트를 실행 중입니다…" />
+            </Card>
+          )}
 
           {result && m && (
             <>
@@ -1109,11 +1117,11 @@ export default function StocksPage() {
                     disabled={reportBusy}
                     className="btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm disabled:opacity-50"
                   >
-                    <Sparkle size={14} />
+                    {reportBusy ? <Spinner className="h-3.5 w-3.5" /> : <Sparkle size={14} />}
                     {reportBusy ? "생성 중…" : report ? "다시 생성" : "리포트 생성"}
                   </button>
                 </div>
-                {reportBusy && <Skeleton className="mt-3 h-40 w-full rounded-xl" />}
+                {reportBusy && <LoadingBlock label="AI 투자 리포트를 작성 중입니다…" className="py-8" />}
                 {report && (
                   <article className="prose-invert mt-3 whitespace-pre-wrap text-sm leading-relaxed text-fg/90">
                     {report}
