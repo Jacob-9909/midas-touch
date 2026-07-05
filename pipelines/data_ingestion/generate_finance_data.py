@@ -6,7 +6,9 @@ import sys
 import pandas as pd
 from datasets import load_dataset
 from huggingface_hub import HfApi
-from openai import AsyncOpenAI
+from google import genai
+from google.genai import types
+from pydantic import BaseModel
 from tqdm import tqdm as sync_tqdm
 from tqdm.asyncio import tqdm
 from dotenv import load_dotenv
@@ -19,23 +21,81 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from shared.database.connector import bulk_upsert_users
+from shared.database.connector import bulk_upsert_users, bulk_upsert_portfolios
+
+# 권장 자산배분 6개 자산군 (portfolios 테이블 비율 컬럼과 1:1, 합계 100)
+RATIO_KEYS = ["stock", "bond", "deposit", "real_estate", "gold", "cash"]
+
+
+# Gemini structured output 스키마 — 프롬프트 JSON 구조와 1:1.
+# response_schema로 강제하면 콤마 누락·잘림 같은 파싱 에러 클래스가 사라진다.
+class _AssetTypes(BaseModel):
+    stock: int
+    bond: int
+    deposit: int
+    real_estate: int
+
+
+class _AssetSize(BaseModel):
+    total_amount: int
+    asset_types: _AssetTypes
+    specific_items: str
+    monthly_income: int
+    monthly_investable: int
+
+
+class _InvestmentPropensity(BaseModel):
+    aggressiveness: int
+    preferred_asset: str
+    financial_literacy: int
+
+
+class _InvestmentGoal(BaseModel):
+    target_return_percent: int
+    investable_period_months: int
+    requires_liquidity: int
+
+
+class _RecommendedAllocation(BaseModel):
+    strategy_name: str
+    stock: int
+    bond: int
+    deposit: int
+    real_estate: int
+    gold: int
+    cash: int
+
+
+class FinanceProfile(BaseModel):
+    asset_size: _AssetSize
+    investment_propensity: _InvestmentPropensity
+    investment_goal: _InvestmentGoal
+    recommended_allocation: _RecommendedAllocation
 
 # ==========================================
 # 1. 설정 (Settings)
 # ==========================================
 # 생성할 데이터 수 지정
-NUM_SAMPLES = 50
-
+NUM_SAMPLES = 200
 # 초당 요청 수 제어 (딜레이를 단축하여 대기 시간 단축)
 DELAY_BETWEEN_REQUESTS = 0.5 
 
-# 클라이언트 설정 (환경 변수 또는 .env에 NVIDIA_API_KEY가 설정되어 있어야 합니다)
-client = AsyncOpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
-    api_key=os.environ.get("NVIDIA_API_KEY", ""),
-    timeout=300.0
-)
+# Gemini via Vertex AI. 인증은 서비스 계정 키(GOOGLE_APPLICATION_CREDENTIALS) 기반 ADC로 자동 처리.
+# document_parser.py의 비전 전사와 동일한 패턴 — 별도 GEMINI_API_KEY 불필요.
+_GCP_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT")
+_GCP_LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+_client = None
+
+
+def _get_client():
+    """Vertex Gemini 클라이언트를 지연 생성(테스트가 인증 없이 모듈을 임포트할 수 있게 함)."""
+    global _client
+    if _client is None:
+        if not _GCP_PROJECT:
+            raise RuntimeError("GOOGLE_CLOUD_PROJECT 환경변수가 설정되어 있지 않습니다.")
+        _client = genai.Client(vertexai=True, project=_GCP_PROJECT, location=_GCP_LOCATION)
+    return _client
+
 
 MODEL_NAME = os.environ.get("PERSONA_GENERATION_MODEL")
 if not MODEL_NAME:
@@ -83,12 +143,22 @@ PROMPT_TEMPLATE = """당신은 금융 데이터를 분석하고 페르소나에 
     "target_return_percent": 15,
     "investable_period_months": 36,
     "requires_liquidity": 0
+  }},
+  "recommended_allocation": {{
+    "strategy_name": "성장형 60/40",
+    "stock": 55,
+    "bond": 15,
+    "deposit": 10,
+    "real_estate": 10,
+    "gold": 5,
+    "cash": 5
   }}
 }}
 
 [제약 조건]
 - asset_types의 하위 값들(stock, bond, deposit, real_estate)은 각 자산의 실제 보유 금액(원화 기준 정수)이어야 하며, 이 값들의 합은 반드시 total_amount와 정확히 일치해야 합니다.
 - aggressiveness, financial_literacy는 1~10 사이의 숫자입니다.
+- recommended_allocation은 이 사람의 현재 보유가 아니라, 투자성향·목표·기간을 반영해 '권장'하는 이상적 자산배분 비율(%)입니다. stock/bond/deposit/real_estate/gold/cash 6개 값의 합이 100에 가깝도록 하고, 공격성이 높고 기간이 길수록 주식 비중을, 유동성이 필요하면 현금/예적금 비중을 높이세요. strategy_name은 20자 이내 한국어 전략명입니다.
 - 모든 금액이나 퍼센트, 개월 수는 문자열이 아닌 정수(숫자)로 입력하세요."""
 
 # ==========================================
@@ -109,6 +179,19 @@ def extract_json(text):
     
     return text
 
+def normalize_ratios(alloc):
+    """권장 배분 6개 비율을 합계 정확히 100.00으로 정규화(portfolios CHECK 제약 충족)."""
+    vals = {k: max(0.0, float(alloc.get(k, 0) or 0)) for k in RATIO_KEYS}
+    total = sum(vals.values())
+    if total <= 0:
+        # 안전망: 정보가 없으면 보수적 균등 배분
+        return {**{k: 0.0 for k in RATIO_KEYS}, "deposit": 50.0, "cash": 50.0}
+    scaled = {k: round(v / total * 100, 2) for k, v in vals.items()}
+    # 반올림 잔차를 가장 큰 버킷에 흡수시켜 합을 정확히 100으로 맞춘다
+    top = max(scaled, key=scaled.get)
+    scaled[top] = round(scaled[top] + (100.0 - sum(scaled.values())), 2)
+    return scaled
+
 async def generate_finance_data(row, semaphore):
     """개별 행에 대해 LLM을 호출하여 금융 데이터를 생성합니다."""
     async with semaphore:
@@ -121,19 +204,25 @@ async def generate_finance_data(row, semaphore):
         
         for attempt in range(max_retries):
             try:
-                # 2. LLM 호출 (JSON 파싱을 위해 stream=False 사용)
-                response = await client.chat.completions.create(
+                # 2. Gemini 호출 (스키마 강제 + thinking off로 잘림/파싱에러 방지)
+                response = await _get_client().aio.models.generate_content(
                     model=MODEL_NAME,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.7,
-                    max_tokens=3000,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.7,
+                        max_output_tokens=3000,
+                        response_mime_type="application/json",
+                        response_schema=FinanceProfile,
+                        thinking_config=types.ThinkingConfig(thinking_budget=0),
+                    ),
                 )
-                
-                content = response.choices[0].message.content
-                json_str = extract_json(content)
-                
-                # 3. JSON 파싱
-                finance_data = json.loads(json_str)
+
+                # 3. 파싱 — 스키마 강제라 response.parsed가 곧 검증된 객체.
+                #    혹시 None이면 원문 텍스트에서 JSON 추출로 폴백.
+                if response.parsed is not None:
+                    finance_data = response.parsed.model_dump()
+                else:
+                    finance_data = json.loads(extract_json(response.text))
                 
                 # 행 데이터에 병합하기 위해 딕셔너리 구조 평탄화 (Flatten)
                 result = row.to_dict()
@@ -159,7 +248,13 @@ async def generate_finance_data(row, semaphore):
                 result['target_return_percent'] = finance_data['investment_goal']['target_return_percent']
                 result['investable_period_months'] = finance_data['investment_goal']['investable_period_months']
                 result['requires_liquidity'] = finance_data['investment_goal']['requires_liquidity']
-                
+
+                # 권장 자산배분 카드 (portfolios 테이블용 비율 + 전략명)
+                alloc = finance_data['recommended_allocation']
+                result['strategy_name'] = str(alloc.get('strategy_name', ''))[:100]
+                for k, v in normalize_ratios(alloc).items():
+                    result[f'{k}_ratio'] = v
+
                 return result
                 
             except Exception as e:
@@ -249,6 +344,25 @@ async def main():
             saved += bulk_upsert_users(rows[i : i + BATCH_SIZE])
             pbar.update(min(BATCH_SIZE, len(rows) - i))
     print(f"    완료! {saved}/{len(rows)}건 적재.")
+
+    # 4.6. 권장 자산배분을 portfolios 테이블에 적재 (대시보드 '권장 포트폴리오' 카드용)
+    pf_rows = [
+        {
+            "uuid": r.get("uuid"),
+            "name": r.get("strategy_name"),
+            "strategy_name": r.get("strategy_name"),
+            **{f"{k}_ratio": r.get(f"{k}_ratio", 0) for k in RATIO_KEYS},
+        }
+        for r in rows
+        if r.get("uuid")
+    ]
+    print(f"\n4.6. PostgreSQL(portfolios)에 {len(pf_rows)}건 적재 중...")
+    pf_saved = 0
+    with sync_tqdm(total=len(pf_rows), unit="rows") as pbar:
+        for i in range(0, len(pf_rows), BATCH_SIZE):
+            pf_saved += bulk_upsert_portfolios(pf_rows[i : i + BATCH_SIZE])
+            pbar.update(min(BATCH_SIZE, len(pf_rows) - i))
+    print(f"    완료! {pf_saved}/{len(pf_rows)}건 적재.")
 
     # 5. 허깅페이스 비공개 데이터셋에 업로드
     hf_token = os.environ.get("HF_TOKEN")

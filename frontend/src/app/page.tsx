@@ -4,7 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { errMsg } from "@/lib/async";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MagnifyingGlass, ArrowRight } from "@phosphor-icons/react";
+import {
+  MagnifyingGlass,
+  ArrowRight,
+  UsersThree,
+  ChartPie,
+  ChatsCircle,
+} from "@phosphor-icons/react";
 import { apiGet, type MarketSnapshot, type UserSummary } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { useToast } from "@/lib/toast";
@@ -17,6 +23,25 @@ import {
   fmtKRW,
   fmtKRWShort,
 } from "@/components/ui";
+
+// 단일 여정 3단계 — 랜딩 진입점에서 서비스의 한 문장을 행동으로 풀어준다.
+const JOURNEY = [
+  {
+    icon: UsersThree,
+    title: "투자자 선택",
+    body: "아래에서 나와 조건이 비슷한 투자자 페르소나를 고릅니다.",
+  },
+  {
+    icon: ChartPie,
+    title: "또래 벤치마킹",
+    body: "대시보드에서 유사 투자자들의 권장 자산배분을 내 현황과 나란히 봅니다.",
+  },
+  {
+    icon: ChatsCircle,
+    title: "근거로 상담",
+    body: "에이전트에게 물으면 세법·시장·또래 데이터를 근거로 답합니다.",
+  },
+] as const;
 
 export default function HomePage() {
   const { selected, setSelected } = useSelectedUser();
@@ -68,9 +93,27 @@ export default function HomePage() {
     <div className="space-y-10">
       <PageTitle
         eyebrow="Midas Touch"
-        title="자산관리 콘솔"
-        subtitle="유저를 선택하면 챗봇·대시보드가 해당 유저 기준으로 동작합니다."
+        title="나와 비슷한 투자자는 어떻게 하고 있을까"
+        subtitle="유사 투자자의 자산배분을 벤치마크로 보여주고, 세법·시장 근거로 상담하는 자산관리 어시스턴트. (정보 제공 목적이며 투자자문이 아닙니다.)"
       />
+
+      {/* 단일 여정 안내 — 진입점에서 "무엇을 하고 가는지" 한눈에 */}
+      <section className="grid gap-3 sm:grid-cols-3">
+        {JOURNEY.map((s, i) => (
+          <Reveal key={s.title} index={i}>
+            <Card className="h-full p-4">
+              <div className="flex items-center gap-2 text-accent">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full border border-line text-xs font-medium">
+                  {i + 1}
+                </span>
+                <s.icon size={18} weight="duotone" />
+                <span className="text-sm font-medium text-fg">{s.title}</span>
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-muted">{s.body}</p>
+            </Card>
+          </Reveal>
+        ))}
+      </section>
 
       {/* 시장 지표 */}
       <section className="animate-rise">

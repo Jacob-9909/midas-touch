@@ -22,6 +22,7 @@ from .sessions import delete_chat_session, list_chat_sessions, upsert_chat_sessi
 from .tax import get_all_tax_rules
 from .watchlist import add_watchlist, list_watchlist, remove_watchlist
 from .users import (
+    bulk_upsert_portfolios,
     bulk_upsert_users,
     get_portfolios_by_user_uuid,
     get_user_by_uuid,
@@ -37,6 +38,7 @@ __all__ = [
     # users
     "upsert_user",
     "bulk_upsert_users",
+    "bulk_upsert_portfolios",
     "get_user_by_uuid",
     "list_users",
     "get_portfolios_by_user_uuid",

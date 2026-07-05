@@ -218,9 +218,12 @@ export default function DashboardPage() {
       {activePf && (
         <Reveal index={3}>
         <Card>
-          <h2 className="mb-3 text-sm font-medium text-fg">
+          <h2 className="mb-1 text-sm font-medium text-fg">
             포트폴리오: {activePf.name ?? activePf.strategy_name ?? "전략"}
           </h2>
+          <p className="mb-3 text-xs leading-relaxed text-muted">
+            {allocationRationale(p, activePf)}
+          </p>
           <div className="grid gap-6 lg:grid-cols-2">
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
@@ -280,6 +283,58 @@ export default function DashboardPage() {
         </Card>
         </Reveal>
       )}
+
+      {/* 리밸런싱 제안 — 현재 보유 vs 권장 배분의 격차와 조정 액션 */}
+      {activePf && Number(p.total_amount) > 0 && (
+        <Reveal index={4}>
+          <Card>
+            <h2 className="mb-1 text-sm font-medium text-fg">리밸런싱 제안</h2>
+            <p className="mb-3 text-xs text-muted">
+              현재 보유를 권장 배분에 맞추려면 아래처럼 조정하세요. (총자산 {fmtKRW(Number(p.total_amount))} 기준)
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-left text-xs">
+                <thead className="text-muted">
+                  <tr>
+                    <th className="py-1.5 font-medium">자산</th>
+                    <th className="py-1.5 text-right font-medium">현재</th>
+                    <th className="py-1.5 text-right font-medium">권장</th>
+                    <th className="py-1.5 text-right font-medium">조정</th>
+                    <th className="py-1.5 text-right font-medium">금액</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rebalanceRows(p, activePf as unknown as Record<string, number>, Number(p.total_amount)).map((r) => {
+                    const hold = Math.abs(r.gap) < 1; // 1%p 미만은 유지로 간주
+                    const up = r.gap > 0;
+                    return (
+                      <tr key={r.label} className="border-t border-line/60">
+                        <td className="py-1.5">{r.label}</td>
+                        <td className="py-1.5 text-right font-mono text-muted">{r.curPct.toFixed(1)}%</td>
+                        <td className="py-1.5 text-right font-mono text-fg">{r.recPct.toFixed(1)}%</td>
+                        <td
+                          className={`py-1.5 text-right font-mono ${
+                            hold ? "text-muted" : up ? "text-[#58c8a0]" : "text-[#e2607b]"
+                          }`}
+                        >
+                          {hold ? "유지" : `${up ? "▲" : "▼"} ${Math.abs(r.gap).toFixed(1)}%p`}
+                        </td>
+                        <td
+                          className={`py-1.5 text-right font-mono ${
+                            hold ? "text-muted" : up ? "text-[#58c8a0]" : "text-[#e2607b]"
+                          }`}
+                        >
+                          {hold ? "-" : `${up ? "+" : "−"}${fmtKRW(Math.abs(r.amount))}`}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </Reveal>
+      )}
     </div>
   );
 }
@@ -315,4 +370,55 @@ function ratioData(pf: {
     { name: "금", value: Number(pf.gold_ratio) },
     { name: "현금", value: Number(pf.cash_ratio) },
   ].filter((d) => d.value > 0);
+}
+
+type Prof = Record<string, number | string | null>;
+
+// 권장 배분의 '근거'를 페르소나 신호(공격성·투자기간·유동성)로 설명한다.
+// LLM 재생성 없이 프로필에서 파생 — 배분을 실제 입력값과 연결해 투명하게 보여준다.
+function allocationRationale(
+  p: Prof,
+  pf: { stock_ratio: number; deposit_ratio: number; cash_ratio: number },
+): string {
+  const agg = Number(p.aggressiveness) || 0;
+  const horizon = Number(p.investable_period_months) || 0;
+  const liq = Number(p.requires_liquidity) === 1; // boolean true → Number()로 1
+
+  const stock = Number(pf.stock_ratio);
+  const safe = Number(pf.deposit_ratio) + Number(pf.cash_ratio);
+
+  const posture =
+    agg >= 7
+      ? `공격적 성향(공격성 ${agg}/10)이라 주식 비중을 ${stock}%로 높였고`
+      : agg <= 3
+        ? `보수적 성향(공격성 ${agg}/10)이라 안전자산 위주로 배분했고`
+        : `중립적 성향(공격성 ${agg}/10)에 맞춰 균형 있게 배분했고`;
+  const horizonClause =
+    horizon >= 36
+      ? `투자기간이 길어(${horizon}개월) 성장자산을 담을 여유가 있습니다`
+      : horizon > 0 && horizon < 12
+        ? `투자기간이 짧아(${horizon}개월) 변동성을 낮췄습니다`
+        : `투자기간 ${horizon || "-"}개월을 반영했습니다`;
+  const liqClause = liq ? ` 유동성 필요를 고려해 현금·예적금을 ${safe}% 확보했습니다.` : "";
+  return `${posture}, ${horizonClause}.${liqClause}`;
+}
+
+// 현재 보유(금액) 대비 권장 배분(%)의 격차와 조정 방향/금액을 계산한다.
+const REBAL_ASSETS = [
+  { label: "주식", amt: "stock_amount", ratio: "stock_ratio" },
+  { label: "채권", amt: "bond_amount", ratio: "bond_ratio" },
+  { label: "예적금", amt: "deposit_amount", ratio: "deposit_ratio" },
+  { label: "부동산", amt: "real_estate_amount", ratio: "real_estate_ratio" },
+  { label: "금", amt: null, ratio: "gold_ratio" },
+  { label: "현금", amt: null, ratio: "cash_ratio" },
+] as const;
+
+function rebalanceRows(p: Prof, pf: Record<string, number>, total: number) {
+  return REBAL_ASSETS.map((a) => {
+    const curAmt = a.amt ? Number(p[a.amt]) || 0 : 0;
+    const curPct = total > 0 ? (curAmt / total) * 100 : 0;
+    const recPct = Number(pf[a.ratio]) || 0;
+    const gap = recPct - curPct;
+    return { label: a.label, curPct, recPct, gap, amount: (gap / 100) * total };
+  });
 }

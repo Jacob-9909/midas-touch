@@ -84,6 +84,14 @@ DEFAULT_PARAMS: dict[str, dict] = {
     "rsi": {"window": 14, "buy_th": 45, "sell_th": 65},
     "bollinger": {"bol_window": 20},
     "obv": {"obv_window": 10},
+    # 리스크·비용 오버레이 — 전 전략 공통. 진입가 기준 손절/익절/추격손절과 편도 거래비용.
+    # None = 해당 규칙 미적용. 신호 청산보다 리스크 청산이 우선한다.
+    "risk": {
+        "stop_loss_pct": 0.08,      # 진입가 대비 -8% 하드 손절
+        "take_profit_pct": None,    # 익절 목표(미사용; 예: 0.25)
+        "trailing_stop_pct": 0.12,  # 보유 중 고점 대비 -12% 추격 손절
+        "fee_bps": 5,               # 편도 거래비용 5bp(0.05%) — 매수·매도 각각 적용
+    },
 }
 
 GRID_RANGES: dict[str, dict] = {
@@ -251,18 +259,21 @@ class StockAnalyzer:
         return data
 
     def _combined(self, data: pd.DataFrame) -> pd.DataFrame:
-        signals = {}
+        # 종전엔 '같은 바에서 3개 이상이 동시에 교차 신호'를 요구해 사실상 거래가 거의 없었다.
+        # 교차 신호는 순간적이라 동시 정렬이 드물기 때문. 대신 각 하위 전략의 '현재 스탠스'
+        # (Position: 매수 후 +1 유지, 매도 후 -1)를 다수결로 합산해 3표 이상 강세면 진입,
+        # 3표 이상 약세면 청산하는 히스테리시스 앙상블로 바꾼다(휩쏘 억제 + 실제 거래 발생).
+        stances = []
         for name, fn in self._strat_map().items():
             if name == "combined":
                 continue
             tmp = fn(data.copy())
-            signals[name] = tmp["Signal"]
+            stances.append(tmp["Position"].fillna(0))
 
-        buy = sum(s.clip(lower=0) for s in signals.values())
-        sell = sum((-s).clip(lower=0) for s in signals.values())
+        net = sum(stances)  # 대략 -5..+5 범위의 순 강세표
         data["Signal"] = 0
-        data.loc[buy >= COMBINED_THRESHOLD, "Signal"] = 1
-        data.loc[sell >= COMBINED_THRESHOLD, "Signal"] = -1
+        data.loc[net >= COMBINED_THRESHOLD, "Signal"] = 1
+        data.loc[net <= -COMBINED_THRESHOLD, "Signal"] = -1
         data["Position"] = data["Signal"].replace(0, np.nan).ffill().fillna(0)
         return data
 
@@ -381,38 +392,93 @@ class StockAnalyzer:
 
     # ── simulation ─────────────────────────────────────
     @staticmethod
-    def _simulate(data: pd.DataFrame, capital: int) -> pd.DataFrame:
+    def _simulate(
+        data: pd.DataFrame, capital: int, risk: dict | None = None
+    ) -> tuple[pd.DataFrame, list[dict]]:
+        """신호 + 리스크·비용 오버레이로 체결을 시뮬레이션한다.
+
+        리스크 청산(손절/익절/추격손절)은 신호 청산보다 우선한다. 리스크로 청산된 뒤에는
+        하위 전략 스탠스(Position)가 새 교차로 다시 +1이 될 때까지 재진입하지 않는다(즉시 재매수 방지).
+        실제 체결 기반 거래 목록(exit_reason 포함)을 함께 반환해 지표가 현실을 반영하게 한다.
+        """
+        risk = risk or {}
+        sl = risk.get("stop_loss_pct")
+        tp = risk.get("take_profit_pct")
+        ts = risk.get("trailing_stop_pct")
+        fee = (risk.get("fee_bps") or 0) / 10000.0
+
         cash = float(capital)
         shares = 0
-        cash_arr = np.zeros(len(data))
-        shares_arr = np.zeros(len(data))
-        port_arr = np.zeros(len(data))
+        entry_px = 0.0
+        peak_px = 0.0
+        entry_date = ""
+
+        n = len(data)
+        cash_arr = np.zeros(n)
+        shares_arr = np.zeros(n)
+        port_arr = np.zeros(n)
+        in_market = np.zeros(n)
         closes = data["Close"].values
         positions = data["Position"].values
+        idx = data.index
+        trades: list[dict] = []
 
         cash_arr[0] = cash
         port_arr[0] = cash
 
-        for i in range(1, len(data)):
+        for i in range(1, n):
             c, s = cash, shares
-            if positions[i] == 1 and positions[i - 1] <= 0:
-                buy_shares = int(c // closes[i])
+            px = float(closes[i])
+            exit_reason = None
+
+            # 1) 보유 중이면 리스크 청산을 먼저 판정하고, 없으면 신호 청산을 본다.
+            if s > 0:
+                if px > peak_px:
+                    peak_px = px
+                ret = (px - entry_px) / entry_px if entry_px else 0.0
+                draw = (px - peak_px) / peak_px if peak_px else 0.0
+                if sl is not None and ret <= -sl:
+                    exit_reason = "stop_loss"
+                elif tp is not None and ret >= tp:
+                    exit_reason = "take_profit"
+                elif ts is not None and draw <= -ts:
+                    exit_reason = "trailing_stop"
+                elif positions[i] == -1 and positions[i - 1] >= 0:
+                    exit_reason = "signal"
+
+            if s > 0 and exit_reason is not None:
+                c += s * px * (1 - fee)
+                pnl_pct = (px - entry_px) / entry_px if entry_px else 0.0
+                trades.append({
+                    "entry_date": entry_date,
+                    "exit_date": str(idx[i])[:10],
+                    "entry_price": round(entry_px, 4),
+                    "exit_price": round(px, 4),
+                    "pnl_pct": round(pnl_pct, 6),
+                    "exit_reason": exit_reason,
+                })
+                s = 0
+            # 2) 미보유 + 신규 매수 교차면 진입(비용 반영해 매수 가능 수량 산정).
+            elif s == 0 and positions[i] == 1 and positions[i - 1] <= 0:
+                buy_shares = int(c // (px * (1 + fee)))
                 if buy_shares > 0:
-                    c -= buy_shares * closes[i]
-                    s += buy_shares
-            elif positions[i] == -1 and positions[i - 1] >= 0:
-                if s > 0:
-                    c += s * closes[i]
-                    s = 0
+                    c -= buy_shares * px * (1 + fee)
+                    s = buy_shares
+                    entry_px = px
+                    peak_px = px
+                    entry_date = str(idx[i])[:10]
+
             cash, shares = c, s
             cash_arr[i] = cash
             shares_arr[i] = shares
-            port_arr[i] = cash + shares * closes[i]
+            port_arr[i] = cash + shares * px
+            in_market[i] = 1.0 if shares > 0 else 0.0
 
         data["Cash"] = cash_arr
         data["Shares"] = shares_arr
         data["Portfolio_Value"] = port_arr
-        return data
+        data["In_Market"] = in_market
+        return data, trades
 
     # ── backtest ───────────────────────────────────────
     def backtest(self, strategy_name: str = "sma_crossover") -> dict:
@@ -424,7 +490,7 @@ class StockAnalyzer:
             raise ValueError(f"지원하지 않는 전략: {strategy_name}")
 
         data = strat_fn(self.data.copy())
-        data = self._simulate(data, self.initial_capital)
+        data, trades = self._simulate(data, self.initial_capital, self.params.get("risk"))
 
         data["Returns"] = data["Close"].pct_change()
         data["Cumulative_Returns"] = (1 + data["Returns"]).cumprod()
@@ -437,30 +503,15 @@ class StockAnalyzer:
         rolling_max = data["Strategy_Cumulative"].cummax()
         max_dd = float((data["Strategy_Cumulative"] / rolling_max - 1).min())
 
-        # ── trade list extraction ──────────────────────
-        trades: list[dict] = []
-        hold = False
-        entry_date_str = ""
-        entry_px = 0.0
-        for i in range(len(data)):
-            sig = int(data["Signal"].iloc[i])
-            px = float(data["Close"].iloc[i])
-            dt = str(data.index[i])[:10]
-            if sig == 1 and not hold:
-                hold = True
-                entry_date_str = dt
-                entry_px = px
-            elif sig == -1 and hold:
-                hold = False
-                pnl_pct = (px - entry_px) / entry_px if entry_px else 0.0
-                trades.append({
-                    "entry_date": entry_date_str,
-                    "exit_date": dt,
-                    "entry_price": round(entry_px, 4),
-                    "exit_price": round(px, 4),
-                    "pnl_pct": round(pnl_pct, 6),
-                })
+        # 거래 목록은 _simulate가 실제 체결(리스크 청산 포함) 기준으로 산출한다.
         total_trades = len(trades) * 2  # buy + sell = 2 signals per round trip
+
+        # 시장 노출도(보유 바 비율)와 청산 사유 분포 — 전략의 실제 동작을 드러내는 지표.
+        exposure = float(np.nanmean(data["In_Market"].values[1:])) if len(data) > 1 else 0.0
+        exit_reasons: dict[str, int] = {}
+        for t in trades:
+            r = t.get("exit_reason", "signal")
+            exit_reasons[r] = exit_reasons.get(r, 0) + 1
 
         # ── enhanced metrics ───────────────────────────
         win_ts = [t for t in trades if t["pnl_pct"] > 0]
@@ -491,12 +542,15 @@ class StockAnalyzer:
                 "profit_factor": round(min(profit_factor, 99.0), 4),
                 "avg_win_pct": round(avg_win_pct, 6),
                 "avg_loss_pct": round(avg_loss_pct, 6),
+                "exposure_pct": round(exposure, 4),
+                "exit_reasons": exit_reasons,
             },
             "trades": trades,
             "chart_data": chart,
             "strategy": strategy_name,
             "ticker": self.ticker,
             "params_used": self.params.get(strategy_name, {}),
+            "risk_used": self.params.get("risk", {}),
         }
 
     def _to_chart_data(self, data: pd.DataFrame, strategy: str) -> list[dict]:

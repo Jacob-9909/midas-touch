@@ -14,12 +14,13 @@ import {
 import { useSelectedUser } from "@/lib/user-context";
 import { useTheme } from "@/lib/theme";
 
-// group: "main" 유저대면(현황·상담·분석) / "engine" 내부 엔진(데이터·학습)
+// 단일 여정을 앞세운다: "core" 핵심 여정(내 현황 → 또래 벤치마킹 → 상담 → 종목 확인)을
+// 먼저 두고, "engine" 부가·데모(청약·지식그래프·파인튜닝)는 구분선 뒤로 강등해 초점을 준다.
 const LINKS = [
-  { href: "/", label: "대시보드", group: "main" },
-  { href: "/chat", label: "에이전트 챗봇", group: "main" },
-  { href: "/stocks", label: "주식분석", group: "main" },
-  { href: "/cheongyak", label: "청약", group: "main" },
+  { href: "/", label: "대시보드", group: "core" },
+  { href: "/chat", label: "에이전트 챗봇", group: "core" },
+  { href: "/stocks", label: "주식분석", group: "core" },
+  { href: "/cheongyak", label: "청약", group: "engine" },
   { href: "/graph", label: "지식그래프", group: "engine" },
   { href: "/finetune", label: "파인튜닝셋", group: "engine" },
 ] as const;
@@ -57,7 +58,7 @@ export default function NavBar() {
                   isActive(l.href)
                     ? "bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] text-accent"
                     : "text-muted hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] hover:text-fg"
-                }`}
+                } ${l.group === "engine" && !isActive(l.href) ? "opacity-55" : ""}`}
               >
                 {l.label}
               </Link>

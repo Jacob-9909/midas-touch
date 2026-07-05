@@ -137,6 +137,52 @@ def list_users(limit: int = 50, offset: int = 0) -> list[dict]:
         return fetchall_dicts(cursor)
 
 
+_PORTFOLIO_INSERT_SQL = """
+INSERT INTO portfolios (
+    user_id, name, strategy_name,
+    stock_ratio, bond_ratio, deposit_ratio,
+    real_estate_ratio, gold_ratio, cash_ratio, is_active
+)
+SELECT id, %s, %s, %s, %s, %s, %s, %s, %s, TRUE
+FROM users WHERE uuid = %s
+"""
+
+
+def bulk_upsert_portfolios(rows: list[dict[str, Any]]) -> int:
+    """페르소나별 권장 자산배분(포트폴리오)을 적재한다.
+
+    각 row는 uuid + 6개 비율(합계 100) + name/strategy_name을 가진다.
+    ponytail: 재실행 시 중복을 막기 위해 해당 유저의 기존 포트폴리오를 지우고 새로 넣는다.
+    포트폴리오 소스가 이 생성 파이프라인뿐이라 단순 delete-then-insert로 충분하다.
+    """
+    saved = 0
+    with db_cursor() as (_, cursor):
+        for row in rows:
+            uuid = row.get("uuid")
+            if not uuid:
+                continue
+            cursor.execute(
+                "DELETE FROM portfolios WHERE user_id = (SELECT id FROM users WHERE uuid = %s)",
+                [uuid],
+            )
+            cursor.execute(
+                _PORTFOLIO_INSERT_SQL,
+                [
+                    row.get("name"),
+                    row.get("strategy_name"),
+                    row.get("stock_ratio", 0),
+                    row.get("bond_ratio", 0),
+                    row.get("deposit_ratio", 0),
+                    row.get("real_estate_ratio", 0),
+                    row.get("gold_ratio", 0),
+                    row.get("cash_ratio", 0),
+                    uuid,
+                ],
+            )
+            saved += cursor.rowcount  # 0이면 해당 uuid 유저가 users에 없다는 뜻
+    return saved
+
+
 def get_portfolios_by_user_uuid(uuid: str) -> list[dict]:
     """해당 유저의 포트폴리오와 각 포트폴리오의 개별 종목(items)을 함께 반환한다."""
     pf_sql = """

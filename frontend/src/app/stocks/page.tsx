@@ -29,6 +29,7 @@ import {
   CheckCircle,
   ChartBar,
   ArrowRight,
+  ShieldCheck,
 } from "@phosphor-icons/react";
 import {
   apiGet,
@@ -74,6 +75,93 @@ const PERIODS: { value: BacktestPeriod; label: string }[] = [
 const pct = (n: number): string => `${(n * 100).toFixed(2)}%`;
 const price = (n: number): string =>
   n >= 1000 ? n.toLocaleString("ko-KR", { maximumFractionDigits: 2 }) : n.toFixed(4);
+
+// 청산 사유 라벨/색 — 신호 청산 vs 리스크 청산(손절·추격손절·익절)을 구분해 보여준다.
+const EXIT_LABEL: Record<string, string> = {
+  signal: "신호",
+  stop_loss: "손절",
+  take_profit: "익절",
+  trailing_stop: "추격손절",
+};
+const EXIT_TONE: Record<string, string> = {
+  signal: "text-muted",
+  stop_loss: "text-[#e2607b]",
+  trailing_stop: "text-[#e2a15a]",
+  take_profit: "text-[#58c8a0]",
+};
+
+// 백테스트에 적용된 리스크 오버레이를 사람이 읽는 한 줄로 (null=미적용은 생략).
+function riskSummary(r: import("@/lib/api").RiskConfig): string {
+  const parts: string[] = [];
+  if (r.stop_loss_pct != null) parts.push(`손절 -${(r.stop_loss_pct * 100).toFixed(0)}%`);
+  if (r.trailing_stop_pct != null) parts.push(`추격 -${(r.trailing_stop_pct * 100).toFixed(0)}%`);
+  if (r.take_profit_pct != null) parts.push(`익절 +${(r.take_profit_pct * 100).toFixed(0)}%`);
+  if (r.fee_bps != null) parts.push(`수수료 ${(r.fee_bps / 100).toFixed(2)}%`);
+  return parts.length ? parts.join(" · ") : "미적용";
+}
+
+// 백테스트 리스크·비용 상태 (퍼센트/bp 단위의 UI 값; run에서 소수/bp로 변환해 params.risk로 전송).
+type RiskState = {
+  slOn: boolean; sl: number;
+  tsOn: boolean; ts: number;
+  tpOn: boolean; tp: number;
+  fee: number;
+};
+const DEFAULT_RISK: RiskState = { slOn: true, sl: 8, tsOn: true, ts: 12, tpOn: false, tp: 20, fee: 5 };
+
+// UI 값(% / bp) → 백엔드 params.risk (소수 / bp, 꺼진 규칙은 null).
+function toRiskParams(r: RiskState): Record<string, number | null> {
+  return {
+    stop_loss_pct: r.slOn ? r.sl / 100 : null,
+    take_profit_pct: r.tpOn ? r.tp / 100 : null,
+    trailing_stop_pct: r.tsOn ? r.ts / 100 : null,
+    fee_bps: r.fee,
+  };
+}
+
+function RiskRow({
+  label, on, onToggle, value, min, max, step, onChange, fmt, togglable = true,
+}: {
+  label: string;
+  on: boolean;
+  onToggle?: (v: boolean) => void;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+  fmt: (v: number) => string;
+  togglable?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <label className="flex w-24 shrink-0 items-center gap-2 text-xs">
+        {togglable && (
+          <input
+            type="checkbox"
+            checked={on}
+            onChange={(e) => onToggle?.(e.target.checked)}
+            className="h-3.5 w-3.5 accent-[var(--accent)]"
+          />
+        )}
+        <span className={on ? "text-fg" : "text-muted line-through"}>{label}</span>
+      </label>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        disabled={!on}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="h-1 flex-1 cursor-pointer accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
+      />
+      <span className={`w-14 text-right font-mono text-xs ${on ? "text-accent" : "text-muted"}`}>
+        {on ? fmt(value) : "끄기"}
+      </span>
+    </div>
+  );
+}
 
 function MetricTile({
   label,
@@ -226,6 +314,7 @@ export default function StocksPage() {
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<string | null>(null);
   const [reportBusy, setReportBusy] = useState(false);
+  const [risk, setRisk] = useState<RiskState>(DEFAULT_RISK);
   const [gridResult, setGridResult] = useState<GridSearchResult | null>(null);
   const [gridShownKey, setGridShownKey] = useState("");
   const [gridBusy, setGridBusy] = useState(false);
@@ -285,7 +374,7 @@ export default function StocksPage() {
 
   // ── Backtest ────────────────────────────────────────────────────────────────
   const run = useCallback(
-    async (tk?: string, strat?: string, params?: Record<string, Record<string, number>>) => {
+    async (tk?: string, strat?: string, params?: Record<string, Record<string, number | null>>) => {
       const symbol = (tk ?? ticker).trim().toUpperCase();
       const stratName = strat ?? strategy;
       if (!symbol) return;
@@ -294,7 +383,9 @@ export default function StocksPage() {
       setReport(null);
       setTradesOpen(false);
       try {
-        const res = await runBacktest({ ticker: symbol, strategy: stratName, period, params });
+        // 현재 리스크 슬라이더 값을 항상 실어 보낸다(그리드 최적 파라미터 등 다른 override와 병합).
+        const merged = { ...(params ?? {}), risk: toRiskParams(risk) };
+        const res = await runBacktest({ ticker: symbol, strategy: stratName, period, params: merged });
         setResult(res);
         toast(`${res.ticker} 백테스트 완료`, "success");
       } catch (e) {
@@ -303,7 +394,7 @@ export default function StocksPage() {
         setBusy(false);
       }
     },
-    [ticker, strategy, period, toast],
+    [ticker, strategy, period, toast, risk],
   );
 
   // 전략·기간·티커가 바뀌면 직전 그리드 결과는 무효 — 렌더 중 키 비교로 리셋(effect 불필요).
@@ -765,6 +856,53 @@ export default function StocksPage() {
               </div>
             </div>
 
+            {/* 리스크·비용 설정 — params.risk로 백테스트에 반영 */}
+            <div className="mt-4 rounded-2xl border border-line bg-[var(--ink-2)]/30 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-1.5 text-sm font-medium text-fg">
+                  <ShieldCheck size={15} /> 리스크·비용 설정
+                </p>
+                <button
+                  onClick={() => setRisk(DEFAULT_RISK)}
+                  className="text-xs text-muted transition-colors hover:text-accent"
+                >
+                  기본값
+                </button>
+              </div>
+              <p className="mb-3 mt-0.5 text-xs text-muted">
+                조정 후 백테스트를 다시 실행하면 반영됩니다. 리스크 청산이 신호 청산보다 우선합니다.
+              </p>
+              <div className="max-w-md space-y-2.5">
+                <RiskRow
+                  label="손절" on={risk.slOn}
+                  onToggle={(v) => setRisk((r) => ({ ...r, slOn: v }))}
+                  value={risk.sl} min={1} max={30} step={1}
+                  onChange={(v) => setRisk((r) => ({ ...r, sl: v }))}
+                  fmt={(v) => `-${v}%`}
+                />
+                <RiskRow
+                  label="추격손절" on={risk.tsOn}
+                  onToggle={(v) => setRisk((r) => ({ ...r, tsOn: v }))}
+                  value={risk.ts} min={1} max={30} step={1}
+                  onChange={(v) => setRisk((r) => ({ ...r, ts: v }))}
+                  fmt={(v) => `-${v}%`}
+                />
+                <RiskRow
+                  label="익절" on={risk.tpOn}
+                  onToggle={(v) => setRisk((r) => ({ ...r, tpOn: v }))}
+                  value={risk.tp} min={5} max={100} step={5}
+                  onChange={(v) => setRisk((r) => ({ ...r, tp: v }))}
+                  fmt={(v) => `+${v}%`}
+                />
+                <RiskRow
+                  label="거래비용" togglable={false} on
+                  value={risk.fee} min={0} max={50} step={1}
+                  onChange={(v) => setRisk((r) => ({ ...r, fee: v }))}
+                  fmt={(v) => `${(v / 100).toFixed(2)}%`}
+                />
+              </div>
+            </div>
+
             {/* 그리드 서치 — 지원 전략만 */}
             {currentStrategy?.grid_supported && (
               <div className="mt-4 rounded-2xl border border-line bg-[var(--ink-2)]/30 p-4">
@@ -852,6 +990,18 @@ export default function StocksPage() {
                 />
               </div>
 
+              {/* 리스크 오버레이 요약 — 손절/추격/수수료 적용값 + 시장노출 + 청산사유 분포 */}
+              {result.risk_used && (
+                <p className="-mt-1 text-xs text-muted">
+                  <span className="text-fg">리스크 오버레이</span> {riskSummary(result.risk_used)}
+                  {typeof m.exposure_pct === "number" && ` · 시장노출 ${pct(m.exposure_pct)}`}
+                  {m.exit_reasons && Object.keys(m.exit_reasons).length > 0 &&
+                    ` · 청산 ${Object.entries(m.exit_reasons)
+                      .map(([k, v]) => `${EXIT_LABEL[k] ?? k} ${v}`)
+                      .join(" / ")}`}
+                </p>
+              )}
+
               {/* Chart */}
               <Card>
                 <div className="flex items-center justify-between">
@@ -916,7 +1066,8 @@ export default function StocksPage() {
                             <th className="py-2 pr-4 text-left font-medium">청산일</th>
                             <th className="py-2 pr-4 text-right font-medium">진입가</th>
                             <th className="py-2 pr-4 text-right font-medium">청산가</th>
-                            <th className="py-2 text-right font-medium">수익률</th>
+                            <th className="py-2 pr-4 text-right font-medium">수익률</th>
+                            <th className="py-2 text-right font-medium">청산사유</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -928,10 +1079,13 @@ export default function StocksPage() {
                               <td className="py-1.5 pr-4 text-right font-mono">{price(t.entry_price)}</td>
                               <td className="py-1.5 pr-4 text-right font-mono">{price(t.exit_price)}</td>
                               <td
-                                className={`py-1.5 text-right font-mono font-medium ${t.pnl_pct >= 0 ? "text-[#58c8a0]" : "text-[#e2607b]"}`}
+                                className={`py-1.5 pr-4 text-right font-mono font-medium ${t.pnl_pct >= 0 ? "text-[#58c8a0]" : "text-[#e2607b]"}`}
                               >
                                 {t.pnl_pct >= 0 ? "+" : ""}
                                 {pct(t.pnl_pct)}
+                              </td>
+                              <td className={`py-1.5 text-right ${EXIT_TONE[t.exit_reason ?? "signal"] ?? "text-muted"}`}>
+                                {EXIT_LABEL[t.exit_reason ?? "signal"] ?? t.exit_reason}
                               </td>
                             </tr>
                           ))}

@@ -221,7 +221,21 @@ export interface BacktestMetrics {
   profit_factor: number;
   avg_win_pct: number;
   avg_loss_pct: number;
+  /** 보유 바 비율(시장 노출도). */
+  exposure_pct?: number;
+  /** 청산 사유별 횟수 (signal·stop_loss·take_profit·trailing_stop). */
+  exit_reasons?: Record<string, number>;
 }
+
+/** 리스크·비용 오버레이 설정(백테스트에 적용된 값). null = 미적용. */
+export interface RiskConfig {
+  stop_loss_pct: number | null;
+  take_profit_pct: number | null;
+  trailing_stop_pct: number | null;
+  fee_bps: number | null;
+}
+
+export type ExitReason = "signal" | "stop_loss" | "take_profit" | "trailing_stop";
 
 export interface BacktestTrade {
   entry_date: string;
@@ -229,6 +243,7 @@ export interface BacktestTrade {
   entry_price: number;
   exit_price: number;
   pnl_pct: number;
+  exit_reason?: ExitReason;
 }
 
 /** 차트 1행. date 외 컬럼은 전략별로 가변. */
@@ -243,6 +258,7 @@ export interface BacktestResult {
   strategy: string;
   ticker: string;
   params_used: Record<string, number>;
+  risk_used?: RiskConfig;
 }
 
 export type BacktestPeriod = "1mo" | "3mo" | "6mo" | "1y" | "2y";
@@ -254,8 +270,8 @@ export interface BacktestRequest {
   start_date?: string;
   end_date?: string;
   initial_capital?: number;
-  /** 전략 파라미터 override. {전략명: {파라미터}} 형태로 보낸다(그리드서치 최적값 적용 등). */
-  params?: Record<string, Record<string, number>>;
+  /** 전략 파라미터 override. {전략명: {파라미터}} 또는 {risk: {...}} 형태. null = 해당 규칙 미적용. */
+  params?: Record<string, Record<string, number | null>>;
 }
 
 export interface TickerSearchItem {
