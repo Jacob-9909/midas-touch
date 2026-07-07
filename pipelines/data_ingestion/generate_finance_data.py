@@ -76,7 +76,7 @@ class FinanceProfile(BaseModel):
 # 1. 설정 (Settings)
 # ==========================================
 # 생성할 데이터 수 지정
-NUM_SAMPLES = 300
+NUM_SAMPLES = 200
 # 초당 요청 수 제어 (딜레이를 단축하여 대기 시간 단축)
 DELAY_BETWEEN_REQUESTS = 0.5 
 
