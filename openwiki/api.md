@@ -67,6 +67,7 @@ This repository exposes a **FastAPI** server under the `/api/v1` prefix. The API
 |--------|------|-------------|
 | `POST` | `/finetune/upload` | Upload a document (PDF/TXT/MD/JSONL) for embedding and triplet generation.
 | `POST` | `/finetune/jobs` | Start a new finetuning pipeline job. Returns a job ID.
+| `POST` | `/finetune/train/jobs` | Start LoRA finetuning training job on generated triplet dataset. Returns a job ID.
 | `GET` | `/finetune/jobs` | List all finetuning jobs with status.
 | `GET` | `/finetune/jobs/{id}` | Get detailed progress and logs for a specific job.
 | `GET` | `/finetune/datasets` | Preview generated training/evaluation datasets (triplets) for a given sub‑directory.
