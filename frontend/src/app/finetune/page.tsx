@@ -30,6 +30,7 @@ export default function FinetunePage() {
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const [subDir, setSubDir] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [trainJobId, setTrainJobId] = useState<string | null>(null);
   const [preview, setPreview] = useState<DatasetPreview | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -65,6 +66,30 @@ export default function FinetunePage() {
       toast("파이프라인을 시작했습니다.", "info");
     } catch (e) {
       toast(`실행 실패: ${errMsg(e)}`, "error");
+    }
+  };
+
+  const startTrain = async () => {
+    if (!uploadedName) return;
+    try {
+      const res = await apiPost<{ job_id: string }>(
+        "/api/v1/finetune/train/jobs",
+        { filename: uploadedName },
+      );
+      setTrainJobId(res.job_id);
+      toast("LoRA 파인튜닝 학습을 시작했습니다.", "info");
+    } catch (e) {
+      toast(`학습 실행 실패: ${errMsg(e)}`, "error");
+    }
+  };
+
+  const onTrainDone = (job: JobState) => {
+    if (job.status === "failed") {
+      toast("학습이 실패했습니다. 로그를 확인하세요.", "error");
+      return;
+    }
+    if (job.status === "succeeded") {
+      toast("학습 완료! 산출물: TRAINING_OUTPUT_DIR/final", "success");
     }
   };
 
@@ -139,11 +164,37 @@ export default function FinetunePage() {
 
       {preview && (
         <Card className="animate-rise">
-          <h2 className="mb-1 text-sm font-medium text-fg">생성된 데이터셋 프리뷰</h2>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-medium text-fg">생성된 데이터셋 프리뷰</h2>
+            <button
+              onClick={startTrain}
+              className="btn-accent flex items-center gap-1.5 px-4 py-2 text-sm"
+            >
+              <Play weight="fill" size={14} />
+              LoRA 파인튜닝 학습
+            </button>
+          </div>
           <p className="mb-4 text-xs text-muted">
             train {preview.train_count}건 · eval {preview.eval_count}건
           </p>
           <TripletTable rows={preview.train_preview} />
+        </Card>
+      )}
+
+      {trainJobId && (
+        <Card className="animate-rise">
+          <h2 className="mb-3 text-sm font-medium text-fg">학습 진행 상황</h2>
+          <JobProgress
+            jobId={trainJobId}
+            endpoint="/api/v1/finetune/jobs"
+            onDone={onTrainDone}
+          />
+          <p className="mt-3 text-xs text-muted">
+            학습 완료 후 적용: <code className="text-fg">.env</code>의{" "}
+            <code className="text-fg">AGENT_EMBEDDING_MODEL</code>을 산출물 경로
+            (<code className="text-fg">TRAINING_OUTPUT_DIR/final</code>)로 바꾸고 백엔드를 재시작하세요.
+            단, persona/그래프 임베딩도 같은 모델로 재적재해야 검색 공간이 일치합니다.
+          </p>
         </Card>
       )}
     </div>

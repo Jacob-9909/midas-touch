@@ -12,6 +12,7 @@ KURE-v1 임베딩 모델 파인튜닝 실행.
 from __future__ import annotations
 
 import logging
+import os
 import random
 from pathlib import Path
 
@@ -181,10 +182,11 @@ def apply_lora(model: SentenceTransformer, config: PipelineConfig) -> SentenceTr
         target_modules=list(lora_cfg.target_modules),
         bias=lora_cfg.bias,
     )
-    # SentenceTransformer[0] = Transformer 레이어, auto_model = HuggingFace backbone
+    # SentenceTransformer[0] = Transformer 레이어. sentence-transformers 5.x에서 backbone은
+    # `.model` 에 있고 `.auto_model` 은 읽기전용 property다 → 반드시 `.model` 에 할당해야 LoRA가 붙는다.
     transformer_layer = model[0]
-    transformer_layer.auto_model = get_peft_model(transformer_layer.auto_model, peft_config)
-    transformer_layer.auto_model.print_trainable_parameters()
+    transformer_layer.model = get_peft_model(transformer_layer.model, peft_config)
+    transformer_layer.model.print_trainable_parameters()
     return model
 
 
@@ -195,7 +197,7 @@ def save_model(model: SentenceTransformer, output_dir: str, config: PipelineConf
     if config.lora.merge_on_save:
         logger.info("LoRA adapter를 base model에 머지 중...")
         transformer_layer = model[0]
-        transformer_layer.auto_model = transformer_layer.auto_model.merge_and_unload()
+        transformer_layer.model = transformer_layer.model.merge_and_unload()
         logger.info("머지 완료 → 단일 모델로 저장: %s", final_path)
     else:
         logger.info("adapter 분리 저장: %s", final_path)
@@ -210,8 +212,18 @@ def train(config: PipelineConfig) -> SentenceTransformer:
     train_cfg = config.training
     lora_cfg = config.lora
 
+    # [n/5] 마커: 백엔드 JobManager의 진행률 추정(_STAGE_RE)이 이 로그로 진행바를 갱신한다.
+    # ponytail: 5단계 coarse 진행률. trainer.train() 내부 스텝까지 반영하려면 tqdm "x/y" 파싱 필요.
+    print("[1/5] 베이스 모델 로드", flush=True)
     logger.info("베이스 모델 로드 중: %s", train_cfg.student_model_name)
     model = SentenceTransformer(train_cfg.student_model_name)
+
+    # 시퀀스 길이 캡(선택). bge-m3 기본 8192는 attention이 O(n²)라 메모리가 적은 환경(예: Mac MPS)에서
+    # OOM 난다. TRAIN_MAX_SEQ_LENGTH로 상한을 두면 안전하게 학습된다. 미설정 시 모델 기본값 유지.
+    _max_sl = os.environ.get("TRAIN_MAX_SEQ_LENGTH")
+    if _max_sl:
+        model.max_seq_length = int(_max_sl)
+        logger.info("max_seq_length 캡 적용: %s", model.max_seq_length)
 
     # LoRA adapter 적용
     logger.info(
@@ -222,6 +234,7 @@ def train(config: PipelineConfig) -> SentenceTransformer:
     model = apply_lora(model, config)
 
     # 데이터셋 로드
+    print("[2/5] 데이터셋 로드", flush=True)
     train_dataset, eval_triplets = load_train_eval_datasets(config)
 
     # 손실 함수
@@ -274,13 +287,16 @@ def train(config: PipelineConfig) -> SentenceTransformer:
         evaluator=evaluator,
     )
 
+    print("[3/5] 학습 진행 (trainer.train)", flush=True)
     trainer.train()
 
     # 최종 저장 (merge_on_save 여부에 따라 분기)
+    print("[4/5] 모델 저장", flush=True)
     final_path = save_model(model, output_dir, config)
     logger.info("최종 모델 저장 완료: %s", final_path)
 
     # 최종 평가
+    print("[5/5] 최종 평가", flush=True)
     final_scores = evaluator(model)
     logger.info("최종 평가 결과:")
     for metric, score in final_scores.items():

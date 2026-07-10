@@ -61,6 +61,24 @@ async def start_finetune_job(req: StartJobRequest) -> dict:
     return {"job_id": job.job_id, "sub_dir": _sub_dir_for(target.name)}
 
 
+@router.post("/train/jobs")
+async def start_train_job(req: StartJobRequest) -> dict:
+    """생성된 triplet 데이터셋으로 임베딩 LoRA 파인튜닝(train.py)을 비동기로 시작한다."""
+    sub_dir = _sub_dir_for(req.filename)
+    train_path = PROJECT_ROOT / "data" / sub_dir / "dataset" / "train_triplets.jsonl"
+    if not train_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"학습할 데이터셋이 없습니다. 먼저 파이프라인을 실행하세요: {train_path}",
+        )
+    cmd = [
+        "uv", "run", "python", "-m", "pipelines.embedding.train",
+        "--file", Path(req.filename).name,
+    ]
+    job = job_manager.start("train", cmd)
+    return {"job_id": job.job_id, "sub_dir": sub_dir}
+
+
 @router.get("/jobs")
 def list_finetune_jobs() -> dict:
     return {"jobs": [j.to_dict(log_tail=5) for j in job_manager.list("finetune")]}
