@@ -12,7 +12,7 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   loading: () => <p className="text-sm text-muted">그래프 로딩 중…</p>,
 });
 
-const NODE_COLOR = "#60a5fa";
+const NODE_COLOR = "#c7a349";
 const NODE_HI = "#ffffff";
 
 export default function GraphView({

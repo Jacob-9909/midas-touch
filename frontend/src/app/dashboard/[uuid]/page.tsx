@@ -22,9 +22,9 @@ import {
 import { Reveal } from "@/components/Reveal";
 import { Card, PageTitle, SectionLabel, Skeleton, fmtKRW } from "@/components/ui";
 
-// 사파이어 블루 정체성에 맞춘 분할 팔레트(은행권 무드).
-// 블루 계열 + 쿨 중립 + 시맨틱 그린 1포인트.
-const COLORS = ["#4f8df9", "#88b6ff", "#1f5fd0", "#2a3a5c", "#9aa3b5", "#58c8a0"];
+// Midas 골드 정체성에 맞춘 분할 팔레트.
+// 골드 계열 3단 + 쿨 중립 + 시맨틱 그린 1포인트로 구분.
+const COLORS = ["#c7a349", "#e6c877", "#8a6a1c", "#5b6b8a", "#9aa3b5", "#58c8a0"];
 const TOOLTIP_STYLE = {
   background: "var(--ink-2)",
   border: "1px solid var(--line)",

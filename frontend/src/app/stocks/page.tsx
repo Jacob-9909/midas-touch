@@ -1037,7 +1037,7 @@ export default function StocksPage() {
                         type="monotone"
                         dataKey="strategy_cumulative"
                         name="전략"
-                        stroke="#4f8df9"
+                        stroke="var(--accent)"
                         dot={false}
                         strokeWidth={2}
                       />

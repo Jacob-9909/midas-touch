@@ -129,7 +129,11 @@ def list_users(limit: int = 50, offset: int = 0) -> list[dict]:
            preferred_asset
     FROM users
     WHERE uuid IS NOT NULL
-    ORDER BY created_at DESC
+    -- 자산 배분이 생성된 유저를 먼저 노출한다. 300명만 breakdown이 있고
+    -- base seed 200명은 created_at이 더 최신이라, 정렬을 안 하면 빈 유저만 보인다.
+    ORDER BY (COALESCE(stock_amount,0) + COALESCE(bond_amount,0)
+              + COALESCE(deposit_amount,0) + COALESCE(real_estate_amount,0)) > 0 DESC,
+             created_at DESC
     LIMIT %s OFFSET %s
     """
     with db_cursor() as (_, cursor):

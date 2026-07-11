@@ -16,6 +16,8 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
+  --color-gilt: var(--gilt);
+  --color-gilt-soft: var(--gilt-soft);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
@@ -47,14 +49,17 @@ html.dark {
   --ink-1: #0e131f;
   --ink-2: #121826;
   --surface: rgba(255, 255, 255, 0.04);
-  --line: rgba(96, 148, 230, 0.16);
+  --line: rgba(199, 168, 110, 0.15);
   --fg: #eef2f8;
   --muted: #8b94a8;
-  --accent: #4f8df9;
-  --accent-soft: #88b6ff;
+  /* Midas 아이덴티티 — 앤티크 샴페인 골드가 앱 전역 액센트 (네온 아님). */
+  --accent: #c7a349;
+  --accent-soft: #e6c877;
+  --gilt: var(--accent);
+  --gilt-soft: var(--accent-soft);
   --positive: #58c8a0;
   --negative: #f08a8a;
-  --glow: rgba(79, 141, 249, 0.14);
+  --glow: rgba(199, 163, 73, 0.13);
   /* 부드럽게 확산된 앰비언트 섀도 (배경 색조와 동일 계열) */
   --shadow-soft:
     0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
@@ -73,14 +78,17 @@ html.light {
   --ink-1: #ffffff;
   --ink-2: #ffffff;
   --surface: #ffffff;
-  --line: rgba(40, 90, 180, 0.16);
+  --line: rgba(150, 116, 40, 0.18);
   --fg: #0f1b2d;
   --muted: #5b6678;
-  --accent: #1f5fd0;
-  --accent-soft: #2f74e6;
+  /* 라이트 테마는 화이트 위 가독성 위해 더 깊은 골드 */
+  --accent: #8a6a1c;
+  --accent-soft: #a67f21;
+  --gilt: var(--accent);
+  --gilt-soft: var(--accent-soft);
   --positive: #1a9c6a;
   --negative: #c64537;
-  --glow: rgba(31, 95, 208, 0.09);
+  --glow: rgba(154, 116, 32, 0.08);
   /* 라이트: 쿨 블루 색조의 확산 섀도 (검정 금지) */
   --shadow-soft:
     0 1px 0 0 rgba(255, 255, 255, 0.8) inset,
@@ -130,7 +138,7 @@ body {
 
 /* 블루 그라디언트 텍스트 (로고/타이틀) */
 .text-gradient-accent {
-  background: linear-gradient(135deg, var(--accent-soft), var(--accent) 55%, #1746a0);
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent) 55%, #6e4e12);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -146,15 +154,16 @@ body {
   box-shadow: var(--shadow-soft);
 }
 
-/* 블루 버튼 — 소프트 필 + 내부 하이라이트, 누름 시 물리적 수축.
-   흰 텍스트 가독성을 위해 액센트→딥네이비 그라디언트로 깊이를 준다. */
+/* 골드 버튼 — 소프트 필 + 내부 하이라이트, 누름 시 물리적 수축.
+   밝은 골드 위 어두운 잉크 텍스트로 가독성 확보 (흰 텍스트는 대비 부족). */
 .btn-accent {
   background: linear-gradient(
     135deg,
-    var(--accent),
-    color-mix(in srgb, var(--accent) 68%, #050b1e)
+    var(--accent-soft),
+    var(--accent) 60%,
+    color-mix(in srgb, var(--accent) 72%, #3a2a06)
   );
-  color: #ffffff;
+  color: #1c1405;
   font-weight: 600;
   border-radius: var(--r-pill);
   transition:
@@ -176,6 +185,36 @@ body {
 }
 .btn-accent:disabled {
   opacity: 0.4;
+}
+
+/* 골드 버튼 — Midas 시그니처. 자산·행동의 순간(주요 CTA)에만.
+   밝은 골드 위 어두운 잉크 텍스트로 가독성 확보. */
+.btn-gilt {
+  background: linear-gradient(
+    135deg,
+    var(--gilt-soft),
+    var(--gilt) 60%,
+    color-mix(in srgb, var(--gilt) 72%, #3a2a06)
+  );
+  color: #1c1405;
+  font-weight: 600;
+  border-radius: var(--r-pill);
+  transition:
+    transform 0.18s var(--ease-soft),
+    box-shadow 0.25s var(--ease-soft),
+    filter 0.25s ease;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.4) inset,
+    0 6px 20px -8px var(--gilt);
+}
+.btn-gilt:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.5) inset,
+    0 10px 28px -8px var(--gilt);
+}
+.btn-gilt:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 /* 고스트 버튼 — 소프트 필 */

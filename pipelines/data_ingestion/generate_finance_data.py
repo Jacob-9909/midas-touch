@@ -279,9 +279,11 @@ async def main():
         print(f"오류: '{input_file}' 파일이 없습니다. 먼저 export_csv.py를 실행해주세요!")
         return
     
-    # 생성할 데이터 수만큼 샘플링
-    df_sample = df.head(NUM_SAMPLES)
-    print(f"2. {NUM_SAMPLES}개의 샘플에 대해 데이터 생성을 시작합니다.")
+    # 생성할 데이터 수만큼 샘플링. GEN_START_INDEX로 오프셋 지정 가능
+    # (이미 생성된 앞쪽 행을 건너뛰고 뒷부분만 채울 때 사용).
+    START_INDEX = int(os.environ.get("GEN_START_INDEX", "0"))
+    df_sample = df.iloc[START_INDEX : START_INDEX + NUM_SAMPLES]
+    print(f"2. 행 {START_INDEX}~{START_INDEX + len(df_sample) - 1} ({len(df_sample)}개) 생성을 시작합니다.")
     
     # 동시 요청 수 제어 (속도 향상을 위해 6개로 확장)
     semaphore = asyncio.Semaphore(4)
@@ -315,8 +317,16 @@ async def main():
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     output_file = os.path.join(PROJECT_ROOT, "data", "augmented_personas.csv")
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    new_df.to_csv(output_file, index=False, encoding="utf-8-sig")
-    print(f"4. 결과가 '{output_file}'에 저장되었습니다.")
+    # 오프셋 실행 시 기존 CSV(앞쪽 행들)를 보존하기 위해 append.
+    append = START_INDEX > 0 and os.path.exists(output_file)
+    new_df.to_csv(
+        output_file,
+        mode="a" if append else "w",
+        header=not append,
+        index=False,
+        encoding="utf-8-sig",
+    )
+    print(f"4. 결과가 '{output_file}'에 {'추가' if append else '저장'}되었습니다.")
 
     # 데이터 미리보기
     if not new_df.empty:
