@@ -32,6 +32,14 @@ def bulk_upsert_emb_passages(passages: list[dict[str, Any]]) -> int:
     return len(passages)
 
 
+def list_emb_sources() -> list[dict[str, Any]]:
+    """RAG에 반영된 문서(source)별 단락 수. 챗봇 지식베이스 패널의 '현재 반영된 파일' 목록용."""
+    sql = "SELECT source, COUNT(*) AS passages FROM emb_passages GROUP BY source ORDER BY source;"
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql)
+        return [{"source": src, "passages": cnt} for src, cnt in cursor.fetchall()]
+
+
 def bulk_upsert_emb_queries(queries: list[dict[str, Any]]) -> int:
     """Upsert synthetic queries into emb_synthetic_queries. Returns count."""
     sql = """

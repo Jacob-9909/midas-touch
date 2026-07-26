@@ -53,20 +53,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{ toast }}>
       {children}
-      <div className="pointer-events-none fixed bottom-5 right-5 z-[100] flex w-80 max-w-[calc(100vw-2.5rem)] flex-col gap-2">
+      <div className="pointer-events-none fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2.5 w-auto max-w-[92vw]">
         {toasts.map((t) => {
           const Icon = ICONS[t.kind];
           return (
             <div
               key={t.id}
-              className="toast-enter glass pointer-events-auto flex items-start gap-3 px-4 py-3 text-sm"
+              className="toast-enter pointer-events-auto flex items-center gap-3 px-5 py-3 text-xs sm:text-sm font-mono-spec bg-[#0c1220]/95 border border-accent/60 text-fg rounded-md shadow-2xl backdrop-blur-md transition-all duration-300 animate-rise border-l-4 border-l-accent"
             >
               <Icon
                 weight="fill"
-                size={18}
-                className={`mt-0.5 shrink-0 ${ACCENT[t.kind]}`}
+                size={20}
+                className={`shrink-0 ${ACCENT[t.kind]}`}
               />
-              <span className="text-fg">{t.message}</span>
+              <span className="font-bold text-fg tracking-tight">{t.message}</span>
             </div>
           );
         })}

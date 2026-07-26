@@ -10,11 +10,13 @@ from .embeddings import (
     bulk_upsert_emb_passages,
     bulk_upsert_emb_queries,
     bulk_upsert_emb_triplets,
+    list_emb_sources,
 )
 from .market import (
     bulk_upsert_market_snapshots,
     get_latest_market_snapshots,
     get_latest_market_value,
+    get_market_history,
     upsert_market_snapshot,
 )
 from .personas import search_similar_personas_db
@@ -66,4 +68,5 @@ __all__ = [
     "bulk_upsert_emb_passages",
     "bulk_upsert_emb_queries",
     "bulk_upsert_emb_triplets",
+    "list_emb_sources",
 ]

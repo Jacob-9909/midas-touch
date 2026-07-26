@@ -21,12 +21,19 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    cache: "no-store",
-    headers: DEFAULT_HEADERS,
-  });
-  return handle<T>(res);
+export async function apiGet<T>(path: string, timeoutMs: number = 4000): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      cache: "no-store",
+      headers: DEFAULT_HEADERS,
+      signal: controller.signal,
+    });
+    return await handle<T>(res);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
@@ -549,4 +556,22 @@ export interface RateBriefing {
 
 export function getRateBriefing(): Promise<RateBriefing> {
   return apiGet("/api/v1/research/rate-briefing");
+}
+
+// ---- RAG 지식베이스 (챗봇 좌측 패널) ----
+export interface RagDocument {
+  source: string;
+  passages: number;
+}
+
+export function listRagDocuments(): Promise<{ documents: RagDocument[] }> {
+  return apiGet("/api/v1/graph/documents");
+}
+
+export function ingestDocument(filename: string): Promise<{ job_id: string }> {
+  return apiPost("/api/v1/graph/ingest/jobs", { filename });
+}
+
+export function buildGraph(limit = -1): Promise<{ job_id: string }> {
+  return apiPost("/api/v1/graph/build/jobs", { limit });
 }

@@ -15,6 +15,7 @@ import { useToast } from "@/lib/toast";
 import { consumeChatSeed } from "@/lib/chat-seed";
 import { Card, PageTitle, Spinner } from "@/components/ui";
 import { Markdown } from "@/components/Markdown";
+import KnowledgePanel from "./KnowledgePanel";
 
 interface Msg {
   role: "user" | "assistant";
@@ -30,6 +31,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [tab, setTab] = useState<"chats" | "kb">("chats");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initedFor = useRef<string | null>(null);
@@ -152,51 +154,73 @@ export default function ChatPage() {
     <div>
       <PageTitle eyebrow="AI Advisor" title="에이전트 챗봇" subtitle="MidasAdviser · 멀티턴 · 실시간 스트리밍" />
       <div className="flex gap-4">
-        {/* 세션 사이드바 */}
-        <aside className="w-60 shrink-0">
-          <button
-            onClick={startNewChat}
-            disabled={!selected}
-            className="btn-accent mb-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm"
-          >
-            <Plus weight="bold" size={16} />새 대화
-          </button>
-          <div className="space-y-1">
-            {sessions.length === 0 && (
-              <p className="px-2 text-xs text-muted">대화 기록이 없습니다.</p>
-            )}
-            {sessions.map((s) => {
-              const active = s.session_id === currentId;
-              return (
-                <div
-                  key={s.session_id}
-                  className={`group flex items-center gap-1 rounded-lg px-2 py-2 text-sm transition ${
-                    active
-                      ? "bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]"
-                      : "hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)]"
-                  }`}
-                >
-                  <button
-                    onClick={() => openSession(s)}
-                    className="min-w-0 flex-1 text-left"
-                  >
-                    <div className="truncate text-fg">{s.title}</div>
-                    <div className="truncate text-[10px] text-muted">
-                      {fmtDate(s.updated_at)} · {s.message_count}개 메시지
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => deleteSession(s.session_id)}
-                    className="flex h-6 w-6 items-center justify-center rounded-md text-muted opacity-0 transition hover:text-negative group-hover:opacity-100"
-                    aria-label="대화 삭제"
-                    title="삭제"
-                  >
-                    <TrashSimple size={15} />
-                  </button>
-                </div>
-              );
-            })}
+        {/* 좌측 사이드바: 대화 목록 / 지식베이스 탭 */}
+        <aside className="w-64 shrink-0">
+          <div className="mb-3 flex gap-1 rounded-lg border border-line p-1">
+            {(["chats", "kb"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                  tab === t
+                    ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-accent"
+                    : "text-muted hover:text-fg"
+                }`}
+              >
+                {t === "chats" ? "대화" : "지식베이스"}
+              </button>
+            ))}
           </div>
+
+          {tab === "kb" ? (
+            <KnowledgePanel />
+          ) : (
+            <>
+              <button
+                onClick={startNewChat}
+                disabled={!selected}
+                className="btn-accent mb-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm"
+              >
+                <Plus weight="bold" size={16} />새 대화
+              </button>
+              <div className="space-y-1">
+                {sessions.length === 0 && (
+                  <p className="px-2 text-xs text-muted">대화 기록이 없습니다.</p>
+                )}
+                {sessions.map((s) => {
+                  const active = s.session_id === currentId;
+                  return (
+                    <div
+                      key={s.session_id}
+                      className={`group flex items-center gap-1 rounded-lg px-2 py-2 text-sm transition ${
+                        active
+                          ? "bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]"
+                          : "hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)]"
+                      }`}
+                    >
+                      <button
+                        onClick={() => openSession(s)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="truncate text-fg">{s.title}</div>
+                        <div className="truncate text-[10px] text-muted">
+                          {fmtDate(s.updated_at)} · {s.message_count}개 메시지
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => deleteSession(s.session_id)}
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-muted opacity-0 transition hover:text-negative group-hover:opacity-100"
+                        aria-label="대화 삭제"
+                        title="삭제"
+                      >
+                        <TrashSimple size={15} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </aside>
 
         {/* 대화 영역 */}
