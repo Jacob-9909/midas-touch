@@ -6,7 +6,7 @@ LlamaIndex + Neo4j 기반 세법 및 금융 자산 지식 그래프(Knowledge Gr
 - data/processed/passages.jsonl 에서 파싱된 금융 단락 로드.
 - LlamaIndex PropertyGraphIndex 및 SchemaLLMPathExtractor 활용.
 - PostgreSQL 기반 증분 적재 체크포인트 연동 (이미 처리된 단락 자동 스킵).
-- Google Gemini API (gemini-2.5-flash)를 사용하여 세법 지식 트리플 자동 추출.
+- NVIDIA NIM(OpenAI 호환 엔드포인트)을 사용하여 세법 지식 트리플 자동 추출.
 - 로컬 Neo4j Graph DB에 그래프 구조 및 HNSW 인덱스 증분 추가(Append) 적재.
 """
 
@@ -33,8 +33,7 @@ from llama_index.core.indices.property_graph import (
     PropertyGraphIndex,
     SchemaLLMPathExtractor,
 )
-from llama_index.llms.google_genai import GoogleGenAI
-from llama_index.llms.openai import OpenAI
+from shared.utils.nim_openai import NIMOpenAI
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from queue import Queue
@@ -47,13 +46,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger("graph_builder")
 
-# 외부 라이브러리(HTTP 요청, OpenAI, Hugging Face, 구글 API 등)의 불필요한 INFO 로그 억제
+NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
+
+# 외부 라이브러리(HTTP 요청, OpenAI, Hugging Face 등)의 불필요한 INFO 로그 억제
 for noisy_logger in [
     "httpx",
     "httpcore",
     "openai",
     "urllib3",
-    "google",
     "sentence_transformers",
     "transformers",
     "huggingface_hub",
@@ -63,27 +63,19 @@ for noisy_logger in [
 
 
 
-def setup_llamaindex_settings() -> tuple[GoogleGenAI, HuggingFaceEmbedding]:
+def setup_llamaindex_settings() -> tuple[NIMOpenAI, HuggingFaceEmbedding]:
     """LlamaIndex의 전역 LLM 및 임베딩 모델 설정."""
-    # 1. LLM 설정 (Vertex AI 경유 Gemini - gemini-2.5-flash 활용)
-    #    AI Studio API 키 대신 Vertex AI를 사용해 GCP 무료 평가판 크레딧으로 청구되도록 함.
-    #    인증은 서비스 계정 키(GOOGLE_APPLICATION_CREDENTIALS)를 통한 ADC로 자동 처리.
-    logger.info("Vertex AI (Gemini) LLM 연동 설정 중...")
-    project = os.environ.get("GOOGLE_CLOUD_PROJECT")
-    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-    if not project:
-        raise ValueError(
-            "GOOGLE_CLOUD_PROJECT가 설정되지 않았습니다. .env에 GOOGLE_CLOUD_PROJECT와 "
-            "GOOGLE_APPLICATION_CREDENTIALS(서비스 계정 키 경로)를 추가하세요."
-        )
-    gemini_model = os.environ.get("GEMINI_GENERATION_MODEL")
-    if not gemini_model:
-        raise RuntimeError("GEMINI_GENERATION_MODEL 환경변수가 설정되어 있지 않습니다.")
-    llm = GoogleGenAI(
-        model=gemini_model,
+    # 1. LLM 설정 (NVIDIA NIM - OpenAI 호환 엔드포인트)
+    #    NIMOpenAI가 다중 NVIDIA_API_KEY 로테이션과 동적 딜레이(레이트리밋 회피)를 담당한다.
+    logger.info("NVIDIA NIM LLM 연동 설정 중...")
+    nim_model = os.environ.get("NIM_GENERATION_MODEL")
+    if not nim_model:
+        raise RuntimeError("NIM_GENERATION_MODEL 환경변수가 설정되어 있지 않습니다.")
+    llm = NIMOpenAI(
+        model=nim_model,
+        api_base=NIM_BASE_URL,
         temperature=0.0,  # 결정론적 지식 추출을 위해 0.0 설정
         max_tokens=4096,
-        vertexai_config={"project": project, "location": location},
     )
 
     # 2. 한국어 지원 임베딩 설정 (로컬 BAAI/bge-m3 모델 사용)
@@ -225,7 +217,7 @@ def save_processed_passage_ids(passage_ids: list[str]) -> None:
         logger.error("processed passage_id 저장 오류: %s", exc)
 
 
-def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document], delay: float = 0.0) -> None:
+def build_knowledge_graph(documents: list[Document], delay: float = 0.0) -> None:
     """Neo4j 데이터베이스에 세법 및 금융 자산 지식 그래프 자동 구축."""
     if not documents:
         logger.info("새로 적재할 문서가 없습니다.")
@@ -320,23 +312,10 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document], delay: fl
     )
 
     # 2. API 키 로드 및 각 모델별 LLM + Extractor 풀 빌드
+    #    키 1개당 추출기 1개 = 병렬 워커 1개 (키별로 레이트리밋을 분산)
     extractors = []
-    
-    # (A) Gemini (Vertex AI) Extractor 추가
-    extractors.append((
-        SchemaLLMPathExtractor(
-            llm=llm,
-            possible_entities=Entities,
-            possible_relations=Relations,
-            kg_validation_schema=kg_validation_schema,
-            strict=False,
-            extract_prompt=custom_extract_prompt,
-            num_workers=1,
-        ),
-        "Gemini-VertexAI"
-    ))
-    
-    # (B) 환경변수에서 NVIDIA API 키 목록 동적 로드 및 추가
+
+    # 환경변수에서 NVIDIA API 키 목록 동적 로드
     nim_keys = []
     if os.environ.get("NVIDIA_API_KEY"):
         nim_keys.append(os.environ.get("NVIDIA_API_KEY"))
@@ -351,12 +330,18 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document], delay: fl
         nim_keys.append(k)
         i += 1
         
+    if not nim_keys:
+        raise RuntimeError(
+            "NVIDIA_API_KEY가 설정되어 있지 않습니다. .env에 최소 1개의 키를 추가하세요."
+        )
+
     nim_model = os.environ.get("NIM_GENERATION_MODEL")
     for idx, key in enumerate(nim_keys, start=1):
-        nim_llm = OpenAI(
+        # NIMOpenAI를 쓰면 호출마다 키별 RPM 슬롯 예약(nim_rate_limit) + 429 백오프가 적용된다.
+        nim_llm = NIMOpenAI(
             model=nim_model,
             api_key=key,
-            api_base="https://integrate.api.nvidia.com/v1",
+            api_base=NIM_BASE_URL,
             temperature=0.0,
             max_tokens=10000,
         )
@@ -374,7 +359,7 @@ def build_knowledge_graph(llm: GoogleGenAI, documents: list[Document], delay: fl
         ))
 
     num_workers = len(extractors)
-    logger.info("총 %d개의 병렬 추출기(Gemini 1개, NVIDIA NIM %d개)를 준비했습니다.", 
+    logger.info("총 %d개의 병렬 추출기(NVIDIA NIM 키 %d개)를 준비했습니다.",
                 num_workers, len(nim_keys))
     
     # 3. ThreadPoolExecutor 빌드 및 Neo4j 적재 (루프를 돌며 병렬 처리 및 즉시 커밋)
@@ -476,7 +461,7 @@ def main() -> None:
         "--delay", "-d",
         type=float,
         default=0.0,
-        help="각 추출기(Gemini, NIM 등)가 작업을 완료한 후 다음 작업을 시작하기 전 대기할 시간(초) (기본값: 0.0)"
+        help="각 NIM 추출기가 작업을 완료한 후 다음 작업을 시작하기 전 대기할 시간(초) (기본값: 0.0)"
     )
     args = parser.parse_args()
 
@@ -484,8 +469,8 @@ def main() -> None:
         # 1. PostgreSQL 체크포인트 테이블 초기화
         init_checkpoint_table()
         
-        # 2. 전역 설정 세팅
-        llm, embed_model = setup_llamaindex_settings()
+        # 2. 전역 설정 세팅 (Settings.llm / Settings.embed_model 주입)
+        setup_llamaindex_settings()
         
         # 3. 모든 문서 단락 로드
         all_documents = load_passages_as_documents()
@@ -510,7 +495,7 @@ def main() -> None:
             target_docs = unprocessed_documents[:limit]
             logger.info("이번 실행에서 처리할 %d개의 미처리 단락으로 그래프 빌드를 시작합니다.", len(target_docs))
         
-        build_knowledge_graph(llm, target_docs, delay=args.delay)
+        build_knowledge_graph(target_docs, delay=args.delay)
         
     except Exception as exc:
         logger.exception("지식 그래프 생성 도중 오류 발생: %s", exc)

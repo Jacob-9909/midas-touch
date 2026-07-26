@@ -4,7 +4,7 @@ entity_resolution.py
 Neo4j 지식 그래프의 동적 엔티티 중복 정제(Entity Resolution) 및 병합 스케줄러.
 
 1. 1차 필터링: BAAI/bge-m3 임베딩 모델을 활용하여 유사도가 높은(0.82 이상) 노드 쌍(Candidate Pair) 추출.
-2. 2차 검증: LLM(Gemini)을 활용해 두 노드가 세무/금융 맥락상 실질적 동의어(Synonym)인지 최종 의미 검증.
+2. 2차 검증: LLM(NVIDIA NIM)을 활용해 두 노드가 세무/금융 맥락상 실질적 동의어(Synonym)인지 최종 의미 검증.
 3. 3차 병합: Python-driven Cypher 트랜잭션을 실행해 구 노드의 관계를 신 노드로 이식 후 구 노드를 삭제.
 4. 백그라운드 스케줄 데몬 기능 포함.
 """
@@ -28,7 +28,9 @@ load_dotenv()
 from llama_index.core import Settings
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
-from llama_index.llms.google_genai import GoogleGenAI
+from shared.utils.nim_openai import NIMOpenAI
+
+NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 # 로깅 설정
 logging.basicConfig(
@@ -67,21 +69,16 @@ class EntityRefiner:
             device="cpu",
         )
 
-        # 3. LLM 설정 (Vertex AI Gemini)
-        project = os.environ.get("GOOGLE_CLOUD_PROJECT")
-        location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-        if not project:
-            raise ValueError("GOOGLE_CLOUD_PROJECT 환경변수가 누락되었습니다.")
-            
-        logger.info("Vertex AI Gemini LLM 초기화 중...")
-        gemini_model = os.environ.get("GEMINI_GENERATION_MODEL")
-        if not gemini_model:
-            raise RuntimeError("GEMINI_GENERATION_MODEL 환경변수가 설정되어 있지 않습니다.")
-        self.llm = GoogleGenAI(
-            model=gemini_model,
+        # 3. LLM 설정 (NVIDIA NIM - OpenAI 호환 엔드포인트, 다중 키 로테이션 포함)
+        logger.info("NVIDIA NIM LLM 초기화 중...")
+        nim_model = os.environ.get("NIM_GENERATION_MODEL")
+        if not nim_model:
+            raise RuntimeError("NIM_GENERATION_MODEL 환경변수가 설정되어 있지 않습니다.")
+        self.llm = NIMOpenAI(
+            model=nim_model,
+            api_base=NIM_BASE_URL,
             temperature=0.0,
             max_tokens=2048,
-            vertexai_config={"project": project, "location": location},
         )
 
     def run_resolution(self, similarity_threshold: float = 0.82) -> int:

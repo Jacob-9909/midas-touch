@@ -1,13 +1,12 @@
 import asyncio
-import json
+import itertools
 import os
 import re
 import sys
 import pandas as pd
 from datasets import load_dataset
 from huggingface_hub import HfApi
-from google import genai
-from google.genai import types
+from openai import AsyncOpenAI
 from pydantic import BaseModel
 from tqdm import tqdm as sync_tqdm
 from tqdm.asyncio import tqdm
@@ -22,13 +21,15 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 from shared.database.connector import bulk_upsert_users, bulk_upsert_portfolios
+from shared.utils.api_key_rotator import APIKeyRotator
+from shared.utils.nim_rate_limit import reserve
 
 # 권장 자산배분 6개 자산군 (portfolios 테이블 비율 컬럼과 1:1, 합계 100)
 RATIO_KEYS = ["stock", "bond", "deposit", "real_estate", "gold", "cash"]
 
 
-# Gemini structured output 스키마 — 프롬프트 JSON 구조와 1:1.
-# response_schema로 강제하면 콤마 누락·잘림 같은 파싱 에러 클래스가 사라진다.
+# structured output 스키마 — 프롬프트 JSON 구조와 1:1.
+# response_format으로 강제하면 콤마 누락·잘림 같은 파싱 에러 클래스가 사라진다.
 class _AssetTypes(BaseModel):
     stock: int
     bond: int
@@ -80,21 +81,29 @@ NUM_SAMPLES = 200
 # 초당 요청 수 제어 (딜레이를 단축하여 대기 시간 단축)
 DELAY_BETWEEN_REQUESTS = 0.5 
 
-# Gemini via Vertex AI. 인증은 서비스 계정 키(GOOGLE_APPLICATION_CREDENTIALS) 기반 ADC로 자동 처리.
-# document_parser.py의 비전 전사와 동일한 패턴 — 별도 GEMINI_API_KEY 불필요.
-_GCP_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT")
-_GCP_LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-_client = None
+# NVIDIA NIM (OpenAI 호환 엔드포인트). 인증은 .env의 NVIDIA_API_KEY(+ _2, _3 ...).
+NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
+_clients = None
+
+# NIM 모델이 json_schema 강제를 거부하면 자동으로 프롬프트-only JSON 모드로 내려간다.
+_use_schema = True
 
 
-def _get_client():
-    """Vertex Gemini 클라이언트를 지연 생성(테스트가 인증 없이 모듈을 임포트할 수 있게 함)."""
-    global _client
-    if _client is None:
-        if not _GCP_PROJECT:
-            raise RuntimeError("GOOGLE_CLOUD_PROJECT 환경변수가 설정되어 있지 않습니다.")
-        _client = genai.Client(vertexai=True, project=_GCP_PROJECT, location=_GCP_LOCATION)
-    return _client
+def _get_client() -> tuple[str, AsyncOpenAI]:
+    """NIM 클라이언트를 지연 생성(테스트가 키 없이 모듈을 임포트할 수 있게 함).
+
+    키가 여러 개면 호출마다 라운드로빈해 레이트리밋을 키별로 분산한다.
+    """
+    global _clients
+    if _clients is None:
+        keys = APIKeyRotator().keys
+        _clients = itertools.cycle(
+            [
+                (k, AsyncOpenAI(api_key=k, base_url=NIM_BASE_URL, max_retries=0, timeout=200.0))
+                for k in keys
+            ]
+        )
+    return next(_clients)
 
 
 MODEL_NAME = os.environ.get("PERSONA_GENERATION_MODEL")
@@ -202,28 +211,37 @@ async def generate_finance_data(row, semaphore):
         max_retries = 3
         base_wait_time = 3.0
         
+        global _use_schema
+
         for attempt in range(max_retries):
             try:
-                # 2. Gemini 호출 (스키마 강제 + thinking off로 잘림/파싱에러 방지)
-                response = await _get_client().aio.models.generate_content(
+                # 2. NIM 호출 (스키마 강제로 잘림/파싱에러 방지)
+                kwargs = {}
+                if _use_schema:
+                    kwargs["response_format"] = {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "FinanceProfile",
+                            "schema": FinanceProfile.model_json_schema(),
+                        },
+                    }
+                key, client = _get_client()
+                # 키별 분당 호출 한도 슬롯 예약 (다른 파이프라인과 창을 공유)
+                await asyncio.sleep(reserve(key))
+                response = await client.chat.completions.create(
                     model=MODEL_NAME,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        temperature=0.7,
-                        max_output_tokens=3000,
-                        response_mime_type="application/json",
-                        response_schema=FinanceProfile,
-                        thinking_config=types.ThinkingConfig(thinking_budget=0),
-                    ),
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.7,
+                    max_tokens=3000,
+                    **kwargs,
                 )
 
-                # 3. 파싱 — 스키마 강제라 response.parsed가 곧 검증된 객체.
-                #    혹시 None이면 원문 텍스트에서 JSON 추출로 폴백.
-                if response.parsed is not None:
-                    finance_data = response.parsed.model_dump()
-                else:
-                    finance_data = json.loads(extract_json(response.text))
-                
+                # 3. 파싱 — 스키마 강제 여부와 무관하게 본문에서 JSON을 추출해 검증한다.
+                content = response.choices[0].message.content or ""
+                finance_data = FinanceProfile.model_validate_json(
+                    extract_json(content)
+                ).model_dump()
+
                 # 행 데이터에 병합하기 위해 딕셔너리 구조 평탄화 (Flatten)
                 result = row.to_dict()
                 result['total_amount'] = finance_data['asset_size']['total_amount']
@@ -259,6 +277,11 @@ async def generate_finance_data(row, semaphore):
                 
             except Exception as e:
                 error_msg = str(e).replace("\n", " ")
+                # 모델/엔드포인트가 json_schema를 지원하지 않으면 스키마 없이 재시도
+                if _use_schema and ("response_format" in error_msg or "json_schema" in error_msg):
+                    _use_schema = False
+                    print(f"\n[알림] 모델이 json_schema를 거부했습니다. 프롬프트 기반 JSON 모드로 전환합니다. | {error_msg}")
+                    continue
                 if attempt < max_retries - 1:
                     wait_time = base_wait_time * (2 ** attempt)
                     print(f"\n[오류 발생 - 재시도 {attempt+1}/{max_retries}] uuid: {row.get('uuid', '알수없음')} | {wait_time}초 대기 | {error_msg}")

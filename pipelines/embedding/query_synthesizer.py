@@ -23,6 +23,7 @@ import httpx
 
 from pipelines.embedding.config import PipelineConfig
 from pipelines.embedding.document_parser import Passage
+from shared.utils.nim_rate_limit import reserve
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,9 @@ class NIMClient:
         self._rotator = APIKeyRotator()
         self._client: httpx.AsyncClient | None = None
         self._semaphore = asyncio.Semaphore(self._cfg.max_concurrent_requests)
-        self.base_delay = 2.0  # 기본 강제 지연시간 초기값 (초)
+        # 분당 호출 한도는 nim_rate_limit.reserve()가 통제하고, 이 값은 429 발생 시에만
+        # 올라가는 추가 백오프 딜레이다(성공하면 다시 0으로 감쇠).
+        self.base_delay = 0.0
 
     async def __aenter__(self) -> "NIMClient":
         self._client = httpx.AsyncClient(
@@ -134,19 +137,19 @@ class NIMClient:
             }
             try:
                 async with self._semaphore:
-                    # 동적 지연 적용 (Rate Limit 발생 시 서서히 증가, 성공 시 서서히 감소)
-                    await asyncio.sleep(self.base_delay)
-                    
+                    # 키별 RPM 슬롯 예약(프로세스 경계를 넘어 공유) + 동적 백오프 딜레이
+                    await asyncio.sleep(reserve(current_key) + self.base_delay)
+
                     response = await self._client.post(
                         "/chat/completions", json=payload, headers=headers
                     )
                     response.raise_for_status()
                     data = response.json()
                     
-                    # 성공 시 지연 시간 서서히 감소 (최소 2.0초)
-                    if self.base_delay > 2.0:
+                    # 성공 시 추가 딜레이를 서서히 0으로 감소(분당 한도는 reserve()가 보장)
+                    if self.base_delay > 0:
                         old_delay = self.base_delay
-                        self.base_delay = max(self.base_delay - 0.2, 2.0)
+                        self.base_delay = max(self.base_delay - 0.2, 0.0)
                         logger.info(
                             "요청 성공: 지연 시간을 %s초에서 %s초로 서서히 줄입니다.",
                             f"{old_delay:.2f}", f"{self.base_delay:.2f}"

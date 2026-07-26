@@ -4,7 +4,7 @@ document_parser.py
 금융 문서(PDF, TXT, MD) 통합 파서 및 청킹 엔진.
 
 1. PDF: pypdf 기반 정제 파싱 (헤더/푸터 및 연속 공백 정제)
-   - 텍스트 레이어가 손상/부재한 PDF는 자동 감지하여 Gemini 비전 전사로 폴백.
+   - 텍스트 레이어가 손상/부재한 PDF는 자동 감지하여 경고 로그를 남긴다(비전 전사 없음).
 2. MD: 마크다운 구조(헤더, 목록) 분석 파싱
 3. TXT: 개행 및 문장 경계 기준 텍스트 로드
 4. Chunker: 한글 금융 텍스트 맞춤형 Recursive Character Splitter + Overlap 지원.
@@ -16,7 +16,6 @@ import logging
 import os
 import re
 import unicodedata
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -347,22 +346,16 @@ class DocumentParser:
         raw_text = re.sub(r" {2,}", " ", raw_text)
         raw_text = re.sub(r"\n{3,}", "\n\n", raw_text)
 
-        # 4. 텍스트 깨짐 및 스캔본 감지 시 비전 OCR 폴백
+        # 4. 텍스트 깨짐 및 스캔본 감지 시 경고만 남긴다(추출 결과는 그대로 반환).
         stripped = raw_text.strip()
         too_short = len(stripped) < 50
         corrupted = self._looks_corrupted(stripped)
-        
+
         if too_short or corrupted:
             reason = "텍스트가 거의 추출되지 않음(스캔본 추정)" if too_short else "텍스트 레이어 손상(글자 단위 깨짐) 감지"
             logger.warning(
-                "[PDF 텍스트 추출 경고] '%s': %s. Gemini 비전 전사로 폴백합니다.",
+                "[PDF 텍스트 추출 경고] '%s': %s. 해당 문서는 품질이 낮은 상태로 적재됩니다.",
                 path.name, reason,
-            )
-            vision_text = self._parse_pdf_vision(path)
-            if vision_text.strip():
-                return vision_text
-            logger.error(
-                "[PDF] '%s' 비전 전사도 실패했습니다. 추출 결과를 그대로 반환합니다.", path.name
             )
 
         return raw_text
@@ -381,77 +374,6 @@ class DocumentParser:
             return False
         single = sum(1 for t in tokens if len(t) == 1)
         return (single / len(tokens)) > 0.45
-
-    def _parse_pdf_vision(self, path: Path) -> str:
-        """손상/스캔 PDF를 페이지 이미지로 렌더링한 뒤 Gemini 비전으로 전사하여 markdown 텍스트로 복원."""
-        try:
-            import pymupdf
-            from google import genai
-            from google.genai import types
-        except ImportError as exc:
-            logger.error(
-                "비전 전사를 위해 pymupdf, google-genai 가 필요합니다 (uv add pymupdf google-genai): %s", exc
-            )
-            return ""
-
-        # Vertex AI 경유로 호출하여 GCP 무료 평가판 크레딧으로 청구되도록 함.
-        # 인증은 서비스 계정 키(GOOGLE_APPLICATION_CREDENTIALS) 기반 ADC로 자동 처리.
-        project = os.environ.get("GOOGLE_CLOUD_PROJECT")
-        location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-        if not project:
-            logger.error(
-                "GOOGLE_CLOUD_PROJECT 가 설정되지 않아 Vertex AI 비전 전사를 진행할 수 없습니다."
-            )
-            return ""
-
-        model = os.environ.get("GEMINI_VISION_MODEL")
-        if not model:
-            raise RuntimeError("GEMINI_VISION_MODEL 환경변수가 설정되어 있지 않습니다.")
-        dpi = int(os.environ.get("PDF_VISION_DPI", "150"))
-        max_workers = int(os.environ.get("PDF_VISION_WORKERS", "8"))
-        prompt = (
-            "이 이미지는 한국 주택/금융 세금 안내 책자의 한 페이지다. "
-            "페이지에 보이는 본문 텍스트를 한국어 마크다운으로 정확히 그대로 전사(transcribe)하라. "
-            "표는 마크다운 표로 변환하라. 머리글/꼬리글/페이지번호/URL/워터마크는 제외하고 본문만 출력하라. "
-            "추가 설명이나 코드펜스 없이 전사 결과 텍스트만 출력하라."
-        )
-
-        doc = pymupdf.open(path)
-        client = genai.Client(vertexai=True, project=project, location=location)
-        n = doc.page_count
-        logger.info("[PDF 비전] '%s' %d페이지 전사 시작 (model=%s, dpi=%d, workers=%d)...",
-                    path.name, n, model, dpi, max_workers)
-
-        # 페이지 이미지를 미리 렌더링(메인 스레드에서 pymupdf 접근, 동시성은 API 호출에만 적용)
-        page_images = [doc[i].get_pixmap(dpi=dpi).tobytes("png") for i in range(n)]
-
-        def transcribe(idx_img: tuple[int, bytes]) -> tuple[int, str]:
-            idx, img = idx_img
-            for attempt in range(1, 4):
-                try:
-                    resp = client.models.generate_content(
-                        model=model,
-                        contents=[types.Part.from_bytes(data=img, mime_type="image/png"), prompt],
-                    )
-                    text = (resp.text or "").strip()
-                    # 혹시 모델이 코드펜스를 붙이면 제거
-                    text = re.sub(r"^```(?:markdown)?\s*|\s*```$", "", text).strip()
-                    return idx, text
-                except Exception as exc:  # 일시적 오류 재시도
-                    logger.warning("[PDF 비전] %d/%d 페이지 전사 실패(시도 %d/3): %s", idx + 1, n, attempt, exc)
-            logger.error("[PDF 비전] %d/%d 페이지 전사 최종 실패, 빈 텍스트로 처리.", idx + 1, n)
-            return idx, ""
-
-        results: list[str] = [""] * n
-        with ThreadPoolExecutor(max_workers=max_workers) as pool:
-            for idx, text in pool.map(transcribe, enumerate(page_images)):
-                results[idx] = text
-                if (idx + 1) % 20 == 0:
-                    logger.info("[PDF 비전] 진행: %d/%d 페이지 전사 완료", idx + 1, n)
-
-        ok = sum(1 for r in results if r)
-        logger.info("[PDF 비전] '%s' 전사 완료: %d/%d 페이지 성공", path.name, ok, n)
-        return "\n\n".join(r for r in results if r)
 
     def _parse_markdown(self, path: Path) -> str:
         """마크다운 파일 읽기 및 가벼운 문법 노이즈(코드블럭 기호 등) 정제."""
