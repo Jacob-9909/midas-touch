@@ -79,3 +79,21 @@ def get_latest_market_snapshots() -> list[dict]:
     with db_cursor() as (_, cursor):
         cursor.execute(sql)
         return fetchall_dicts(cursor)
+
+
+def get_market_history(limit_per_key: int = 15) -> list[dict]:
+    """Retrieve recent historical snapshot series for each unique (data_type, sub_key) pair (sparkline/chart용)."""
+    sql = """
+    WITH RankedSnapshots AS (
+        SELECT snapshot_date, data_type, sub_key, value, unit, source,
+               ROW_NUMBER() OVER (PARTITION BY data_type, sub_key ORDER BY snapshot_date DESC) as rn
+        FROM market_snapshots
+    )
+    SELECT snapshot_date, data_type, sub_key, value, unit, source
+    FROM RankedSnapshots
+    WHERE rn <= %s
+    ORDER BY data_type, sub_key, snapshot_date ASC
+    """
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql, [limit_per_key])
+        return fetchall_dicts(cursor)

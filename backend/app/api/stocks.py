@@ -288,3 +288,162 @@ def post_watchlist(req: WatchlistRequest) -> list[str]:
 def delete_watchlist(user_uuid: str, ticker: str) -> list[str]:
     """관심종목 제거 후 갱신된 목록 반환."""
     return remove_watchlist(user_uuid, ticker)
+
+
+# ── Finviz Heatmap Live Batch Service ──────────────────────────────────────────
+
+_HEATMAP_STOCKS = [
+    {"ticker": "NVDA", "name": "NVIDIA", "sector": "tech", "sectorName": "SEMICONDUCTOR & TECH", "defaultPrice": "$124.50", "defaultPct": 3.53, "defaultCapB": 3100},
+    {"ticker": "AAPL", "name": "Apple", "sector": "tech", "sectorName": "SEMICONDUCTOR & TECH", "defaultPrice": "$225.20", "defaultPct": 1.85, "defaultCapB": 3450},
+    {"ticker": "MSFT", "name": "Microsoft", "sector": "tech", "sectorName": "SEMICONDUCTOR & TECH", "defaultPrice": "$448.90", "defaultPct": 0.42, "defaultCapB": 3300},
+    {"ticker": "AVGO", "name": "Broadcom", "sector": "tech", "sectorName": "SEMICONDUCTOR & TECH", "defaultPrice": "$1,680.10", "defaultPct": -2.69, "defaultCapB": 780},
+    {"ticker": "005930.KS", "name": "삼성전자", "sector": "tech", "sectorName": "SEMICONDUCTOR & TECH", "defaultPrice": "78,500원", "defaultPct": 1.42, "defaultCapB": 410},
+    {"ticker": "AMD", "name": "AMD", "sector": "tech", "sectorName": "SEMICONDUCTOR & TECH", "defaultPrice": "$152.30", "defaultPct": -3.29, "defaultCapB": 240},
+    {"ticker": "000660.KS", "name": "SK하이닉스", "sector": "tech", "sectorName": "SEMICONDUCTOR & TECH", "defaultPrice": "215,000원", "defaultPct": 2.87, "defaultCapB": 140},
+    {"ticker": "MU", "name": "Micron", "sector": "tech", "sectorName": "SEMICONDUCTOR & TECH", "defaultPrice": "$118.40", "defaultPct": -6.99, "defaultCapB": 130},
+
+    {"ticker": "GOOGL", "name": "Alphabet", "sector": "comm", "sectorName": "COMMUNICATION SERVICES", "defaultPrice": "$182.60", "defaultPct": 0.65, "defaultCapB": 2250},
+    {"ticker": "AMZN", "name": "Amazon", "sector": "comm", "sectorName": "COMMUNICATION SERVICES", "defaultPrice": "$186.40", "defaultPct": -0.66, "defaultCapB": 1950},
+    {"ticker": "META", "name": "Meta", "sector": "comm", "sectorName": "COMMUNICATION SERVICES", "defaultPrice": "$498.50", "defaultPct": -1.80, "defaultCapB": 1250},
+    {"ticker": "NFLX", "name": "Netflix", "sector": "comm", "sectorName": "COMMUNICATION SERVICES", "defaultPrice": "$642.10", "defaultPct": 1.74, "defaultCapB": 280},
+    {"ticker": "035420.KS", "name": "NAVER", "sector": "comm", "sectorName": "COMMUNICATION SERVICES", "defaultPrice": "172,000원", "defaultPct": 0.88, "defaultCapB": 30},
+
+    {"ticker": "BRK-B", "name": "Berkshire", "sector": "finance", "sectorName": "FINANCIAL SERVICES", "defaultPrice": "$412.30", "defaultPct": 0.83, "defaultCapB": 900},
+    {"ticker": "JPM", "name": "JPMorgan", "sector": "finance", "sectorName": "FINANCIAL SERVICES", "defaultPrice": "$208.40", "defaultPct": 0.95, "defaultCapB": 600},
+    {"ticker": "V", "name": "Visa", "sector": "finance", "sectorName": "FINANCIAL SERVICES", "defaultPrice": "$274.50", "defaultPct": 1.18, "defaultCapB": 560},
+    {"ticker": "MA", "name": "Mastercard", "sector": "finance", "sectorName": "FINANCIAL SERVICES", "defaultPrice": "$452.10", "defaultPct": 1.77, "defaultCapB": 420},
+    {"ticker": "BAC", "name": "Bank of America", "sector": "finance", "sectorName": "FINANCIAL SERVICES", "defaultPrice": "$41.80", "defaultPct": 1.26, "defaultCapB": 320},
+
+    {"ticker": "TSLA", "name": "Tesla", "sector": "auto", "sectorName": "AUTO & MOBILITY", "defaultPrice": "$248.50", "defaultPct": -2.08, "defaultCapB": 800},
+    {"ticker": "GE", "name": "GE Aerospace", "sector": "auto", "sectorName": "AUTO & MOBILITY", "defaultPrice": "$168.20", "defaultPct": 1.35, "defaultCapB": 180},
+    {"ticker": "CAT", "name": "Caterpillar", "sector": "auto", "sectorName": "AUTO & MOBILITY", "defaultPrice": "$345.80", "defaultPct": -0.65, "defaultCapB": 170},
+    {"ticker": "005380.KS", "name": "현대차", "sector": "auto", "sectorName": "AUTO & MOBILITY", "defaultPrice": "254,000원", "defaultPct": 3.15, "defaultCapB": 160},
+
+    {"ticker": "LLY", "name": "Eli Lilly", "sector": "bio", "sectorName": "HEALTHCARE & BIO", "defaultPrice": "$948.50", "defaultPct": 0.86, "defaultCapB": 900},
+    {"ticker": "UNH", "name": "UnitedHealth", "sector": "bio", "sectorName": "HEALTHCARE & BIO", "defaultPrice": "$528.10", "defaultPct": -0.67, "defaultCapB": 490},
+    {"ticker": "207940.KS", "name": "삼성바이오", "sector": "bio", "sectorName": "HEALTHCARE & BIO", "defaultPrice": "812,000원", "defaultPct": 1.25, "defaultCapB": 60},
+]
+
+_HEATMAP_CACHE: dict = {
+    "data": [],
+    "last_updated": 0.0,
+    "source": "init",
+}
+_CACHE_TTL_SECONDS = 300.0  # 5분 인메모리 캐시 (Rate limit 방지)
+
+
+import threading
+
+_IS_UPDATING_HEATMAP = False
+
+
+def _do_update_heatmap():
+    global _IS_UPDATING_HEATMAP
+    import time
+    import yfinance as yf
+
+    try:
+        now = time.time()
+        items = []
+        tickers_space = " ".join(s["ticker"] for s in _HEATMAP_STOCKS)
+        data = yf.Tickers(tickers_space)
+        for s in _HEATMAP_STOCKS:
+            t_symbol = s["ticker"]
+            price_str = s["defaultPrice"]
+            pct = s["defaultPct"]
+            cap = s["defaultCapB"]
+
+            try:
+                t_obj = data.tickers.get(t_symbol)
+                if t_obj:
+                    fast_info = getattr(t_obj, "fast_info", None)
+                    if fast_info:
+                        last_price = getattr(fast_info, "last_price", None) or getattr(fast_info, "previous_close", None)
+                        prev_close = getattr(fast_info, "previous_close", None)
+                        mcap = getattr(fast_info, "market_cap", None)
+
+                        if last_price and prev_close and prev_close > 0:
+                            pct = round(((last_price - prev_close) / prev_close) * 100, 2)
+
+                        if last_price:
+                            if t_symbol.endswith(".KS"):
+                                price_str = f"{int(last_price):,}원"
+                            else:
+                                price_str = f"${last_price:,.2f}"
+
+                        if mcap:
+                            if t_symbol.endswith(".KS"):
+                                cap = round(mcap / 1_000_000_000_000, 1)
+                            else:
+                                cap = round(mcap / 1_000_000_000, 1)
+            except Exception:
+                pass
+
+            items.append({
+                "ticker": t_symbol,
+                "name": s["name"],
+                "price": price_str,
+                "changePct": pct,
+                "marketCapB": cap,
+                "sector": s["sector"],
+                "sectorName": s["sectorName"],
+            })
+
+        _HEATMAP_CACHE["data"] = items
+        _HEATMAP_CACHE["last_updated"] = now
+        _HEATMAP_CACHE["source"] = "yfinance_live_batch"
+    except Exception as exc:
+        if not _HEATMAP_CACHE["data"]:
+            _HEATMAP_CACHE["data"] = [
+                {
+                    "ticker": s["ticker"],
+                    "name": s["name"],
+                    "price": s["defaultPrice"],
+                    "changePct": s["defaultPct"],
+                    "marketCapB": s["defaultCapB"],
+                    "sector": s["sector"],
+                    "sectorName": s["sectorName"],
+                }
+                for s in _HEATMAP_STOCKS
+            ]
+            _HEATMAP_CACHE["last_updated"] = time.time()
+            _HEATMAP_CACHE["source"] = f"fallback_sample ({exc})"
+    finally:
+        _IS_UPDATING_HEATMAP = False
+
+
+@router.get("/heatmap")
+def get_stock_heatmap(force_refresh: bool = False) -> dict:
+    """Finviz 히트맵용 대표 종목 시가총액 & 등락률 정보 (초고속 캐시 + 비동기 라이브 백그라운드 배치)."""
+    global _IS_UPDATING_HEATMAP
+    import time
+
+    now = time.time()
+    # 1. 최초 데이터가 없으면 즉시 샘플 데이터로 선초기화 (0초 응답)
+    if not _HEATMAP_CACHE["data"]:
+        _HEATMAP_CACHE["data"] = [
+            {
+                "ticker": s["ticker"],
+                "name": s["name"],
+                "price": s["defaultPrice"],
+                "changePct": s["defaultPct"],
+                "marketCapB": s["defaultCapB"],
+                "sector": s["sector"],
+                "sectorName": s["sectorName"],
+            }
+            for s in _HEATMAP_STOCKS
+        ]
+        _HEATMAP_CACHE["last_updated"] = now
+        _HEATMAP_CACHE["source"] = "sample_initial"
+
+    # 2. 캐시 만료 시 백그라운드 스레드로 비동기 갱신 (메인 스레드 블로킹 방지)
+    if (force_refresh or (now - _HEATMAP_CACHE["last_updated"] >= _CACHE_TTL_SECONDS)) and not _IS_UPDATING_HEATMAP:
+        _IS_UPDATING_HEATMAP = True
+        t = threading.Thread(target=_do_update_heatmap, daemon=True)
+        t.start()
+
+    return {
+        "stocks": _HEATMAP_CACHE["data"],
+        "source": _HEATMAP_CACHE["source"],
+        "last_updated": datetime.fromtimestamp(_HEATMAP_CACHE["last_updated"]).strftime("%Y-%m-%d %H:%M:%S") if _HEATMAP_CACHE["last_updated"] > 0 else "",
+    }
