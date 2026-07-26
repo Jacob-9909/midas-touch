@@ -20,6 +20,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _require_env(name: str) -> str:
+    """필수 환경변수를 읽고, 없으면 명확한 오류로 실패한다(하드코딩 기본값 금지)."""
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f"{name} 환경변수가 설정되어 있지 않습니다.")
+    return value
+
+
 # ---------------------------------------------------------------------------
 # NVIDIA NIM API 설정
 # ---------------------------------------------------------------------------
@@ -35,11 +43,10 @@ class NIMConfig:
     )
     base_url: str = "https://integrate.api.nvidia.com/v1"
 
-    # 쿼리 합성에 사용할 생성 모델 (NIM_GENERATION_MODEL 환경변수로 override 가능)
+    # 쿼리 합성에 사용할 생성 모델. 하드코딩 기본값을 두면 .env 교체 후에도 옛 모델로
+    # 조용히 돌아가므로(실제로 meta/llama-3.1-70b가 남아 있었다), 미설정이면 그냥 실패시킨다.
     generation_model: str = field(
-        default_factory=lambda: os.environ.get(
-            "NIM_GENERATION_MODEL", "meta/llama-3.1-70b-instruct"
-        )
+        default_factory=lambda: _require_env("NIM_GENERATION_MODEL")
     )
 
     # 요청 타임아웃(초) / 동시 요청 수 상한 (40 RPM 안전 무풍지대를 위해 1로 고정 추천)

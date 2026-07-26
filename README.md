@@ -70,20 +70,47 @@ uv sync
 
 ## 🤖 LLM · 임베딩 모델 구성
 
-모델은 코드에 하드코딩하지 않고 전부 `.env` 환경변수로 주입합니다(`agent/llm.py`의 `require_env`는 기본값 없이 강제). 호출 경로는 **NVIDIA NIM**(OpenAI 호환 엔드포인트 `https://integrate.api.nvidia.com/v1`)과 **Google Gemini**(Vertex AI) 두 가지입니다.
+모델은 코드에 하드코딩하지 않고 전부 `.env` 환경변수로 주입합니다(`agent/llm.py`의 `require_env`는 기본값 없이 강제). 모든 LLM 호출은 **NVIDIA NIM**(OpenAI 호환 엔드포인트 `https://integrate.api.nvidia.com/v1`) 단일 경로를 사용합니다.
 
 | 환경변수 | 현재 모델 | 용도 |
 |----------|-----------|------|
-| `AGENT_LLM_MODEL` | `deepseek-ai/deepseek-v4-pro` | 에이전트 답변·보고서 생성 (LangGraph) |
-| `PERSONA_GENERATION_MODEL` | `deepseek-ai/deepseek-v4-pro` | 합성 투자자 페르소나 생성 |
-| `NIM_GENERATION_MODEL` | `deepseek-ai/deepseek-v4-pro` | 임베딩 파이프라인 쿼리 합성 |
-| `GEMINI_GENERATION_MODEL` | `gemini-2.5-flash` | 지식 그래프 빌더 |
-| `GEMINI_VISION_MODEL` | `gemini-2.5-flash` | 비전 기반 PDF 전사(텍스트레이어 손상 문서) |
+| `AGENT_LLM_MODEL` | `qwen/qwen3-next-80b-a3b-instruct` | 에이전트 답변·보고서 생성 (LangGraph) |
+| `PERSONA_GENERATION_MODEL` | `qwen/qwen3-next-80b-a3b-instruct` | 합성 투자자 페르소나 생성 |
+| `NIM_GENERATION_MODEL` | `qwen/qwen3-next-80b-a3b-instruct` | 임베딩 파이프라인 쿼리 합성 · 지식 그래프 빌더 · 엔티티 정제 |
 | `AGENT_EMBEDDING_MODEL` | `BAAI/bge-m3` | 에이전트 쿼리 임베딩(1024차원, persona_embeddings와 동일해야 함) |
 | `TEACHER_EMBEDDING_MODEL` | `BAAI/bge-m3` | 하드 네거티브 마이닝 교사 임베딩 |
 | `STUDENT_EMBEDDING_MODEL` | `BAAI/bge-m3` | 파인튜닝 대상 학생 임베딩 |
 
 > 임베딩은 파인튜닝 완료 후 `TRAINING_OUTPUT_DIR`(예: `./output/kure-finance-v1`) 경로의 모델로 교체할 수 있습니다.
+
+### 모델 선정 근거 (2026-07-26 실측)
+
+NIM 카탈로그의 후보 10종을 실제 프롬프트(라우터 structured output · 보고서 작문)로 재봤습니다.
+
+| 모델 | 라우터 정확도 | 라우터 p50 | 보고서 성공 | 보고서 p50 |
+|------|--------------|-----------|------------|-----------|
+| **qwen/qwen3-next-80b-a3b-instruct** | **15/16** | **2.0초** | **3/3** | 39.6초 |
+| deepseek-ai/deepseek-v4-pro (이전) | 16/16 | 15.8초 | **1/3** | 120초 타임아웃 |
+| nvidia/nemotron-3-super-120b-a12b | 9/16 | 3.0초 | 3/3 | 27.0초 |
+| openai/gpt-oss-120b | 14/16 | 0.8초 | — | (툴 스키마 위반 관측) |
+
+이전 모델 `deepseek-v4-pro`는 정확했지만 실제 보고서 길이의 요청에서 3번 중 2번 120초 타임아웃이 났고,
+매 턴 호출되는 라우터가 15.8초를 잡아먹었습니다. `qwen3-next-80b`는 라우터를 8배 빠르게 처리하면서
+보고서 3/3을 완주했습니다. 탈락: `deepseek-v4-flash`·`meta/llama-3.3-70b`·`z-ai/glm-5.2`(503/타임아웃 다발),
+`qwen3.5-397b`·`moonshotai/kimi-k2.6`(계정에서 404).
+
+### ⏱️ NIM 호출 속도 제한 (키당 40 RPM)
+
+NIM 무료 티어는 **API 키 1개당 분당 40회**입니다. 그런데 지식그래프 빌더·엔티티 정제·쿼리 합성·페르소나 생성은 트리거가 각각 다르고 `jobs.py`가 이들을 **별도 subprocess**로 띄우므로, 파이프라인마다 자기 딜레이만 지켜도 동시에 두 개가 돌면 한도를 넘습니다.
+
+그래서 `shared/utils/nim_rate_limit.py`가 **키별 슬라이딩 윈도우 슬롯을 파일 락으로 공유**합니다. 어느 프로세스에서 호출하든 60초 창 안의 호출 수가 `NIM_RPM`을 넘지 않도록 대기 시간을 계산해 돌려주며, 대기는 락 밖에서 하므로 느린 호출자가 다른 프로세스를 막지 않습니다. 키가 2개면 총 80 RPM까지 자동 분산됩니다.
+
+| 환경변수 | 기본값 | 의미 |
+|----------|--------|------|
+| `NIM_RPM` | `40` | 키 1개당 분당 허용 호출 수 (0이면 제한 해제) |
+| `NIM_GRAPH_DELAY` | `0` | RPM 한도 위에 추가로 강제할 호출 간 최소 간격(초) |
+
+적용 지점: `NIMOpenAI`(지식그래프 빌더·엔티티 정제·GraphRAG 도구), `query_synthesizer.NIMClient`, `generate_finance_data`. 대화형 응답 경로(`agent/llm.py`의 `ChatOpenAI`)는 사용자 대기를 늘리지 않기 위해 의도적으로 제외했습니다.
 
 ---
 

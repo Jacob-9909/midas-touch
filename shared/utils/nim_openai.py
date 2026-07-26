@@ -6,12 +6,19 @@ from llama_index.llms.openai import OpenAI
 from llama_index.core.llms import LLMMetadata
 from llama_index.core.base.llms.types import MessageRole
 from shared.utils.api_key_rotator import APIKeyRotator
-from openai import RateLimitError, APITimeoutError, APIConnectionError
+from shared.utils.nim_rate_limit import reserve
+from openai import (
+    RateLimitError,
+    APITimeoutError,
+    APIConnectionError,
+    InternalServerError,
+)
 
 logger = logging.getLogger("nim_openai")
 
-# 회전하며 재시도할 예외 유형 정의 (429 Rate Limit, 타임아웃, 연결 실패 등)
-RETRY_EXCEPTIONS = (RateLimitError, APITimeoutError, APIConnectionError)
+# 회전하며 재시도할 예외 유형 정의.
+# InternalServerError는 5xx 전반(NIM은 모델 워커가 붐비면 503 ResourceExhausted를 뱉는다)을 덮는다.
+RETRY_EXCEPTIONS = (RateLimitError, APITimeoutError, APIConnectionError, InternalServerError)
 
 
 class NIMOpenAI(OpenAI):
@@ -37,8 +44,10 @@ class NIMOpenAI(OpenAI):
         # Pydantic BaseModel의 필드 빌드로 인한 초기화 무효화 방지를 위해 super().__init__ 이후 속성 지정
         self._rotator = temp_rotator
         
-        # 동적 딜레이 조절을 위한 상태 변수
-        self._min_delay = float(os.environ.get("NIM_GRAPH_DELAY", "2.0"))
+        # 동적 딜레이 조절을 위한 상태 변수.
+        # 분당 호출 수 자체는 nim_rate_limit.reserve()가 정확히 통제하므로 기본값은 0이고,
+        # NIM_GRAPH_DELAY는 그 위에 얹는 추가 여유(호출 간 최소 간격) 튜닝 노브로만 남긴다.
+        self._min_delay = float(os.environ.get("NIM_GRAPH_DELAY", "0"))
         self._current_delay = self._min_delay
         self._backoff_step = 2.0  # 오류 발생 시 증가할 초 단위
         self._decay_step = 0.2    # 성공 시 점진적으로 감소할 초 단위
@@ -54,15 +63,21 @@ class NIMOpenAI(OpenAI):
             system_role=MessageRole.SYSTEM,
         )
 
+    def _wait_seconds(self) -> float:
+        """분당 호출 한도(RPM) 슬롯 예약 대기 + 동적 백오프 딜레이의 합."""
+        return reserve(self.api_key) + self._current_delay
+
     def _apply_delay(self) -> None:
-        if self._current_delay > 0:
-            logger.info("[NIM API] 동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self._current_delay)
-            time.sleep(self._current_delay)
+        wait = self._wait_seconds()
+        if wait > 0:
+            logger.info("[NIM API] 동기 API 호출 전 %.2f초 대기 중... (RPM 슬롯 + 동적 딜레이)", wait)
+            time.sleep(wait)
 
     async def _apply_adelay(self) -> None:
-        if self._current_delay > 0:
-            logger.info("[NIM API] 비동기 API 호출 간 %.2f초 지연 대기 중... (현재 동적 딜레이 기준)", self._current_delay)
-            await asyncio.sleep(self._current_delay)
+        wait = self._wait_seconds()
+        if wait > 0:
+            logger.info("[NIM API] 비동기 API 호출 전 %.2f초 대기 중... (RPM 슬롯 + 동적 딜레이)", wait)
+            await asyncio.sleep(wait)
 
     def _handle_success(self) -> None:
         # 성공 시 딜레이를 점진적으로 최소 딜레이 방향으로 감쇠(Decay)
@@ -76,9 +91,12 @@ class NIMOpenAI(OpenAI):
         old_delay = self._current_delay
         self._current_delay = self._current_delay + self._backoff_step
         
-        # 실패한 키는 5분 동안 쿨다운(사용 제외) 처리하여 다음 재시도 및 호출에서 스킵되게 합니다.
+        # 실패한 키를 쿨다운(사용 제외) 처리해 다음 재시도에서 스킵되게 합니다.
+        # 429는 창이 지나면 바로 풀리므로 짧게 — 키가 2개뿐인데 5분씩 재우면 둘 다 쿨다운되어
+        # 로테이터가 전체 초기화로 되돌리고, 결국 쿨다운이 무의미해집니다.
         old_key = self.api_key
-        self._rotator.mark_failed(old_key, duration=300.0)
+        cooldown = 30.0 if isinstance(exc, RateLimitError) else 300.0
+        self._rotator.mark_failed(old_key, duration=cooldown)
         
         # API 키 회전 (쿨다운된 키는 제외하고 남은 활성 키 중에서 선택됨)
         new_key = self._rotator.rotate()
@@ -116,9 +134,10 @@ class NIMOpenAI(OpenAI):
         max_retries = len(self._rotator.keys) * 2
         for attempt in range(1, max_retries + 1):
             try:
-                self._apply_delay()
+                # 키를 먼저 고르고 그 키의 RPM 슬롯을 예약해야 한다(예약은 키 단위)
                 if attempt == 1:
                     self._rotate_key_proactive()
+                self._apply_delay()
                 res = call()
                 self._handle_success()
                 return res
@@ -135,9 +154,10 @@ class NIMOpenAI(OpenAI):
         max_retries = len(self._rotator.keys) * 2
         for attempt in range(1, max_retries + 1):
             try:
-                await self._apply_adelay()
+                # 키를 먼저 고르고 그 키의 RPM 슬롯을 예약해야 한다(예약은 키 단위)
                 if attempt == 1:
                     self._rotate_key_proactive()
+                await self._apply_adelay()
                 res = await acall()
                 self._handle_success()
                 return res
