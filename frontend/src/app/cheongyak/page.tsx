@@ -22,6 +22,8 @@ import { seedChat } from "@/lib/chat-seed";
 import { Card, PageTitle, Skeleton } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import DetailModal from "./DetailModal";
+import KoreaMap from "./KoreaMap";
+import { PROVINCES, matchProvince } from "./korea-geo";
 
 const TABS: { kind: CheongyakKind; label: string }[] = [
   { kind: "apt", label: "APT" },
@@ -134,6 +136,7 @@ export default function CheongyakPage() {
   const [district, setDistrict] = useState<string | null>(null);
   const [onlyMyRegion, setOnlyMyRegion] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("전체");
+  const [mapRegion, setMapRegion] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<CheongyakSummary | null>(null);
 
   // 선택 유저의 거주 지역(개인화).
@@ -163,6 +166,7 @@ export default function CheongyakPage() {
     /* eslint-disable react-hooks/set-state-in-effect -- kind 변경 시 로딩 리셋 후 재요청 */
     setItems(null);
     setError(null);
+    setMapRegion(null);
     /* eslint-enable react-hooks/set-state-in-effect */
     listCheongyak(kind, 120, 120)
       .then((data) => alive && setItems(data))
@@ -186,17 +190,33 @@ export default function CheongyakPage() {
     return c;
   }, [items]);
 
-  // 상태 필터 → district 매칭 우선 정렬 + (옵션) 내 지역만 필터.
-  const view = useMemo(() => {
+  // 상태 필터만 적용한 목록 — 지도 카운트와 최종 view 의 공통 기준.
+  const statusFiltered = useMemo(() => {
     if (!items) return null;
+    return statusFilter === "전체" ? items : items.filter((it) => it.status === statusFilter);
+  }, [items, statusFilter]);
+
+  // 시도별 공고 수 (지도 채움 농도용).
+  const regionCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    PROVINCES.forEach((p) => {
+      c[p.short] = (statusFiltered ?? []).filter((it) => matchProvince(it, p)).length;
+    });
+    return c;
+  }, [statusFiltered]);
+
+  // 지도 선택 → district 매칭 우선 정렬 + (옵션) 내 지역만 필터.
+  const view = useMemo(() => {
+    if (!statusFiltered) return null;
     const key = (district || "").replace(/특별시|광역시|특별자치시|특별자치도|도$/g, "").trim();
     const matches = (it: CheongyakSummary) =>
       key.length >= 2 && (it.region?.includes(key) || it.address?.includes(key));
-    let list = items;
-    if (statusFilter !== "전체") list = list.filter((it) => it.status === statusFilter);
+    let list = statusFiltered;
+    const prov = PROVINCES.find((p) => p.short === mapRegion);
+    if (prov) list = list.filter((it) => matchProvince(it, prov));
     if (onlyMyRegion && key) list = list.filter(matches);
     return [...list].sort((a, b) => Number(matches(b)) - Number(matches(a)));
-  }, [items, district, onlyMyRegion, statusFilter]);
+  }, [statusFiltered, district, onlyMyRegion, mapRegion]);
 
   const consult = (item: CheongyakSummary) => {
     const text =
@@ -268,6 +288,55 @@ export default function CheongyakPage() {
         </div>
       )}
 
+      {/* 지역 지도: 클릭하면 해당 시도로 필터 + 포커싱 */}
+      {items && items.length > 0 && (
+        <Card className="mb-5 flex flex-col items-center gap-5 lg:flex-row lg:items-start">
+          <KoreaMap counts={regionCounts} selected={mapRegion} onSelect={setMapRegion} />
+          <div className="min-w-0 flex-1 text-sm">
+            {mapRegion ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="font-display text-lg font-semibold text-accent">{mapRegion}</span>
+                  <span className="text-muted">공고 {regionCounts[mapRegion] ?? 0}건</span>
+                  <button
+                    onClick={() => setMapRegion(null)}
+                    className="ml-auto rounded-full border border-line px-3 py-1 text-xs text-muted transition hover:text-fg"
+                  >
+                    전체 보기 ✕
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-muted">
+                  다른 시도를 누르면 이동, 같은 곳을 다시 누르거나 지도 바깥을 누르면 전체로 돌아갑니다.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-display text-base text-fg">지역으로 좁혀보기</p>
+                <p className="mt-2 text-xs leading-relaxed text-muted">
+                  지도에서 시도를 누르면 해당 지역 공고만 보이고 지도도 그 지역으로 확대됩니다. 색이
+                  진할수록 공고가 많은 지역입니다.
+                </p>
+              </>
+            )}
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {PROVINCES.filter((p) => (regionCounts[p.short] ?? 0) > 0).map((p) => (
+                <button
+                  key={p.code}
+                  onClick={() => setMapRegion(p.short === mapRegion ? null : p.short)}
+                  className={`rounded-full border px-2.5 py-0.5 text-xs transition ${
+                    p.short === mapRegion
+                      ? "border-accent/50 bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-accent"
+                      : "border-line text-muted hover:text-fg"
+                  }`}
+                >
+                  {p.short} {regionCounts[p.short]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
+
       {error && (
         <Card className="border-[#e2607b]/40">
           <p className="text-sm text-[#e2607b]">조회 실패: {error}</p>
@@ -287,7 +356,9 @@ export default function CheongyakPage() {
 
       {view && view.length === 0 && (
         <p className="text-sm text-muted">
-          {statusFilter !== "전체"
+          {mapRegion
+            ? `'${mapRegion}' 지역에 조건에 맞는 공고가 없습니다.`
+            : statusFilter !== "전체"
             ? `'${statusFilter}' 상태의 공고가 없습니다.`
             : onlyMyRegion
               ? "내 지역 매칭 공고가 없습니다."
