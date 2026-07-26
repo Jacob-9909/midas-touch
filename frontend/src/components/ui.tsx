@@ -7,7 +7,6 @@ export function Card({
   children: ReactNode;
   className?: string;
 }) {
-  // soft-skill: 넉넉한 내부 여백으로 호흡감 확보.
   return <div className={`glass p-6 ${className}`}>{children}</div>;
 }
 
@@ -18,25 +17,22 @@ export function PageTitle({
 }: {
   title: string;
   subtitle?: string;
-  /** 헤딩 위 마이크로 라벨 (soft-skill 아이브로우 태그) */
   eyebrow?: string;
 }) {
-  // 큰 헤더에 그라디언트 텍스트는 지양(skill 9.A). 위계는 무게·크기로.
-  // 골드는 아이브로우 태그/얇은 마커로만 사용.
   return (
-    <div className="mb-10 animate-rise">
-      {eyebrow && <span className="eyebrow mb-3">{eyebrow}</span>}
-      <div className="flex items-center gap-3">
+    <div className="mb-10 animate-rise space-y-3">
+      {eyebrow && <span className="eyebrow">{eyebrow}</span>}
+      <div className="flex items-baseline gap-4">
         <span
           aria-hidden
-          className="h-8 w-1 shrink-0 rounded-full bg-gradient-to-b from-accent-soft to-accent"
+          className="h-7 w-0.5 shrink-0 bg-accent"
         />
-        <h1 className="font-display text-[2rem] font-semibold leading-[1.1] tracking-tight text-fg sm:text-[2.6rem]">
+        <h1 className="font-display text-[2.2rem] font-normal leading-[1.05] tracking-tight text-fg sm:text-[3.1rem]">
           {title}
         </h1>
       </div>
       {subtitle && (
-        <p className="mt-3 max-w-[60ch] pl-4 text-sm leading-relaxed text-muted">
+        <p className="max-w-[64ch] pl-5 text-xs leading-relaxed text-muted font-sans border-l border-line/40">
           {subtitle}
         </p>
       )}
@@ -46,7 +42,7 @@ export function PageTitle({
 
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+    <h2 className="mb-3 font-mono-spec text-[10px] font-semibold uppercase tracking-[0.22em] text-accent">
       {children}
     </h2>
   );

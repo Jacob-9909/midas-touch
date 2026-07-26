@@ -35,30 +35,33 @@ export default function NavBar() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <header className="sticky top-3 z-50 mx-auto mt-3 w-[calc(100%-1.5rem)] max-w-6xl rounded-[var(--r-xl)] border border-line bg-[var(--ink-2)]/70 backdrop-blur-2xl [box-shadow:var(--shadow-float)] sm:top-4 sm:mt-4">
-      <nav className="flex h-15 items-center gap-1 px-3 py-2.5 sm:px-4">
+    <header className="sticky top-3 z-50 mx-auto mt-2 w-[calc(100%-1.5rem)] max-w-6xl rounded-lg border border-line bg-[var(--ink-1)]/90 backdrop-blur-md shadow-md sm:top-4 sm:mt-3">
+      <nav className="flex h-14 items-center gap-1 px-4 sm:px-5">
         <Link
           href="/"
-          className="mr-3 flex items-center gap-2 font-display text-lg font-semibold"
+          className="mr-5 flex items-center gap-2.5 font-display text-xl font-normal tracking-tight"
         >
-          <ShieldChevron weight="fill" className="text-accent" size={22} />
-          <span className="text-gradient-accent">Midas Touch</span>
+          <ShieldChevron weight="fill" className="text-accent" size={20} />
+          <span className="text-gradient-accent font-semibold tracking-wide">Midas Touch</span>
+          <span className="hidden font-mono-spec text-[9px] uppercase tracking-widest text-muted border border-line/60 px-1.5 py-0.5 rounded sm:inline-block">
+            Console
+          </span>
         </Link>
 
-        {/* 데스크톱 링크 (단일 라인 유지) — 유저대면/엔진 사이 옅은 구분선 */}
+        {/* 데스크톱 링크 — Swiss Hairline Divider & Monospace Active State */}
         <div className="hidden items-center gap-1 md:flex">
           {LINKS.map((l, i) => (
             <span key={l.href} className="flex items-center">
               {i > 0 && LINKS[i - 1].group !== l.group && (
-                <span aria-hidden className="mx-1.5 h-4 w-px bg-line" />
+                <span aria-hidden className="mx-2 h-3.5 w-px bg-line/60" />
               )}
               <Link
                 href={l.href}
-                className={`rounded-full px-3.5 py-1.5 text-sm transition-colors duration-200 ${
+                className={`rounded px-3 py-1 text-xs font-medium transition-all duration-150 ${
                   isActive(l.href)
-                    ? "bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] text-accent"
-                    : "text-muted hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] hover:text-fg"
-                } ${l.group === "engine" && !isActive(l.href) ? "opacity-55" : ""}`}
+                    ? "bg-accent/15 text-accent border border-accent/40 font-semibold"
+                    : "text-muted hover:text-fg hover:bg-surface"
+                } ${l.group === "engine" && !isActive(l.href) ? "opacity-60" : ""}`}
               >
                 {l.label}
               </Link>
@@ -66,15 +69,15 @@ export default function NavBar() {
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <span className="hidden text-sm sm:inline">
+        <div className="ml-auto flex items-center gap-2.5">
+          <span className="hidden font-mono-spec text-xs sm:inline">
             {selected ? (
-              <span className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-3 py-1 text-accent">
-                <UserCircle weight="fill" size={16} className="shrink-0" />
+              <span className="flex items-center gap-1.5 whitespace-nowrap rounded border border-line px-2.5 py-1 text-accent">
+                <UserCircle weight="fill" size={15} className="shrink-0" />
                 {selected.label}
               </span>
             ) : (
-              <span className="text-muted">유저 미선택</span>
+              <span className="text-muted/60 text-xs">유저 미선택</span>
             )}
           </span>
 
@@ -82,9 +85,9 @@ export default function NavBar() {
           <button
             onClick={toggle}
             aria-label="테마 전환"
-            className="btn-ghost flex h-9 w-9 items-center justify-center"
+            className="btn-ghost flex h-8 w-8 items-center justify-center rounded border border-line"
           >
-            {theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
+            {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
           </button>
 
           {/* 모바일 햄버거 */}
@@ -92,24 +95,24 @@ export default function NavBar() {
             onClick={() => setOpen((o) => !o)}
             aria-label="메뉴"
             aria-expanded={open}
-            className="btn-ghost flex h-9 w-9 items-center justify-center md:hidden"
+            className="btn-ghost flex h-8 w-8 items-center justify-center rounded border border-line md:hidden"
           >
-            {open ? <X size={18} /> : <List size={18} />}
+            {open ? <X size={16} /> : <List size={16} />}
           </button>
         </div>
       </nav>
 
       {/* 모바일 메뉴 */}
       {open && (
-        <div className="border-t border-line px-3 py-2 md:hidden">
+        <div className="border-t border-line px-4 py-2 md:hidden bg-[var(--ink-1)]">
           {LINKS.map((l) => (
             <Link
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className={`block rounded-xl px-3 py-2 text-sm transition-colors ${
+              className={`block rounded px-3 py-2 text-xs font-medium transition-colors ${
                 isActive(l.href)
-                  ? "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-accent"
+                  ? "bg-accent/15 text-accent font-semibold"
                   : "text-muted hover:text-fg"
               }`}
             >

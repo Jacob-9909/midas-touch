@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Cormorant_Garamond } from "next/font/google";
+import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/lib/user-context";
 import { ThemeProvider, themeInitScript } from "@/lib/theme";
@@ -7,14 +7,15 @@ import { ToastProvider } from "@/lib/toast";
 import NavBar from "@/components/NavBar";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 const display = Cormorant_Garamond({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Midas Touch · 자산관리 콘솔",
+  title: "Midas Touch · AI 자산관리 & 투자 에디토리얼 콘솔",
   description: "금융 에이전트, 파인튜닝셋, 지식그래프 통합 웹 콘솔",
 };
 
@@ -26,7 +27,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className={`${geistSans.variable} ${display.variable} min-h-full`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${display.variable} min-h-full`}>
         <ThemeProvider>
           <ToastProvider>
             <UserProvider>

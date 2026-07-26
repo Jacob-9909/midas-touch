@@ -7,6 +7,12 @@
    은행권 무드: 차분한 사파이어 액센트로 신뢰감 전달.
    html.dark / html.light 에서 팔레트를 교체한다.
    ──────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────
+   디자인 토큰 — SWISS FINANCIAL EDITORIAL (Anti-AI 하이엔드 정밀 디테일)
+   - 퍼플/네온 그라디언트 및 뻔한 AI 카드 탈피
+   - 클래식 에디토리얼 세리프 + 1px 헤어라인 그리드 + 정밀 테크니컬 모노 믹스
+   - 미세 필름 노이즈(Tactile Grain) 질감으로 실물 인쇄물 같은 깊이감 형성
+   ──────────────────────────────────────────────── */
 @theme inline {
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
@@ -21,82 +27,67 @@
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-display: var(--font-display), Georgia, serif;
+  --font-display: var(--font-display), "Cormorant Garamond", Georgia, serif;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", monospace;
 }
 
-/* ────────────────────────────────────────────────
-   SHAPE LOCK: 한 페이지 = 하나의 radius 스케일.
-   소프트 전환으로 한 단계 키움(큰 squircle).
-   규칙: 카드 = lg, 버튼/입력 = md, 작은 칩/스켈레톤 = sm,
-        토글/아바타 등 원형 = pill. 예외 없음.
-   ──────────────────────────────────────────────── */
 :root {
-  --r-sm: 10px;
-  --r-md: 13px;
-  --r-lg: 20px;
-  --r-xl: 26px;
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 14px;
+  --r-xl: 20px;
   --r-pill: 999px;
-  /* 마이크로 인터랙션용(짧고 또렷) */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  /* 큰 모션용(부드럽고 물성감 있는 감속) — soft-skill */
-  --ease-soft: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html.dark {
-  /* 순수 블랙 대신 깊은 네이비-슬레이트 베이스 */
-  --ink: #0a0e17;
-  /* 오버레이(드롭다운·모달·플로팅 패널)용 불투명 서피스. 카드(--ink-2)보다 한 톤 낮게 띄운 느낌 */
-  --ink-1: #0e131f;
-  --ink-2: #121826;
-  --surface: rgba(255, 255, 255, 0.04);
-  --line: rgba(199, 168, 110, 0.15);
-  --fg: #eef2f8;
-  --muted: #8b94a8;
-  /* Midas 아이덴티티 — 앤티크 샴페인 골드가 앱 전역 액센트 (네온 아님). */
-  --accent: #c7a349;
-  --accent-soft: #e6c877;
+  --ink: #070a0f;
+  --ink-1: #0b0f19;
+  --ink-2: #101624;
+  --surface: rgba(255, 255, 255, 0.03);
+  --line: rgba(212, 175, 96, 0.18);
+  --line-subtle: rgba(255, 255, 255, 0.07);
+  --fg: #f1f4f9;
+  --muted: #848e9f;
+  --accent: #d4af37;
+  --accent-soft: #e8c86b;
   --gilt: var(--accent);
   --gilt-soft: var(--accent-soft);
-  --positive: #58c8a0;
-  --negative: #f08a8a;
-  --glow: rgba(199, 163, 73, 0.13);
-  /* 부드럽게 확산된 앰비언트 섀도 (배경 색조와 동일 계열) */
+  --positive: #34d399;
+  --negative: #f87171;
+  --glow: rgba(212, 175, 96, 0.08);
   --shadow-soft:
-    0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
-    0 2px 6px -3px rgba(2, 6, 18, 0.45),
-    0 26px 60px -34px rgba(2, 6, 18, 0.78);
-  --shadow-float:
     0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
-    0 18px 50px -22px rgba(2, 6, 18, 0.82);
+    0 4px 20px -6px rgba(0, 0, 0, 0.6);
+  --shadow-float:
+    0 1px 0 0 rgba(255, 255, 255, 0.08) inset,
+    0 16px 40px -16px rgba(0, 0, 0, 0.85);
   color-scheme: dark;
 }
 
 html.light {
-  /* 클린 쿨 화이트 페이퍼 (은행권) */
-  --ink: #eef2f8;
-  /* 오버레이용 불투명 서피스(라이트 테마는 순백) */
+  --ink: #f7f8fa;
   --ink-1: #ffffff;
   --ink-2: #ffffff;
   --surface: #ffffff;
-  --line: rgba(150, 116, 40, 0.18);
-  --fg: #0f1b2d;
-  --muted: #5b6678;
-  /* 라이트 테마는 화이트 위 가독성 위해 더 깊은 골드 */
-  --accent: #8a6a1c;
-  --accent-soft: #a67f21;
+  --line: rgba(160, 125, 45, 0.22);
+  --line-subtle: rgba(0, 0, 0, 0.08);
+  --fg: #0d1522;
+  --muted: #576375;
+  --accent: #92701a;
+  --accent-soft: #b08a26;
   --gilt: var(--accent);
   --gilt-soft: var(--accent-soft);
-  --positive: #1a9c6a;
-  --negative: #c64537;
-  --glow: rgba(154, 116, 32, 0.08);
-  /* 라이트: 쿨 블루 색조의 확산 섀도 (검정 금지) */
+  --positive: #059669;
+  --negative: #dc2626;
+  --glow: rgba(160, 125, 45, 0.06);
   --shadow-soft:
-    0 1px 0 0 rgba(255, 255, 255, 0.8) inset,
-    0 2px 8px -4px rgba(20, 60, 140, 0.12),
-    0 26px 56px -30px rgba(20, 60, 140, 0.2);
-  --shadow-float:
     0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
-    0 18px 46px -20px rgba(20, 60, 140, 0.22);
+    0 4px 16px -4px rgba(10, 25, 55, 0.08);
+  --shadow-float:
+    0 1px 0 0 rgba(255, 255, 255, 1) inset,
+    0 14px 36px -12px rgba(10, 25, 55, 0.16);
   color-scheme: light;
 }
 
@@ -107,140 +98,137 @@ html {
 body {
   font-family: var(--font-sans);
   color: var(--fg);
-  /* 상단에 은은한 블루 글로우가 깔린 깊은 배경 */
   background:
-    radial-gradient(125% 75% at 50% -12%, var(--glow) 0%, transparent 58%),
+    radial-gradient(100% 60% at 50% 0%, var(--glow) 0%, transparent 60%),
     var(--ink);
   background-attachment: fixed;
   min-height: 100dvh;
+  position: relative;
 }
 
+/* Tactile Grain Noise Overlay — 실물 종이/필름 같은 섬세한 질감 추가 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  opacity: 0.032;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Swiss Editorial Serif Typography */
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: -0.012em;
+  letter-spacing: -0.02em;
 }
 
-/* 아이브로우 태그 (헤딩 위 마이크로 라벨) — soft-skill */
+.font-mono-spec {
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
+}
+
+/* 아이브로우 태그 — 에디토리얼 모노 캡션 */
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 0.4em;
-  border-radius: var(--r-pill);
+  gap: 0.5em;
+  border-radius: var(--r-sm);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  padding: 0.25rem 0.7rem;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  padding: 0.2rem 0.65rem;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--accent);
 }
 
-/* 블루 그라디언트 텍스트 (로고/타이틀) */
+/* 에디토리얼 골드 그라디언트 텍스트 */
 .text-gradient-accent {
-  background: linear-gradient(135deg, var(--accent-soft), var(--accent) 55%, #6e4e12);
+  background: linear-gradient(135deg, #f3e5ab 0%, var(--accent-soft) 40%, var(--accent) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* 글래스 카드 — 더블베젤(외피 + 내부 하이라이트) + 확산 섀도 */
+/* 글래스 카드 — 스위스 에디토리얼 헤어라인 그리드 패널 */
 .glass {
-  background: var(--surface);
+  background: var(--ink-1);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  border-radius: var(--r-md);
   box-shadow: var(--shadow-soft);
 }
 
-/* 골드 버튼 — 소프트 필 + 내부 하이라이트, 누름 시 물리적 수축.
-   밝은 골드 위 어두운 잉크 텍스트로 가독성 확보 (흰 텍스트는 대비 부족). */
+/* 에디토리얼 버튼 — 깔끔한 1px 테두리와 정밀 호버 효과 */
 .btn-accent {
-  background: linear-gradient(
-    135deg,
-    var(--accent-soft),
-    var(--accent) 60%,
-    color-mix(in srgb, var(--accent) 72%, #3a2a06)
-  );
-  color: #1c1405;
+  background: var(--accent);
+  color: #0b0f19;
   font-weight: 600;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--accent-soft);
   transition:
-    transform 0.18s var(--ease-soft),
-    box-shadow 0.25s var(--ease-soft),
-    filter 0.25s ease;
-  box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.35) inset,
-    0 6px 20px -8px var(--accent);
+    transform 0.15s var(--ease-soft),
+    box-shadow 0.2s var(--ease-soft),
+    filter 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 .btn-accent:hover:not(:disabled) {
-  filter: brightness(1.05);
-  box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.4) inset,
-    0 10px 28px -8px var(--accent);
+  filter: brightness(1.08);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .btn-accent:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: translateY(1px);
 }
 .btn-accent:disabled {
   opacity: 0.4;
 }
 
-/* 골드 버튼 — Midas 시그니처. 자산·행동의 순간(주요 CTA)에만.
-   밝은 골드 위 어두운 잉크 텍스트로 가독성 확보. */
 .btn-gilt {
-  background: linear-gradient(
-    135deg,
-    var(--gilt-soft),
-    var(--gilt) 60%,
-    color-mix(in srgb, var(--gilt) 72%, #3a2a06)
-  );
-  color: #1c1405;
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent));
+  color: #0b0f19;
   font-weight: 600;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--accent-soft);
   transition:
-    transform 0.18s var(--ease-soft),
-    box-shadow 0.25s var(--ease-soft),
-    filter 0.25s ease;
-  box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.4) inset,
-    0 6px 20px -8px var(--gilt);
+    transform 0.15s var(--ease-soft),
+    box-shadow 0.2s var(--ease-soft);
 }
 .btn-gilt:hover:not(:disabled) {
-  filter: brightness(1.06);
-  box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.5) inset,
-    0 10px 28px -8px var(--gilt);
+  filter: brightness(1.08);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 .btn-gilt:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: translateY(1px);
 }
 
-/* 고스트 버튼 — 소프트 필 */
 .btn-ghost {
   border: 1px solid var(--line);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-sm);
   color: var(--fg);
+  background: transparent;
   transition:
     background 0.2s var(--ease-soft),
-    border-color 0.2s ease,
-    transform 0.18s var(--ease-soft);
+    border-color 0.2s ease;
 }
 .btn-ghost:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 9%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 26%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: var(--accent);
 }
 .btn-ghost:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: translateY(1px);
 }
 
-/* 입력 필드 — 부드러운 라운드, 포커스 링은 은은하게 확산 */
+/* 입력 필드 — 스위스 정밀 테두리 */
 .field {
-  background: color-mix(in srgb, var(--ink) 55%, transparent);
+  background: var(--ink-2);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   color: var(--fg);
+  font-family: var(--font-sans);
   outline: none;
   transition:
     border-color 0.2s ease,
@@ -251,7 +239,7 @@ body {
 }
 .field:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 /* 스켈레톤 시머 */
