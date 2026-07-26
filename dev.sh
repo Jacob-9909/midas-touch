@@ -19,7 +19,28 @@ BACKEND_HOST="${BACKEND_HOST:-127.0.0.1}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 
-MODE="${1:-all}"
+# 파라미터 파싱 (--reload, --no-reload 및 모드 지정)
+RELOAD="${RELOAD:-true}"
+MODE="all"
+
+for arg in "$@"; do
+  case "$arg" in
+    --reload|-r)
+      RELOAD="true"
+      ;;
+    --no-reload)
+      RELOAD="false"
+      ;;
+    all|backend|frontend)
+      MODE="$arg"
+      ;;
+    *)
+      echo "❌ 알 수 없는 파라미터: $arg" >&2
+      echo "사용법: ./dev.sh [all|backend|frontend] [--reload|--no-reload]" >&2
+      exit 1
+      ;;
+  esac
+done
 
 # ── 사전 점검 ────────────────────────────────────────────────
 check_backend() {
@@ -34,9 +55,13 @@ check_frontend() {
 }
 
 run_backend() {
-  echo "🚀 [backend]  http://$BACKEND_HOST:$BACKEND_PORT  (docs: /docs)"
+  RELOAD_ARGS=""
+  if [ "$RELOAD" = "true" ]; then
+    RELOAD_ARGS="--reload --reload-dir $ROOT/backend --reload-dir $ROOT/shared"
+  fi
+  echo "🚀 [backend]  http://$BACKEND_HOST:$BACKEND_PORT  (docs: /docs, reload=$RELOAD)"
   PYTHONPATH="$ROOT" uv run uvicorn backend.app.main:app \
-    --host "$BACKEND_HOST" --port "$BACKEND_PORT" --reload
+    --host "$BACKEND_HOST" --port "$BACKEND_PORT" $RELOAD_ARGS
 }
 run_frontend() {
   echo "🎨 [frontend] http://localhost:$FRONTEND_PORT"
@@ -56,16 +81,12 @@ case "$MODE" in
     check_backend
     check_frontend
     echo "────────────────────────────────────────────"
-    echo " Midas Touch dev — Ctrl+C 로 모두 종료"
+    echo " Midas Touch dev (reload=$RELOAD) — Ctrl+C 로 모두 종료"
     echo "────────────────────────────────────────────"
     # 자식 프로세스를 백그라운드로 띄우고, 종료 시 프로세스 그룹 전체를 정리한다.
     trap 'echo; echo "🛑 종료 중…"; kill 0 2>/dev/null' INT TERM EXIT
     run_backend &
     run_frontend &
     wait
-    ;;
-  *)
-    echo "사용법: ./dev.sh [all|backend|frontend]" >&2
-    exit 1
     ;;
 esac
