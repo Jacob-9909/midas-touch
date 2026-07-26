@@ -41,12 +41,13 @@ frontend/
 
 | Page | Core Interaction | Backend Endpoint |
 |------|------------------|------------------|
-| **Chat** | Send user message → stream LLM response | `POST /api/v1/chat` / `POST /api/v1/chat/stream` |
-| **Stocks** | Select ticker → quick‑analysis view | `GET /api/v1/stocks/quick-analysis?ticker=` |
+| **Chat** | Send user message → stream LLM response (includes Knowledge Panel tab) | `POST /api/v1/chat` / `POST /api/v1/chat/stream` |
+| **Stocks** | Select ticker → quick‑analysis view | `GET /api/v1/stocks/quick-analysis?ticker=`
+| **Stocks** | View live heatmap data | `GET /api/v1/stocks/heatmap` |
 | | Run backtest with risk sliders | `POST /api/v1/stocks/backtest` |
 | | Grid‑search for strategy parameters | `POST /api/v1/stocks/grid-search` |
 | | Watchlist CRUD | `GET/POST/DELETE /api/v1/stocks/watchlist` |
-| **Cheongyak** | List housing projects by kind | `GET /api/v1/cheongyak/list/{kind}` |
+| **Cheongyak** | List housing projects by kind (with interactive Korean map) | `GET /api/v1/cheongyak/list/{kind}` |
 | | View detailed competition / scores | Various `/detail/...` routes |
 | **Graph** | Build graph snapshot → visualiser | `POST /api/v1/graph/build/jobs` then `GET /api/v1/graph/snapshot` |
 | **Finetune** | Upload document → start pipeline job | `POST /api/v1/finetune/upload` and `POST /api/v1/finetune/jobs` |

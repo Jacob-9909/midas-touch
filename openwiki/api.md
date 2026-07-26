@@ -46,6 +46,7 @@ This repository exposes a **FastAPI** server under the `/api/v1` prefix. The API
 | `POST` | `/stocks/memory/validate` | Validate a new analysis against historic patterns; returns calibrated confidence.
 | `POST` | `/stocks/memory/validate-horizons` | Horizon‑level validation of a new analysis.
 | `GET` | `/stocks/watchlist` | Retrieve the current user‑specific watchlist.
+| `GET` | `/stocks/heatmap` | Retrieve live heatmap data for major tickers (cached 5 min).
 | `POST` | `/stocks/watchlist` | Add a ticker to the watchlist.
 | `DELETE` | `/stocks/watchlist` | Remove a ticker from the watchlist.
 
