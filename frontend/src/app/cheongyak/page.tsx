@@ -46,10 +46,17 @@ const STATUS_TONE: Record<string, string> = {
 
 function StatusBadge({ status }: { status: string }) {
   const tone = STATUS_TONE[status] ?? STATUS_TONE["일정미정"];
+  const isLive = status === "접수중";
   return (
     <span
-      className={`shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${tone}`}
+      className={`shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold flex items-center gap-1.5 ${tone}`}
     >
+      {isLive && (
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#58c8a0] opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#58c8a0]" />
+        </span>
+      )}
       {status || "-"}
     </span>
   );

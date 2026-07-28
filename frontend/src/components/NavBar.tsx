@@ -22,14 +22,23 @@ const LINKS = [
   { href: "/stocks", label: "주식분석", group: "core" },
   { href: "/cheongyak", label: "청약", group: "engine" },
   { href: "/graph", label: "지식그래프", group: "engine" },
-  { href: "/finetune", label: "파인튜닝셋", group: "engine" },
+  { href: "/finetune", label: "AI지식·학습", group: "engine" },
 ] as const;
+
+const SAMPLE_USERS = [
+  { uuid: "5c1f632516b34e56a89b3672e11456cc", label: "44세 연구원 · 자산 1.2억", district: "경기-용인시" },
+  { uuid: "319b99b4172b48ab98ebaa7dba449ac6", label: "63세 제조원 · 자산 1.2억", district: "경북-구미시" },
+  { uuid: "19ebbdd30b6c4aabbdc2424dfee02b1a", label: "40세 조리사 · 자산 7,000만", district: "서울-서대문구" },
+  { uuid: "c1df90a15fe34fc4929e4e9318026512", label: "43세 회계원 · 자산 7,500만", district: "세종-세종시" },
+  { uuid: "1fa921721df6420aaa9aad5b42591563", label: "44세 개발자 · 자산 3.5억", district: "경기-김포시" },
+];
 
 export default function NavBar() {
   const pathname = usePathname();
-  const { selected } = useSelectedUser();
+  const { selected, setSelected } = useSelectedUser();
   const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -69,17 +78,48 @@ export default function NavBar() {
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-2.5">
-          <span className="hidden font-mono-spec text-xs sm:inline">
-            {selected ? (
-              <span className="flex items-center gap-1.5 whitespace-nowrap rounded border border-line px-2.5 py-1 text-accent">
-                <UserCircle weight="fill" size={15} className="shrink-0" />
-                {selected.label}
+        <div className="ml-auto flex items-center gap-2.5 relative">
+          {/* 페르소나 유저 퀵 스위처 */}
+          <div className="relative">
+            <button
+              onClick={() => setUserDropdownOpen((v) => !v)}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded border border-line px-2.5 py-1 text-xs text-accent hover:border-accent/60 transition bg-surface/40 font-mono-spec"
+            >
+              <UserCircle weight="fill" size={15} className="shrink-0" />
+              <span className="font-medium truncate max-w-[150px]">
+                {selected ? selected.label : "유저 선택"}
               </span>
-            ) : (
-              <span className="text-muted/60 text-xs">유저 미선택</span>
+              <span className="text-[10px] text-muted ml-0.5">▼</span>
+            </button>
+
+            {userDropdownOpen && (
+              <div
+                onMouseLeave={() => setUserDropdownOpen(false)}
+                className="absolute right-0 mt-2 w-64 rounded-lg border border-line/80 bg-[#0c1220] p-1.5 shadow-2xl z-50 animate-rise font-mono-spec text-xs space-y-1"
+              >
+                <div className="px-2 py-1 text-[10px] uppercase font-bold text-accent tracking-wider border-b border-line/40">
+                  ★ 페르소나 유저 전환 (Persona Switcher)
+                </div>
+                {SAMPLE_USERS.map((u) => (
+                  <button
+                    key={u.uuid}
+                    onClick={() => {
+                      setSelected({ uuid: u.uuid, label: u.label });
+                      setUserDropdownOpen(false);
+                    }}
+                    className={`w-full text-left p-2 rounded-md transition flex flex-col ${
+                      selected?.uuid === u.uuid
+                        ? "bg-accent/20 border border-accent/40 text-accent font-semibold"
+                        : "hover:bg-surface/80 text-fg"
+                    }`}
+                  >
+                    <span className="truncate">{u.label}</span>
+                    <span className="text-[10px] text-muted font-normal">{u.district}</span>
+                  </button>
+                ))}
+              </div>
             )}
-          </span>
+          </div>
 
           {/* 테마 토글 */}
           <button

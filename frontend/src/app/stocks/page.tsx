@@ -135,16 +135,16 @@ function RiskRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <label className="flex w-24 shrink-0 items-center gap-2 text-xs">
+      <label className="flex w-24 shrink-0 items-center gap-2 text-xs cursor-pointer">
         {togglable && (
           <input
             type="checkbox"
             checked={on}
             onChange={(e) => onToggle?.(e.target.checked)}
-            className="h-3.5 w-3.5 accent-[var(--accent)]"
+            className="h-3.5 w-3.5 accent-[var(--accent)] cursor-pointer"
           />
         )}
-        <span className={on ? "text-fg" : "text-muted line-through"}>{label}</span>
+        <span className={on ? "text-fg font-medium" : "text-muted line-through"}>{label}</span>
       </label>
       <input
         type="range"
@@ -154,9 +154,11 @@ function RiskRow({
         value={value}
         disabled={!on}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-1 flex-1 cursor-pointer accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40"
+        className="h-1.5 flex-1 cursor-pointer accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-30 rounded-lg"
       />
-      <span className={`w-14 text-right font-mono text-xs ${on ? "text-accent" : "text-muted"}`}>
+      <span className={`w-16 text-center font-mono-spec text-xs font-bold px-2 py-0.5 rounded border transition ${
+        on ? "bg-accent/15 border-accent/40 text-accent" : "bg-surface/50 border-line/40 text-muted"
+      }`}>
         {on ? fmt(value) : "끄기"}
       </span>
     </div>
@@ -177,10 +179,11 @@ function MetricTile({
   const color =
     tone === "up" ? "text-[#58c8a0]" : tone === "down" ? "text-[#e2607b]" : "text-fg";
   return (
-    <div className="rounded-2xl border border-line bg-[var(--ink-2)]/40 px-4 py-3">
-      <div className="text-xs uppercase tracking-wider text-muted">{label}</div>
-      <div className={`mt-1 font-display text-lg font-semibold ${color}`}>{value}</div>
-      {sub && <div className="mt-0.5 text-[11px] text-muted">{sub}</div>}
+    <div className="rounded-2xl border border-line bg-[var(--ink-2)]/40 px-4 py-3 relative overflow-hidden group hover:border-accent/40 transition">
+      <div className={`absolute top-0 left-0 h-1 w-full ${tone === "up" ? "bg-[#58c8a0]" : tone === "down" ? "bg-[#e2607b]" : "bg-accent"}`} />
+      <div className="text-xs uppercase tracking-wider text-muted font-mono-spec">{label}</div>
+      <div className={`mt-1 font-display text-xl font-extrabold ${color}`}>{value}</div>
+      {sub && <div className="mt-0.5 text-[11px] text-muted font-mono-spec">{sub}</div>}
     </div>
   );
 }

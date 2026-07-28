@@ -247,9 +247,38 @@ export default function ChatPage() {
                   <p className="text-center text-sm text-muted">기록 불러오는 중…</p>
                 )}
                 {!loadingHistory && messages.length === 0 && (
-                  <p className="mt-10 text-center text-sm text-muted">
-                    예: &ldquo;나와 비슷한 투자자들의 자산 배분을 벤치마크로 보여줘&rdquo;
-                  </p>
+                  <div className="my-auto py-8 space-y-4 text-center">
+                    <div className="mx-auto max-w-sm">
+                      <div className="h-12 w-12 mx-auto rounded-full bg-accent/10 border border-accent/30 flex items-center justify-center text-accent text-xl font-bold mb-2">
+                        💬
+                      </div>
+                      <h3 className="text-sm font-semibold text-fg">무엇이든 질문해보세요</h3>
+                      <p className="text-xs text-muted mt-1">
+                        유저 자산 정보, 마크로 금융 지표, 청약 자격, 개별 주식 분석을 종합하여 맞춤형 인사이트를 제공합니다.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left max-w-lg mx-auto pt-2">
+                      {[
+                        { title: "📊 포트폴리오 자산배분", prompt: "나와 비슷한 투자자들의 자산 배분과 내 포트폴리오 리스크를 분석해줘" },
+                        { title: "💵 금리 인상 파급 효과", prompt: "미국 10년물 국채 금리 변화가 내 주식 포트폴리오에 미치는 영향은?" },
+                        { title: "🏢 공모주 청약 자격 체크", prompt: "올해 하반기 주요 공모주 청약 일정과 내 진단 등급 자격을 확인해줘" },
+                        { title: "⚡ NVDA & TSLA 지표 분석", prompt: "엔비디아(NVDA)와 테슬라(TSLA)의 기술적 지표 및 중단기 전망을 분석해줘" },
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setInput(item.prompt);
+                            requestAnimationFrame(() => inputRef.current?.focus());
+                          }}
+                          className="p-3 border border-line/60 bg-[#090d16] hover:border-accent hover:bg-accent/10 rounded-lg text-left transition group"
+                        >
+                          <div className="text-xs font-semibold text-accent group-hover:text-accent-soft">{item.title}</div>
+                          <div className="text-[11px] text-muted truncate mt-0.5">&ldquo;{item.prompt}&rdquo;</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
                 {messages.map((m, i) => (
                   <div
