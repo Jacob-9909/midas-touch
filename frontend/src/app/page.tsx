@@ -17,6 +17,15 @@ import {
   ChartLineUp,
   type Icon,
 } from "@phosphor-icons/react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { apiGet, type MarketSnapshot, type UserSummary } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { useToast } from "@/lib/toast";
@@ -148,9 +157,13 @@ interface StockHeatmapItem {
   price: string;
   changePct: number;
   marketCapB: number; // 시가총액 ($B 기준)
-  sector: "tech" | "comm" | "auto" | "finance" | "bio" | "custom";
+  sector: "tech" | "comm" | "auto" | "finance" | "bio" | "crypto" | "custom";
   sectorName: string;
 }
+
+const isKrTicker = (ticker: string) => /\.(KS|KQ)$/i.test(ticker);
+const isCryptoTicker = (ticker: string) => /-USD$/i.test(ticker);
+const marketOf = (ticker: string) => (isCryptoTicker(ticker) ? "CRYPTO" : isKrTicker(ticker) ? "KR" : "US");
 
 const STOCK_HEATMAP_DATA: StockHeatmapItem[] = [
   // 반도체 & 테크
@@ -187,6 +200,25 @@ const STOCK_HEATMAP_DATA: StockHeatmapItem[] = [
   { ticker: "LLY", name: "Eli Lilly", price: "$948.50", changePct: 0.86, marketCapB: 900, sector: "bio", sectorName: "HEALTHCARE & BIO" },
   { ticker: "UNH", name: "UnitedHealth", price: "$528.10", changePct: -0.67, marketCapB: 490, sector: "bio", sectorName: "HEALTHCARE & BIO" },
   { ticker: "207940.KS", name: "삼성바이오", price: "812,000원", changePct: 1.25, marketCapB: 60, sector: "bio", sectorName: "HEALTHCARE & BIO" },
+  { ticker: "068270.KS", name: "셀트리온", price: "182,000원", changePct: -0.82, marketCapB: 28, sector: "bio", sectorName: "HEALTHCARE & BIO" },
+  { ticker: "196170.KQ", name: "알테오젠", price: "352,000원", changePct: 2.41, marketCapB: 14, sector: "bio", sectorName: "HEALTHCARE & BIO" },
+
+  // 국내 대형주 (코스피/코스닥) — marketCapB는 USD 10억 달러 단위
+  { ticker: "373220.KS", name: "LG에너지솔루션", price: "382,000원", changePct: 1.12, marketCapB: 62, sector: "tech", sectorName: "SEMICONDUCTOR & TECH" },
+  { ticker: "006400.KS", name: "삼성SDI", price: "298,000원", changePct: -1.44, marketCapB: 14, sector: "tech", sectorName: "SEMICONDUCTOR & TECH" },
+  { ticker: "247540.KQ", name: "에코프로비엠", price: "101,800원", changePct: -2.15, marketCapB: 7, sector: "tech", sectorName: "SEMICONDUCTOR & TECH" },
+  { ticker: "035720.KS", name: "카카오", price: "42,300원", changePct: 0.71, marketCapB: 13, sector: "comm", sectorName: "COMMUNICATION SERVICES" },
+  { ticker: "259960.KQ", name: "크래프톤", price: "312,000원", changePct: 1.86, marketCapB: 11, sector: "comm", sectorName: "COMMUNICATION SERVICES" },
+  { ticker: "000270.KS", name: "기아", price: "104,500원", changePct: 2.24, marketCapB: 30, sector: "auto", sectorName: "AUTO & MOBILITY" },
+  { ticker: "012450.KS", name: "한화에어로스페이스", price: "742,000원", changePct: 3.42, marketCapB: 24, sector: "auto", sectorName: "AUTO & MOBILITY" },
+  { ticker: "329180.KS", name: "HD현대중공업", price: "398,000원", changePct: 1.58, marketCapB: 25, sector: "auto", sectorName: "AUTO & MOBILITY" },
+  { ticker: "105560.KS", name: "KB금융", price: "108,500원", changePct: 1.34, marketCapB: 30, sector: "finance", sectorName: "FINANCIAL SERVICES" },
+  { ticker: "055550.KS", name: "신한지주", price: "62,400원", changePct: 0.92, marketCapB: 22, sector: "finance", sectorName: "FINANCIAL SERVICES" },
+  { ticker: "086790.KS", name: "하나금융지주", price: "78,900원", changePct: 1.05, marketCapB: 18, sector: "finance", sectorName: "FINANCIAL SERVICES" },
+
+  // 크립토
+  { ticker: "BTC-USD", name: "Bitcoin", price: "$118,400.00", changePct: 2.14, marketCapB: 2350, sector: "crypto", sectorName: "CRYPTO" },
+  { ticker: "ETH-USD", name: "Ethereum", price: "$4,120.50", changePct: -1.32, marketCapB: 497, sector: "crypto", sectorName: "CRYPTO" },
 ];
 
 function getHeatmapTileColor(pct: number): { bgClass: string; textClass: string; borderClass: string } {
@@ -259,7 +291,11 @@ function StockTile({
 }) {
   const isPos = item.changePct >= 0;
   const { bgClass, textClass, borderClass } = getHeatmapTileColor(item.changePct);
-  const isLongTicker = item.ticker.length > 6;
+  // 국내 종목 티커는 6자리 숫자 코드라 읽을 수 없으므로 종목명을 앞세우고 코드를 보조로 둔다.
+  const isKr = isKrTicker(item.ticker);
+  const primary = isKr ? item.name : item.ticker;
+  const secondary = isKr ? item.ticker.replace(/\.(KS|KQ)$/i, "") : item.name;
+  const isLongTicker = primary.length > 6;
   const showName = (size === "mega" || size === "large") && !isLongTicker;
 
   return (
@@ -286,11 +322,14 @@ function StockTile({
               : "text-[9px] sm:text-[10px]"
           }`}
         >
-          {item.ticker}
+          <span className="mr-1 opacity-90">
+            {{ CRYPTO: "₿", KR: "🇰🇷", US: "🇺🇸" }[marketOf(item.ticker)]}
+          </span>
+          {primary}
         </span>
         {showName && (
           <span className="text-[9px] opacity-75 font-normal truncate max-w-[60px] ml-1 shrink-0">
-            {item.name}
+            {secondary}
           </span>
         )}
       </div>
@@ -320,6 +359,110 @@ function StockTile({
         <span className={`font-bold ${size === "small" || isLongTicker ? "w-full text-right" : "shrink-0"}`}>
           MCAP ${item.marketCapB >= 1000 ? `${(item.marketCapB / 1000).toFixed(1)}T` : `${item.marketCapB}B`}
         </span>
+      </div>
+    </div>
+  );
+}
+
+const CRYPTO_CHARTS = [
+  { ticker: "BTC-USD", name: "비트코인 (Bitcoin)", color: "#f7931a" },
+  { ticker: "ETH-USD", name: "이더리움 (Ethereum)", color: "#8b93f8" },
+];
+
+function CryptoChart({ ticker, name, color }: { ticker: string; name: string; color: string }) {
+  const [points, setPoints] = useState<{ date: string; close: number }[]>([]);
+  const [changePct, setChangePct] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    apiGet<{ points: { date: string; close: number }[]; changePct: number }>(
+      `/api/v1/stocks/price-history?ticker=${ticker}&period=3mo`,
+      15000
+    )
+      .then((r) => {
+        if (!alive) return;
+        setPoints(r.points);
+        setChangePct(r.changePct);
+      })
+      .catch((e) => alive && setError(errMsg(e)));
+    return () => {
+      alive = false;
+    };
+  }, [ticker]);
+
+  const last = points.at(-1)?.close;
+  const isPos = changePct >= 0;
+  const gradId = `cryptograd-${ticker}`;
+
+  return (
+    <div className="border border-line/60 bg-[#090d16] rounded-md overflow-hidden">
+      <div className="bg-[#101726] border-b border-line/60 px-3 py-2 flex items-center justify-between font-mono-spec">
+        <div className="flex items-baseline gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color }}>
+            ₿ {ticker}
+          </span>
+          <span className="text-[10px] text-muted">{name}</span>
+        </div>
+        <div className="flex items-baseline gap-2 text-[11px]">
+          {last != null && (
+            <span className="font-bold text-fg tabular-nums">
+              ${last.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </span>
+          )}
+          <span className={`font-bold tabular-nums ${isPos ? "text-emerald-400" : "text-red-400"}`}>
+            {isPos ? "+" : ""}
+            {changePct}% <span className="text-muted font-normal">3M</span>
+          </span>
+        </div>
+      </div>
+      <div className="h-[260px] w-full p-2">
+        {error ? (
+          <div className="flex h-full items-center justify-center text-xs text-muted">
+            시세를 불러오지 못했습니다 · {error}
+          </div>
+        ) : points.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-xs text-muted animate-pulse">
+            LOADING {ticker} …
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={points} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
+              <defs>
+                <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+                  <stop offset="100%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="var(--line)" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--muted)" }} minTickGap={56} />
+              <YAxis
+                tick={{ fontSize: 10, fill: "var(--muted)" }}
+                width={64}
+                domain={["auto", "auto"]}
+                tickFormatter={(v: number) => `$${v.toLocaleString()}`}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "var(--ink-2)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 12,
+                  color: "var(--fg)",
+                  fontSize: 12,
+                }}
+                formatter={(v) => [`$${Number(v).toLocaleString()}`, ticker]}
+              />
+              <Area
+                type="monotone"
+                dataKey="close"
+                stroke={color}
+                strokeWidth={2}
+                fill={`url(#${gradId})`}
+                dot={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );
@@ -384,8 +527,12 @@ function getMacroTrendData(
       : "var(--accent)";
 
   if (dbHist && dbHist.length >= 2) {
-    const sliceCount = period === "1W" ? 7 : period === "1M" ? 15 : dbHist.length;
-    return { data: dbHist.slice(-sliceCount), color };
+    // 영업일 기준 대략치 — 1주=5, 1개월=22, 6개월=130
+    const sliceCount = period === "1W" ? 5 : period === "1M" ? 22 : 130;
+    const series = dbHist.slice(-sliceCount);
+    // 적재 배치는 하루 늦게 들어오므로, 카드에 찍힌 현재값을 끝에 이어 붙여야 그래프 끝점과 숫자가 맞는다.
+    if (currentVal && currentVal !== series[series.length - 1]) series.push(currentVal);
+    return { data: series, color };
   }
 
   if (key === "USD/KRW") {
@@ -556,6 +703,7 @@ export default function HomePage() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 8;
   const [stockSectorFilter, setStockSectorFilter] = useState<string>("ALL");
+  const [marketFilter, setMarketFilter] = useState<"ALL" | "US" | "KR" | "CRYPTO">("ALL");
   const [macroPeriod, setMacroPeriod] = useState<"1W" | "1M" | "6M">("1W");
   const [stockHeatmapData, setStockHeatmapData] = useState<StockHeatmapItem[]>(STOCK_HEATMAP_DATA);
   const [heatmapMeta, setHeatmapMeta] = useState<{ source?: string; last_updated?: string }>({});
@@ -625,8 +773,11 @@ export default function HomePage() {
       map.set(s.ticker, override ? { ...s, sector: override.sector, sectorName: override.sectorName } : s);
     }
 
-    return [...map.values()];
-  }, [stockHeatmapData, customTickers, sectorOverrides]);
+    const items = [...map.values()];
+    // ponytail: 티커 접미사로 시장 판별 (.KS/.KQ = 국내, -USD = 크립토), 백엔드가 market 필드를 주면 그걸 쓰면 됨
+    if (marketFilter === "ALL") return items;
+    return items.filter((s) => marketOf(s.ticker) === marketFilter);
+  }, [stockHeatmapData, customTickers, sectorOverrides, marketFilter]);
 
   // localStorage 초기화 & 자동 연동
   useEffect(() => {
@@ -662,7 +813,8 @@ export default function HomePage() {
           apiGet<{ users: UserSummary[] }>("/api/v1/users?limit=100").catch(() => ({ users: [] })),
           apiGet<{ snapshots: MarketSnapshot[] }>("/api/v1/market/snapshots").catch(() => ({ snapshots: DEFAULT_MACRO_SNAPSHOTS })),
           apiGet<{ stocks: StockHeatmapItem[]; source: string; last_updated: string }>("/api/v1/stocks/heatmap").catch(() => ({ stocks: STOCK_HEATMAP_DATA, source: "sample", last_updated: "" })),
-          apiGet<{ history: { data_type: string; sub_key: string; value: number }[] }>("/api/v1/market/history?limit_per_key=15").catch(() => ({ history: [] })),
+          // 6개월 토글까지 커버하려면 영업일 130개가 필요하다. 한 번 받아두고 기간별로 잘라 쓴다.
+          apiGet<{ history: { data_type: string; sub_key: string; value: number }[] }>("/api/v1/market/history?limit_per_key=130").catch(() => ({ history: [] })),
         ]);
         setUsers(u.users && u.users.length ? u.users : SAMPLE_USERS);
         setMarket(m.snapshots && m.snapshots.length ? m.snapshots : DEFAULT_MACRO_SNAPSHOTS);
@@ -691,6 +843,28 @@ export default function HomePage() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 시세 자동 갱신 — 백엔드가 5분 TTL로 재배치하므로 대부분 캐시 히트다.
+  // 서버 기동 직후(예열 완료 전)에 열어 샘플 데이터를 잡았어도 1분 뒤 라이브로 교체된다.
+  useEffect(() => {
+    const id = setInterval(async () => {
+      if (document.visibilityState !== "visible") return; // 백그라운드 탭에선 쉰다
+      try {
+        const [m, h] = await Promise.all([
+          apiGet<{ snapshots: MarketSnapshot[] }>("/api/v1/market/snapshots"),
+          apiGet<{ stocks: StockHeatmapItem[]; source: string; last_updated: string }>("/api/v1/stocks/heatmap"),
+        ]);
+        if (m.snapshots?.length) setMarket(m.snapshots);
+        if (h.stocks?.length) {
+          setStockHeatmapData(h.stocks);
+          setHeatmapMeta({ source: h.source, last_updated: h.last_updated });
+        }
+      } catch {
+        /* 일시적 실패는 다음 주기에 다시 시도 */
+      }
+    }, 60_000);
+    return () => clearInterval(id);
   }, []);
 
   const { primaryMarket, secondaryMarketGroups } = useMemo(() => {
@@ -1021,33 +1195,61 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* 카테고리 셀렉터 칩 & 티커 추가 폼 */}
-        <div className="flex flex-wrap items-center justify-between gap-3 font-mono-spec text-[11px]">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-muted mr-1 text-[10px] uppercase">Sector Filter:</span>
-            {[
-              { id: "ALL", label: "전체 종목 뷰" },
-              { id: "tech", label: "⚡ 반도체·테크" },
-              { id: "comm", label: "💬 커뮤니케이션" },
-              { id: "auto", label: "🚗 자동차·모빌리티" },
-              { id: "finance", label: "🏦 금융·핀테크" },
-              { id: "bio", label: "🧪 바이오·헬스" },
-            ].map((cat) => {
-              const active = stockSectorFilter === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setStockSectorFilter(cat.id)}
-                  className={`rounded border px-3 py-1 font-medium transition ${
-                    active
-                      ? "border-accent bg-accent/20 text-accent font-semibold shadow-sm"
-                      : "border-line/60 bg-surface/40 text-muted hover:border-line hover:text-fg"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              );
-            })}
+        {/* Swiss Capsule Segmented Control & Quick Add Form */}
+        <div className="flex flex-wrap items-center justify-between gap-3 font-mono-spec text-[11px] bg-[#090d16] border border-line/60 p-2 rounded-xl shadow-inner">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 bg-[#0f1624] p-1 rounded-lg border border-line/40">
+              <span className="text-muted px-1.5 text-[9px] uppercase font-bold tracking-wider">MARKET</span>
+              {([
+                { id: "ALL", label: "전체 시장" },
+                { id: "US", label: "🇺🇸 나스닥·S&P" },
+                { id: "KR", label: "🇰🇷 코스피·코스닥" },
+                { id: "CRYPTO", label: "₿ 크립토" },
+              ] as const).map((mk) => {
+                const active = marketFilter === mk.id;
+                return (
+                  <button
+                    key={mk.id}
+                    onClick={() => setMarketFilter(mk.id)}
+                    className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+                      active
+                        ? "bg-accent text-[#0b0f19] font-bold shadow"
+                        : "text-muted hover:text-fg hover:bg-surface/50"
+                    }`}
+                  >
+                    {mk.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 크립토 뷰는 섹터 구분 없이 코인 차트만 본다 */}
+            <div className={`flex items-center gap-1 bg-[#0f1624] p-1 rounded-lg border border-line/40 ${marketFilter === "CRYPTO" ? "hidden" : ""}`}>
+              <span className="text-muted px-1.5 text-[9px] uppercase font-bold tracking-wider">SECTOR</span>
+              {[
+                { id: "ALL", label: "전체" },
+                { id: "tech", label: "⚡ 테크" },
+                { id: "comm", label: "💬 통신" },
+                { id: "auto", label: "🚗 모빌리티" },
+                { id: "finance", label: "🏦 금융" },
+                { id: "bio", label: "🧪 바이오" },
+              ].map((sec) => {
+                const active = stockSectorFilter === sec.id;
+                return (
+                  <button
+                    key={sec.id}
+                    onClick={() => setStockSectorFilter(sec.id)}
+                    className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+                      active
+                        ? "bg-accent text-[#0b0f19] font-bold shadow"
+                        : "text-muted hover:text-fg hover:bg-surface/50"
+                    }`}
+                  >
+                    {sec.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* 실시간 커스텀 종목 추가 폼 (Ticker Quick Add) */}
@@ -1074,7 +1276,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between border-b border-line/50 pb-2 px-1 font-mono-spec">
             <div className="flex items-center gap-2 text-xs font-bold text-fg">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>FINVIZ STOCK HEATMAP · BATCH LIVE FEED</span>
+              <span>{marketFilter === "CRYPTO" ? "CRYPTO PRICE CHART · 3M CLOSE" : "FINVIZ STOCK HEATMAP · BATCH LIVE FEED"}</span>
             </div>
             <div className="flex items-center gap-3 text-[10px] text-accent uppercase tracking-widest">
               <span>SOURCE: {heatmapMeta.source || "LIVE BATCH (YFINANCE)"}</span>
@@ -1082,7 +1284,15 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Unified Board Sector Grid Canvas (100% 공백 없는 정밀 프로포션 구조) */}
+          {/* 크립토 뷰: 섹터 트리맵 대신 코인 차트를 위아래로 */}
+          {marketFilter === "CRYPTO" ? (
+            <div className="space-y-2.5">
+              {CRYPTO_CHARTS.map((c) => (
+                <CryptoChart key={c.ticker} {...c} />
+              ))}
+            </div>
+          ) : (
+          /* Unified Board Sector Grid Canvas (100% 공백 없는 정밀 프로포션 구조) */
           <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5">
             {/* 1. SEMICONDUCTOR & TECH */}
             {(stockSectorFilter === "ALL" || stockSectorFilter === "tech") && (() => {
@@ -1228,6 +1438,9 @@ export default function HomePage() {
                 </div>
               );
             })()}
+
+            {/* 크립토는 섹터 보드 없이 ₿ 크립토 뷰(차트)에서만 본다 */}
+
             {/* 6. MY CUSTOM WATCHLIST (사용자가 직접 추가한 커스텀 티커 보드 & 언제든지 다시 드래그 이동 가능) */}
             {(() => {
               const myCustomStocks = allCombinedStocks.filter((s) => s.sector === "custom");
@@ -1268,6 +1481,7 @@ export default function HomePage() {
               );
             })()}
           </div>
+          )}
         </div>
       </section>
 

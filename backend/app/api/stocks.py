@@ -322,6 +322,25 @@ _HEATMAP_STOCKS = [
     {"ticker": "LLY", "name": "Eli Lilly", "sector": "bio", "sectorName": "HEALTHCARE & BIO", "defaultPrice": "$948.50", "defaultPct": 0.86, "defaultCapB": 900},
     {"ticker": "UNH", "name": "UnitedHealth", "sector": "bio", "sectorName": "HEALTHCARE & BIO", "defaultPrice": "$528.10", "defaultPct": -0.67, "defaultCapB": 490},
     {"ticker": "207940.KS", "name": "삼성바이오", "sector": "bio", "sectorName": "HEALTHCARE & BIO", "defaultPrice": "812,000원", "defaultPct": 1.25, "defaultCapB": 60},
+    {"ticker": "068270.KS", "name": "셀트리온", "sector": "bio", "sectorName": "HEALTHCARE & BIO", "defaultPrice": "182,000원", "defaultPct": -0.82, "defaultCapB": 28},
+    {"ticker": "196170.KQ", "name": "알테오젠", "sector": "bio", "sectorName": "HEALTHCARE & BIO", "defaultPrice": "352,000원", "defaultPct": 2.41, "defaultCapB": 14},
+
+    # 국내 대형주 (코스피/코스닥). defaultCapB는 USD 10억 달러 단위 — 라이브 배치가 환율로 환산해 덮어씀
+    {"ticker": "373220.KS", "name": "LG에너지솔루션", "sector": "tech", "sectorName": "SEMICONDUCTOR & TECH", "defaultPrice": "382,000원", "defaultPct": 1.12, "defaultCapB": 62},
+    {"ticker": "006400.KS", "name": "삼성SDI", "sector": "tech", "sectorName": "SEMICONDUCTOR & TECH", "defaultPrice": "298,000원", "defaultPct": -1.44, "defaultCapB": 14},
+    {"ticker": "247540.KQ", "name": "에코프로비엠", "sector": "tech", "sectorName": "SEMICONDUCTOR & TECH", "defaultPrice": "101,800원", "defaultPct": -2.15, "defaultCapB": 7},
+    {"ticker": "035720.KS", "name": "카카오", "sector": "comm", "sectorName": "COMMUNICATION SERVICES", "defaultPrice": "42,300원", "defaultPct": 0.71, "defaultCapB": 13},
+    {"ticker": "259960.KQ", "name": "크래프톤", "sector": "comm", "sectorName": "COMMUNICATION SERVICES", "defaultPrice": "312,000원", "defaultPct": 1.86, "defaultCapB": 11},
+    {"ticker": "000270.KS", "name": "기아", "sector": "auto", "sectorName": "AUTO & MOBILITY", "defaultPrice": "104,500원", "defaultPct": 2.24, "defaultCapB": 30},
+    {"ticker": "012450.KS", "name": "한화에어로스페이스", "sector": "auto", "sectorName": "AUTO & MOBILITY", "defaultPrice": "742,000원", "defaultPct": 3.42, "defaultCapB": 24},
+    {"ticker": "329180.KS", "name": "HD현대중공업", "sector": "auto", "sectorName": "AUTO & MOBILITY", "defaultPrice": "398,000원", "defaultPct": 1.58, "defaultCapB": 25},
+    {"ticker": "105560.KS", "name": "KB금융", "sector": "finance", "sectorName": "FINANCIAL SERVICES", "defaultPrice": "108,500원", "defaultPct": 1.34, "defaultCapB": 30},
+    {"ticker": "055550.KS", "name": "신한지주", "sector": "finance", "sectorName": "FINANCIAL SERVICES", "defaultPrice": "62,400원", "defaultPct": 0.92, "defaultCapB": 22},
+    {"ticker": "086790.KS", "name": "하나금융지주", "sector": "finance", "sectorName": "FINANCIAL SERVICES", "defaultPrice": "78,900원", "defaultPct": 1.05, "defaultCapB": 18},
+
+    # 크립토 (yfinance는 -USD 접미사, market_cap 미제공 시 defaultCapB로 폴백)
+    {"ticker": "BTC-USD", "name": "Bitcoin", "sector": "crypto", "sectorName": "CRYPTO", "defaultPrice": "$118,400.00", "defaultPct": 2.14, "defaultCapB": 2350},
+    {"ticker": "ETH-USD", "name": "Ethereum", "sector": "crypto", "sectorName": "CRYPTO", "defaultPrice": "$4,120.50", "defaultPct": -1.32, "defaultCapB": 497},
 ]
 
 _HEATMAP_CACHE: dict = {
@@ -345,8 +364,19 @@ def _do_update_heatmap():
     try:
         now = time.time()
         items = []
-        tickers_space = " ".join(s["ticker"] for s in _HEATMAP_STOCKS)
+        tickers_space = " ".join(s["ticker"] for s in _HEATMAP_STOCKS) + " KRW=X"
         data = yf.Tickers(tickers_space)
+
+        # 국내 종목 시총은 원화로 오므로 달러로 환산해야 트리맵 면적이 미국 종목과 같은 축에 놓인다.
+        usdkrw = 1400.0
+        try:
+            fx = getattr(data.tickers.get("KRW=X"), "fast_info", None)
+            rate = getattr(fx, "last_price", None) or getattr(fx, "previous_close", None)
+            if rate and rate > 0:
+                usdkrw = float(rate)
+        except Exception:
+            pass
+
         for s in _HEATMAP_STOCKS:
             t_symbol = s["ticker"]
             price_str = s["defaultPrice"]
@@ -365,17 +395,17 @@ def _do_update_heatmap():
                         if last_price and prev_close and prev_close > 0:
                             pct = round(((last_price - prev_close) / prev_close) * 100, 2)
 
+                        is_kr = t_symbol.endswith((".KS", ".KQ"))
+
                         if last_price:
-                            if t_symbol.endswith(".KS"):
+                            if is_kr:
                                 price_str = f"{int(last_price):,}원"
                             else:
                                 price_str = f"${last_price:,.2f}"
 
                         if mcap:
-                            if t_symbol.endswith(".KS"):
-                                cap = round(mcap / 1_000_000_000_000, 1)
-                            else:
-                                cap = round(mcap / 1_000_000_000, 1)
+                            # 원화 시총 → 달러 10억 단위 (미국 종목과 동일 축)
+                            cap = round(mcap / usdkrw / 1_000_000_000, 1) if is_kr else round(mcap / 1_000_000_000, 1)
             except Exception:
                 pass
 
@@ -410,6 +440,39 @@ def _do_update_heatmap():
             _HEATMAP_CACHE["source"] = f"fallback_sample ({exc})"
     finally:
         _IS_UPDATING_HEATMAP = False
+
+
+@router.get("/price-history")
+def get_price_history(
+    ticker: str = Query(min_length=1, max_length=20),
+    period: str = "3mo",
+) -> dict:
+    """종가 시계열 (차트용). 지표·LLM 없이 yfinance 종가만 뽑는다."""
+    import yfinance as yf
+
+    symbol = ticker.strip().upper()
+    if period not in {"1mo", "3mo", "6mo", "1y", "5y"}:
+        raise HTTPException(status_code=422, detail=f"지원하지 않는 기간: {period}")
+
+    try:
+        hist = yf.Ticker(symbol).history(period=period)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"시세 조회 실패: {exc}")
+
+    if hist.empty:
+        raise HTTPException(status_code=404, detail=f"{symbol} 시세 데이터가 없습니다.")
+
+    points = [
+        {"date": idx.strftime("%Y-%m-%d"), "close": round(float(row["Close"]), 2)}
+        for idx, row in hist.iterrows()
+    ]
+    first, last = points[0]["close"], points[-1]["close"]
+    return {
+        "ticker": symbol,
+        "period": period,
+        "points": points,
+        "changePct": round((last - first) / first * 100, 2) if first else 0.0,
+    }
 
 
 @router.get("/heatmap")
