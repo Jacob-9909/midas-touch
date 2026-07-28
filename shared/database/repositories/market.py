@@ -48,6 +48,14 @@ def bulk_upsert_market_snapshots(rows: list[dict[str, Any]]) -> int:
     return len(rows)
 
 
+def get_last_ingest_time():
+    """마지막 적재 시각(MAX(created_at)). 일일 배치의 중복 실행 판단용. 데이터 없으면 None."""
+    with db_cursor() as (_, cursor):
+        cursor.execute("SELECT MAX(created_at) FROM market_snapshots")
+        row = cursor.fetchone()
+        return row[0] if row else None
+
+
 def get_latest_market_value(data_type: str, sub_key: str) -> dict | None:
     sql = """
     SELECT snapshot_date, value, unit, source

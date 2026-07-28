@@ -15,6 +15,7 @@ from .embeddings import (
 from .market import (
     bulk_upsert_market_snapshots,
     get_latest_market_snapshots,
+    get_last_ingest_time,
     get_latest_market_value,
     get_market_history,
     upsert_market_snapshot,
@@ -47,6 +48,7 @@ __all__ = [
     # market
     "upsert_market_snapshot",
     "bulk_upsert_market_snapshots",
+    "get_last_ingest_time",
     "get_latest_market_value",
     "get_latest_market_snapshots",
     # tax

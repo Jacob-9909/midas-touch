@@ -193,7 +193,8 @@ class MarketDataPipeline:
             ("interest_rate", "US_2Y_BOND", "%", "FRED", "^FVX", "DGS2", None), # Fallback to 5Y yield index ^FVX if needed
             ("interest_rate", "US_FED_RATE", "%", "FRED", "^IRX", "FEDFUNDS", None), # Fallback to 13W T-Bill index ^IRX
             ("interest_rate", "KR_BASE_RATE", "%", "BOK", None, None, ("722Y001", "D", "0101000")),
-            ("interest_rate", "KR_CD_3M", "%", "BOK", None, None, ("022Y013", "D", "010500000")),
+            # 022Y013은 폐지된 통계표라 INFO-200(데이터 없음)만 돌려준다. 시장금리(일별) 817Y002로 교체.
+            ("interest_rate", "KR_CD_3M", "%", "BOK", None, None, ("817Y002", "D", "010502000")),
             
             # 3. Oil & Commodities
             ("oil_price", "WTI", "USD/BBL", "YahooFinance", "CL=F", None, None),
@@ -235,18 +236,8 @@ class MarketDataPipeline:
             if results:
                 return [{"snapshot_date": r["date"], "data_type": data_type, "sub_key": sub_key, "value": r["value"], "unit": unit, "source": "YahooFinance"} for r in results]
         
-        # If absolutely nothing works for Korean Interest Rates (e.g. KR_BASE_RATE without BOK key)
-        if sub_key == "KR_BASE_RATE":
-            logger.info("Using hardcoded fallback base rate of 3.50% for KR_BASE_RATE")
-            # Generate daily records for target range
-            date_range = pd.date_range(start=start_date, end=end_date)
-            return [{"snapshot_date": d.strftime("%Y-%m-%d"), "data_type": data_type, "sub_key": sub_key, "value": 3.50, "unit": unit, "source": "HardcodedFallback"} for d in date_range]
-            
-        if sub_key == "KR_CD_3M":
-            logger.info("Using hardcoded fallback base rate of 3.55% for KR_CD_3M")
-            date_range = pd.date_range(start=start_date, end=end_date)
-            return [{"snapshot_date": d.strftime("%Y-%m-%d"), "data_type": data_type, "sub_key": sub_key, "value": 3.55, "unit": unit, "source": "HardcodedFallback"} for d in date_range]
-
+        # 조회 실패 시 고정값을 날짜별로 찍어내던 폴백을 제거했다. 그 값이 화면에서 실제 금리처럼
+        # 보여서(CD 3M이 6개월 내내 3.55% 직선) 잘못된 판단을 부른다. 데이터가 없으면 없는 채로 둔다.
         logger.error(f"Failed to fetch any data for {data_type}:{sub_key}")
         return []
 

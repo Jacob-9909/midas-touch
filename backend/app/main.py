@@ -22,6 +22,13 @@ from backend.app.api.stocks import router as stocks_router
 from backend.app.api.cheongyak import router as cheongyak_router
 from backend.app.api.research import router as research_router
 
+# uvicorn은 자기 로거만 설정해서, 앱 로거의 INFO가 root(기본 WARNING)에서 잘린다.
+# 캐시 예열·일일 적재 로그를 기동 화면에서 바로 보려면 root 레벨을 열어줘야 한다.
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+
 _log = logging.getLogger("midas.validation")
 
 
@@ -57,16 +64,95 @@ async def _validation_loop() -> None:
         await asyncio.sleep(interval_s)
 
 
+def _run_market_ingest() -> dict:
+    """거시지표 일일 적재 1회 실행(블로킹 — yfinance/FRED/ECOS/psycopg2). 스레드에서 호출한다.
+
+    최근 MARKET_INGEST_LOOKBACK_DAYS일(기본 7)만 수집한다. upsert 키가
+    (snapshot_date, data_type, sub_key)라 겹치는 날짜를 다시 넣어도 행이 늘지 않고,
+    값이 같으면 내용도 그대로다. 휴장일·지연 정정 때문에 하루가 아니라 일주일을 겹쳐 받는다.
+    """
+    from datetime import datetime, timedelta
+
+    from pipelines.data_ingestion.fetch_market_data import MarketDataPipeline
+    from shared.database.connector import bulk_upsert_market_snapshots
+
+    end = datetime.now()
+    start = end - timedelta(days=int(os.getenv("MARKET_INGEST_LOOKBACK_DAYS", "7")))
+    rows = MarketDataPipeline().fetch_all(
+        start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
+    )
+    return {"fetched": len(rows), "saved": bulk_upsert_market_snapshots(rows) if rows else 0}
+
+
+async def _market_ingest_loop() -> None:
+    """거시지표(환율·금리·유가 등)를 매일 한 번 DB에 적재한다.
+
+    MARKET_INGEST_ENABLED=false면 비활성. 간격은 MARKET_INGEST_INTERVAL_HOURS(기본 24h).
+    마지막 적재가 간격 이내면 건너뛴다 — dev 서버가 --reload로 자주 재시작해도
+    외부 API를 반복해서 때리지 않는다. 실패해도 루프는 지속.
+    """
+    if os.getenv("MARKET_INGEST_ENABLED", "true").lower() != "true":
+        _log.info("market ingest disabled (MARKET_INGEST_ENABLED=false)")
+        return
+    interval_s = float(os.getenv("MARKET_INGEST_INTERVAL_HOURS", "24")) * 3600
+    await asyncio.sleep(float(os.getenv("MARKET_INGEST_START_DELAY_SECONDS", "30")))
+
+    while True:
+        try:
+            if await asyncio.to_thread(_ingest_due, interval_s):
+                _log.info("market ingest: %s", await asyncio.to_thread(_run_market_ingest))
+            else:
+                _log.info("market ingest skipped (최근 적재 이력이 간격 이내)")
+        except Exception as exc:  # noqa: BLE001 - 적재 실패가 서버를 죽이면 안 됨
+            _log.warning("market ingest failed: %s", exc)
+        await asyncio.sleep(interval_s)
+
+
+def _ingest_due(interval_s: float) -> bool:
+    """마지막 적재로부터 interval_s가 지났는지. 이력이 없으면 실행한다."""
+    from datetime import datetime
+
+    from shared.database.connector import get_last_ingest_time
+
+    last = get_last_ingest_time()
+    if last is None:
+        return True
+    return (datetime.now(tz=last.tzinfo) - last).total_seconds() >= interval_s
+
+
+async def _warm_caches() -> None:
+    """부팅 직후 거시지표·히트맵 캐시를 미리 채운다.
+
+    두 엔드포인트 모두 '요청이 들어온 뒤에야' 백그라운드 갱신을 시작해서, 서버를 갓 띄우면
+    첫 방문자는 하드코딩 기본값(sample_initial)을 본다. 미리 데워두면 첫 화면부터 라이브 값이다.
+    """
+    from backend.app.api.stocks import _do_update_heatmap
+    from backend.app.api.users import _update_macro_cache
+
+    for name, fn in (("macro", _update_macro_cache), ("heatmap", _do_update_heatmap)):
+        try:
+            await asyncio.to_thread(fn)
+            _log.info("cache warmed: %s", name)
+        except Exception as exc:  # noqa: BLE001 - 예열 실패가 서버를 죽이면 안 됨
+            _log.warning("cache warm failed (%s): %s", name, exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """앱 수명 동안 분석 검증 백그라운드 태스크를 띄우고, 종료 시 정리한다."""
-    task = asyncio.create_task(_validation_loop())
+    """앱 수명 동안 백그라운드 태스크(캐시 예열·분석 검증·거시지표 적재)를 띄우고, 종료 시 정리한다."""
+    tasks = [
+        asyncio.create_task(_warm_caches()),
+        asyncio.create_task(_validation_loop()),
+        asyncio.create_task(_market_ingest_loop()),
+    ]
     try:
         yield
     finally:
-        task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
+        for task in tasks:
+            task.cancel()
+        for task in tasks:
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
 
 
 app = FastAPI(
