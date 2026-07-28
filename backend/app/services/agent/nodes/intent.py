@@ -134,7 +134,10 @@ def classify_intent(state: AgentState) -> dict:
         return {"route": [], "tax_asset_types": [], "ticker": None, "tool_context": None}
 
     try:
-        router = build_chat_model(temperature=0.0).with_structured_output(_Route)
+        # 라우터 출력은 도구 이름 몇 개짜리 JSON이라 300토큰이면 충분하다. 기본값(4000)을
+        # 두면 모델이 structured output에서 폭주할 때 4000토큰을 다 태우고서야 끝난다
+        # (실측 45초). 상한을 낮추면 폭주해도 금방 끝나고 아래 _keyword_route로 폴백된다.
+        router = build_chat_model(temperature=0.0, max_tokens=300).with_structured_output(_Route)
         result = router.invoke(
             [SystemMessage(content=_INTENT_PROMPT), HumanMessage(content=user_text)]
         )

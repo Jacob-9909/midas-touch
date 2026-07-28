@@ -180,4 +180,10 @@ def build_chat_model(temperature: float = 0.7, max_tokens: int = 4000) -> NIMCha
         max_tokens=max_tokens,
         timeout=REQUEST_TIMEOUT,
         max_retries=0,  # 같은 키로 재시도해봐야 429는 그대로 — 위 루프가 키를 바꿔가며 재시도한다
+        # NIM의 qwen3-next-80b는 스트리밍이 사실상 동작하지 않는다. 순수 openai SDK로 재도
+        # 같은 답변을 delta 4개로만 쪼개 보내면서 비스트리밍보다 2.5배 느렸다
+        # (invoke 71.8초 vs stream 178.3초, 첫 토큰 144초). 점진 표시 이득이 없고 손해만
+        # 커서 끈다. LangGraph의 stream_mode="messages"는 그대로 동작하며, 완성된 메시지가
+        # 한 덩어리로 흐른다. 스트리밍이 멀쩡한 모델로 갈면 이 줄을 지우면 된다.
+        disable_streaming=True,
     )
