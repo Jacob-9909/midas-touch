@@ -49,7 +49,14 @@ import {
 } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { seedChat } from "@/lib/chat-seed";
-import { Card, PageTitle, SectionLabel, Spinner, LoadingBlock } from "@/components/ui";
+import {
+  Card,
+  PageTitle,
+  SectionLabel,
+  Spinner,
+  LoadingBlock,
+  AnimatedNumber,
+} from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import TickerAutocomplete from "./TickerAutocomplete";
 import MemoryStatsCard from "./MemoryStatsCard";
@@ -178,11 +185,33 @@ function MetricTile({
 }) {
   const color =
     tone === "up" ? "text-[#58c8a0]" : tone === "down" ? "text-[#e2607b]" : "text-fg";
+  const toneBg =
+    tone === "up" ? "bg-[#58c8a0]" : tone === "down" ? "bg-[#e2607b]" : "bg-accent";
+
+  // 호출부는 "12.34%", "-1,203원" 같은 완성된 문자열을 넘긴다.
+  // 여기서 앞쪽 수치만 떼어 카운트업하고 단위는 그대로 붙인다 →
+  // 호출부를 하나도 건드리지 않고 모든 타일이 이득을 본다.
+  // "∞", "-" 처럼 수치가 아닌 값은 매칭되지 않아 원문 그대로 나간다.
+  const numeric = /^(-?[\d,]+(?:\.\d+)?)(.*)$/.exec(value);
+
   return (
-    <div className="rounded-2xl border border-line bg-[var(--ink-2)]/40 px-4 py-3 relative overflow-hidden group hover:border-accent/40 transition">
-      <div className={`absolute top-0 left-0 h-1 w-full ${tone === "up" ? "bg-[#58c8a0]" : tone === "down" ? "bg-[#e2607b]" : "bg-accent"}`} />
+    <div className="rounded-2xl border border-line bg-[var(--ink-2)]/40 px-4 py-3 relative overflow-hidden group hover:border-accent/40 hover:shadow-[0_0_28px_-10px_var(--accent)] transition">
+      <div className={`absolute top-0 left-0 h-1 w-full ${toneBg} shadow-[0_0_12px_currentColor]`} />
       <div className="text-xs uppercase tracking-wider text-muted font-mono-spec">{label}</div>
-      <div className={`mt-1 font-display text-xl font-extrabold ${color}`}>{value}</div>
+      <div className={`mt-1 font-display text-xl font-extrabold ${color}`}>
+        {numeric ? (
+          <>
+            <AnimatedNumber
+              value={Number(numeric[1].replace(/,/g, ""))}
+              decimals={numeric[1].split(".")[1]?.length ?? 0}
+              duration={1.1}
+            />
+            {numeric[2]}
+          </>
+        ) : (
+          value
+        )}
+      </div>
       {sub && <div className="mt-0.5 text-[11px] text-muted font-mono-spec">{sub}</div>}
     </div>
   );
