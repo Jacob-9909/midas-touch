@@ -1,4 +1,7 @@
 import type { ReactNode } from "react";
+import BlurText from "@/components/bits/BlurText";
+import DecryptedText from "@/components/bits/DecryptedText";
+import CountUp from "@/components/bits/CountUp";
 
 export function Card({
   children,
@@ -25,11 +28,16 @@ export function PageTitle({
       <div className="flex items-baseline gap-4">
         <span
           aria-hidden
-          className="h-7 w-0.5 shrink-0 bg-accent"
+          className="h-7 w-0.5 shrink-0 bg-accent shadow-[0_0_12px_var(--accent)]"
         />
-        <h1 className="font-display text-[2.2rem] font-normal leading-[1.05] tracking-tight text-fg sm:text-[3.1rem]">
-          {title}
-        </h1>
+        {/* 제목은 단어 단위 블러 인. 모든 페이지의 첫인상이라 여기만 모션을 크게 준다. */}
+        <BlurText
+          as="h1"
+          text={title}
+          animateBy="words"
+          delay={90}
+          className="font-display text-[2.2rem] font-normal leading-[1.05] tracking-tight text-fg sm:text-[3.1rem]"
+        />
       </div>
       {subtitle && (
         <p className="max-w-[64ch] pl-5 text-xs leading-relaxed text-muted font-sans border-l border-line/40">
@@ -78,9 +86,79 @@ export function LoadingBlock({
       className={`flex flex-col items-center justify-center gap-3 py-12 text-muted ${className}`}
     >
       <Spinner className="h-7 w-7 text-accent" />
-      <span className="text-sm">{label}</span>
+      {/* 데이터 피드가 복호화되는 듯한 스크램블 — 대기 시간을 "처리 중"으로 읽히게 만든다.
+          sequential이라 글자가 왼쪽부터 순서대로 확정된다. */}
+      <DecryptedText
+        text={label}
+        animateOn="view"
+        sequential
+        speed={38}
+        className="text-sm text-muted"
+        encryptedClassName="text-sm text-accent/70"
+        parentClassName="font-mono-spec"
+      />
     </div>
   );
+}
+
+/**
+ * 스크롤 진입 시 0에서 목표값까지 올라가는 수치.
+ * 금융 콘솔에서 체감이 가장 큰 모션이라 지표·금액 전반에 쓴다.
+ * 표시 형식은 호출부가 prefix/suffix로 정한다 (예: suffix="원", suffix="%").
+ */
+export function AnimatedNumber({
+  value,
+  prefix = "",
+  suffix = "",
+  decimals = 0,
+  separator = ",",
+  duration = 1.4,
+  className = "",
+}: {
+  value: number | null | undefined;
+  prefix?: string;
+  suffix?: string;
+  decimals?: number;
+  separator?: string;
+  duration?: number;
+  className?: string;
+}) {
+  if (value == null) return <span className={className}>-</span>;
+  return (
+    <span className={className}>
+      {prefix}
+      <CountUp
+        to={decimals > 0 ? Number(value.toFixed(decimals)) : Math.round(value)}
+        duration={duration}
+        separator={separator}
+      />
+      {suffix}
+    </span>
+  );
+}
+
+/**
+ * 큰 금액을 억/만으로 축약해 애니메이션한다 (fmtKRWShort의 모션 버전).
+ * 단위는 고정 텍스트로 두고 숫자만 카운트업해야 단위가 흔들리지 않는다.
+ */
+export function AnimatedKRWShort({
+  value,
+  className = "",
+}: {
+  value: number | null | undefined;
+  className?: string;
+}) {
+  if (value == null) return <span className={className}>-</span>;
+  if (value >= 1e8) {
+    const scaled = value / 1e8;
+    // 1.2억처럼 소수 한 자리까지만. 딱 떨어지면 정수로.
+    const decimals = value % 1e8 === 0 ? 0 : 1;
+    return <AnimatedNumber value={scaled} decimals={decimals} suffix="억" className={className} />;
+  }
+  if (value >= 1e4) {
+    return <AnimatedNumber value={Math.round(value / 1e4)} suffix="만" className={className} />;
+  }
+  return <AnimatedNumber value={value} className={className} />;
 }
 
 export function fmtKRW(n: number | null | undefined): string {
