@@ -5,6 +5,8 @@ import { UserProvider } from "@/lib/user-context";
 import { ThemeProvider, themeInitScript } from "@/lib/theme";
 import { ToastProvider } from "@/lib/toast";
 import NavBar from "@/components/NavBar";
+import AmbientBackground from "@/components/AmbientBackground";
+import ClickSpark from "@/components/bits/ClickSpark";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -31,10 +33,14 @@ export default function RootLayout({
         <ThemeProvider>
           <ToastProvider>
             <UserProvider>
-              <NavBar />
-              <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-                {children}
-              </main>
+              {/* 전역 골드 앰비언트 — 앱 전체에서 유일한 WebGL 캔버스 */}
+              <AmbientBackground />
+              <ClickSpark sparkRadius={18} sparkCount={9} duration={480}>
+                <NavBar />
+                <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+                  {children}
+                </main>
+              </ClickSpark>
             </UserProvider>
           </ToastProvider>
         </ThemeProvider>
