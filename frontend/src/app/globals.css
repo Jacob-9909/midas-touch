@@ -42,11 +42,13 @@
 }
 
 html.dark {
-  --ink: #070a0f;
-  --ink-1: #0b0f19;
-  --ink-2: #101624;
-  --surface: rgba(255, 255, 255, 0.03);
-  --line: rgba(212, 175, 96, 0.18);
+  /* MOLTEN GOLD: 캔버스를 더 깊게 내려 골드 광원의 대비를 확보한다.
+     화려함은 광원의 세기가 아니라 배경과의 대비에서 나온다. */
+  --ink: #04060a;
+  --ink-1: #090d16;
+  --ink-2: #0d1320;
+  --surface: rgba(255, 255, 255, 0.035);
+  --line: rgba(212, 175, 96, 0.2);
   --line-subtle: rgba(255, 255, 255, 0.07);
   --fg: #f1f4f9;
   --muted: #848e9f;
@@ -56,13 +58,17 @@ html.dark {
   --gilt-soft: var(--accent-soft);
   --positive: #34d399;
   --negative: #f87171;
-  --glow: rgba(212, 175, 96, 0.08);
+  --glow: rgba(212, 175, 96, 0.13);
+  /* 표면 하이라이트를 골드 기가 도는 흰빛으로 — 금속 스펙큘러 느낌 */
+  --specular: rgba(255, 240, 200, 0.09);
   --shadow-soft:
-    0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
-    0 4px 20px -6px rgba(0, 0, 0, 0.6);
+    0 1px 0 0 var(--specular) inset,
+    0 4px 20px -6px rgba(0, 0, 0, 0.7);
   --shadow-float:
-    0 1px 0 0 rgba(255, 255, 255, 0.08) inset,
-    0 16px 40px -16px rgba(0, 0, 0, 0.85);
+    0 1px 0 0 rgba(255, 240, 200, 0.14) inset,
+    0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 18px 50px -18px rgba(0, 0, 0, 0.9),
+    0 0 40px -12px color-mix(in srgb, var(--accent) 26%, transparent);
   color-scheme: dark;
 }
 
@@ -82,26 +88,32 @@ html.light {
   --positive: #059669;
   --negative: #dc2626;
   --glow: rgba(160, 125, 45, 0.06);
+  --specular: rgba(255, 255, 255, 0.9);
   --shadow-soft:
     0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
     0 4px 16px -4px rgba(10, 25, 55, 0.08);
   --shadow-float:
     0 1px 0 0 rgba(255, 255, 255, 1) inset,
-    0 14px 36px -12px rgba(10, 25, 55, 0.16);
+    0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent),
+    0 14px 36px -12px rgba(10, 25, 55, 0.18);
   color-scheme: light;
 }
 
+/* 배경은 반드시 html이 소유한다.
+   음수 z-index인 앰비언트 Aurora 캔버스는 페인팅 순서상 body의 배경보다 먼저
+   그려지므로, body가 불투명 배경을 가지면 캔버스를 덮어버린다.
+   루트 스택 컨텍스트(html)의 배경 위에 캔버스가 올라오도록 여기에 둔다. */
 html {
-  background: var(--ink);
+  background:
+    radial-gradient(100% 60% at 50% 0%, var(--glow) 0%, transparent 60%),
+    var(--ink);
+  background-attachment: fixed;
 }
 
 body {
   font-family: var(--font-sans);
   color: var(--fg);
-  background:
-    radial-gradient(100% 60% at 50% 0%, var(--glow) 0%, transparent 60%),
-    var(--ink);
-  background-attachment: fixed;
+  background: transparent;
   min-height: 100dvh;
   position: relative;
 }
@@ -157,12 +169,35 @@ body::before {
   -webkit-text-fill-color: transparent;
 }
 
-/* 글래스 카드 — 스위스 에디토리얼 헤어라인 그리드 패널 */
+/* 글래스 카드 — 헤어라인 패널 + 금속 스펙큘러.
+   배경을 살짝 투과시켜 뒤의 앰비언트 골드가 카드 상단을 은은히 물들이게 한다.
+   backdrop-filter는 일부러 쓰지 않았다: 카드가 화면당 수십 개라 비용이 크다. */
 .glass {
-  background: var(--ink-1);
+  position: relative;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, transparent) 0%, transparent 40%),
+    color-mix(in srgb, var(--ink-1) 92%, transparent);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-soft);
+}
+
+/* 상단 모서리를 따라 흐르는 1px 스펙큘러 — 금속 패널의 광택 엣지 */
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--specular) 20%,
+    color-mix(in srgb, var(--accent) 55%, transparent) 50%,
+    var(--specular) 80%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
 /* 에디토리얼 버튼 — 깔끔한 1px 테두리와 정밀 호버 효과 */
@@ -179,8 +214,8 @@ body::before {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 .btn-accent:hover:not(:disabled) {
-  filter: brightness(1.08);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent);
+  filter: brightness(1.1);
+  box-shadow: 0 0 22px -4px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .btn-accent:active:not(:disabled) {
   transform: translateY(1px);
@@ -189,19 +224,26 @@ body::before {
   opacity: 0.4;
 }
 
+/* 주요 CTA — 용융 금속 표면. 3-스톱 그라디언트로 금속 광택의 꺾임을 만든다. */
 .btn-gilt {
-  background: linear-gradient(135deg, var(--accent-soft), var(--accent));
+  background: linear-gradient(135deg, #f3e5ab 0%, var(--accent-soft) 45%, var(--accent) 100%);
   color: #0b0f19;
   font-weight: 600;
   border-radius: var(--r-sm);
   border: 1px solid var(--accent-soft);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.45) inset,
+    0 0 18px -6px color-mix(in srgb, var(--accent) 50%, transparent);
   transition:
     transform 0.15s var(--ease-soft),
-    box-shadow 0.2s var(--ease-soft);
+    box-shadow 0.25s var(--ease-soft),
+    filter 0.2s ease;
 }
 .btn-gilt:hover:not(:disabled) {
-  filter: brightness(1.08);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent);
+  filter: brightness(1.1);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
+    0 0 26px -4px color-mix(in srgb, var(--accent) 65%, transparent);
 }
 .btn-gilt:active:not(:disabled) {
   transform: translateY(1px);
@@ -259,7 +301,9 @@ body::before {
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--accent) 12%, transparent),
+    color-mix(in srgb, var(--accent) 28%, transparent),
+    color-mix(in srgb, #fff6d5 18%, transparent),
+    color-mix(in srgb, var(--accent) 28%, transparent),
     transparent
   );
   animation: shimmer 1.6s infinite;
@@ -322,8 +366,9 @@ body::before {
 }
 .lift:hover {
   transform: translateY(-3px);
+  /* shadow-float에 골드 앰비언트 글로우가 포함돼 있어 호버 시 카드가 발광한다 */
   box-shadow: var(--shadow-float);
-  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
 }
 
 /* 스트리밍 응답 깜빡이는 커서 (이모지/블록문자 대체) */
