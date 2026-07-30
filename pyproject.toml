@@ -1,47 +1,65 @@
 [project]
 name = "midas-touch"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI-Augmented Asset Management & Investment Analytics Platform"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "datasets>=4.8.5",
-    "dotenv>=0.9.9",
-    "ipykernel>=7.2.0",
-    "openai>=2.37.0",
+    # Core Data Utilities & Async
     "pandas>=3.0.3",
+    "datasets>=4.8.5",
     "tqdm>=4.67.3",
-    # Azure SQL
-    "pyodbc>=5.2.0",
-    # Supabase (pgvector RAG)
-    "supabase>=2.15.0",
-    "psycopg2-binary>=2.9.12",
-    "alembic>=1.18.4",
-    "sqlalchemy>=2.0.49",
-    "pgvector>=0.4.2",
-    "yfinance>=0.2.54",
     "requests>=2.32.3",
+    "python-multipart>=0.0.32",
+    "dotenv>=0.9.9",
+
+    # Database & ORM (PostgreSQL + pgvector + Neo4j)
+    "sqlalchemy>=2.0.49",
+    "alembic>=1.18.4",
+    "pgvector>=0.4.2",
+    "psycopg[binary]>=3.3.4",
+
+    # FastAPI Web Framework & Server
+    "fastapi>=0.136.3",
+    "uvicorn>=0.49.0",
+
+    # LangGraph & LLM Orchestration
+    "langgraph>=1.0.0",
+    "langchain>=1.0",
+    "langchain-openai>=0.2.0",
+    "langgraph-checkpoint-postgres>=2.0.0",
+    "openai>=2.37.0",
+
+    # Embedding & Fine-tuning
     "sentence-transformers>=5.5.1",
-    "pypdf>=4.2.0",
     "peft>=0.11.0",
+    "pypdf>=4.2.0",
+    "pymupdf>=1.27.2.3",
+
+    # LlamaIndex & Neo4j Knowledge Graph
     "llama-index>=0.10.50",
     "llama-index-graph-stores-neo4j>=0.2.0",
     "llama-index-llms-openai>=0.1.0",
     "llama-index-embeddings-huggingface>=0.2.0",
-    "pymupdf>=1.27.2.3",
-    "fastapi>=0.136.3",
-    "uvicorn>=0.49.0",
-    # Backend agent (LangGraph orchestration)
-    "langgraph>=1.0.0",
-    "langchain-openai>=0.2.0",
-    "langgraph-checkpoint-postgres>=2.0.0",
-    "langchain>=1.0",
-    "psycopg[binary]>=3.3.4",
-    "python-multipart>=0.0.32",
-    # Live web research (Tavily 금리 동향) + 주식 분석(공포탐욕지수)
+
+    # Market Data & Web Search
+    "yfinance>=0.2.54",
     "langchain-tavily>=0.2.0",
     "fear-and-greed>=0.4",
 ]
 
 [dependency-groups]
-dev = []
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ipykernel>=7.2.0",
+    "ruff>=0.3.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
