@@ -13,6 +13,9 @@ import {
 } from "@phosphor-icons/react";
 import { useSelectedUser } from "@/lib/user-context";
 import { useTheme } from "@/lib/theme";
+import ShinyText from "@/components/bits/ShinyText";
+import ElectricBorder from "@/components/bits/ElectricBorder";
+import GlassSurface from "@/components/bits/GlassSurface";
 
 // 단일 여정을 앞세운다: "core" 핵심 여정(내 현황 → 또래 벤치마킹 → 상담 → 종목 확인)을
 // 먼저 두고, "engine" 부가·데모(청약·지식그래프·파인튜닝)는 구분선 뒤로 강등해 초점을 준다.
@@ -44,21 +47,44 @@ export default function NavBar() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <header className="sticky top-3 z-50 mx-auto mt-2 w-[calc(100%-1.5rem)] max-w-6xl rounded-lg border border-line bg-[var(--ink-1)]/90 backdrop-blur-md shadow-md sm:top-4 sm:mt-3">
+    <header className="sticky top-3 z-50 mx-auto mt-2 w-[calc(100%-1.5rem)] max-w-6xl sm:top-4 sm:mt-3">
+      {/* 뒤의 골드 앰비언트가 유리를 통과해 굴절된다.
+          SVG 필터 미지원 브라우저에서는 컴포넌트 내부 폴백(backdrop-filter)으로 내려간다. */}
+      <GlassSurface
+        width="100%"
+        height="auto"
+        borderRadius={10}
+        blur={14}
+        backgroundOpacity={0.55}
+        saturation={1.4}
+        distortionScale={-140}
+        displace={1.2}
+        className="border border-line shadow-md"
+      >
       <nav className="flex h-14 items-center gap-1 px-4 sm:px-5">
         <Link
           href="/"
-          className="mr-5 flex items-center gap-2.5 font-display text-xl font-normal tracking-tight"
+          className="mr-5 flex shrink-0 items-center gap-2.5 whitespace-nowrap font-display text-xl font-normal tracking-tight"
         >
-          <ShieldChevron weight="fill" className="text-accent" size={20} />
-          <span className="text-gradient-accent font-semibold tracking-wide">Midas Touch</span>
+          <ShieldChevron
+            weight="fill"
+            className="text-accent drop-shadow-[0_0_8px_var(--accent)]"
+            size={20}
+          />
+          {/* 정적 그라디언트 대신 금이 흐르는 하이라이트. 브랜드명이 곧 Midas라 여기가 제자리다. */}
+          <ShinyText
+            text="Midas Touch"
+            speed={4}
+            delay={2.5}
+            className="font-semibold tracking-wide"
+          />
           <span className="hidden font-mono-spec text-[9px] uppercase tracking-widest text-muted border border-line/60 px-1.5 py-0.5 rounded sm:inline-block">
             Console
           </span>
         </Link>
 
         {/* 데스크톱 링크 — Swiss Hairline Divider & Monospace Active State */}
-        <div className="hidden items-center gap-1 md:flex">
+        <div className="hidden shrink-0 items-center gap-1 md:flex">
           {LINKS.map((l, i) => (
             <span key={l.href} className="flex items-center">
               {i > 0 && LINKS[i - 1].group !== l.group && (
@@ -66,7 +92,7 @@ export default function NavBar() {
               )}
               <Link
                 href={l.href}
-                className={`rounded px-3 py-1 text-xs font-medium transition-all duration-150 ${
+                className={`whitespace-nowrap rounded px-3 py-1 text-xs font-medium transition-all duration-150 ${
                   isActive(l.href)
                     ? "bg-accent/15 text-accent border border-accent/40 font-semibold"
                     : "text-muted hover:text-fg hover:bg-surface"
@@ -78,18 +104,22 @@ export default function NavBar() {
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-2.5 relative">
+        {/* 페르소나 라벨 길이가 가변이라, 줄어드는 쪽은 항상 이 그룹이어야 한다.
+            (min-w-0 없이는 flex가 로고·링크까지 압축해 글자가 두 줄로 깨진다) */}
+        <div className="relative ml-auto flex min-w-0 items-center gap-2.5">
           {/* 페르소나 유저 퀵 스위처 */}
-          <div className="relative">
+          {/* truncate가 실제로 걸리려면 축소 사슬 전체에 min-w-0이 있어야 한다.
+              하나라도 빠지면 콘텐츠 폭이 하한이 되어 우측 아이콘 버튼이 잘려 나간다. */}
+          <div className="relative min-w-0">
             <button
               onClick={() => setUserDropdownOpen((v) => !v)}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded border border-line px-2.5 py-1 text-xs text-accent hover:border-accent/60 transition bg-surface/40 font-mono-spec"
+              className="flex min-w-0 max-w-full items-center gap-1.5 whitespace-nowrap rounded border border-line px-2.5 py-1 text-xs text-accent hover:border-accent/60 transition bg-surface/40 font-mono-spec"
             >
               <UserCircle weight="fill" size={15} className="shrink-0" />
-              <span className="font-medium truncate max-w-[150px]">
+              <span className="min-w-0 max-w-[150px] truncate font-medium">
                 {selected ? selected.label : "유저 선택"}
               </span>
-              <span className="text-[10px] text-muted ml-0.5">▼</span>
+              <span className="ml-0.5 shrink-0 text-[10px] text-muted">▼</span>
             </button>
 
             {userDropdownOpen && (
@@ -100,23 +130,35 @@ export default function NavBar() {
                 <div className="px-2 py-1 text-[10px] uppercase font-bold text-accent tracking-wider border-b border-line/40">
                   ★ 페르소나 유저 전환 (Persona Switcher)
                 </div>
-                {SAMPLE_USERS.map((u) => (
-                  <button
-                    key={u.uuid}
-                    onClick={() => {
-                      setSelected({ uuid: u.uuid, label: u.label });
-                      setUserDropdownOpen(false);
-                    }}
-                    className={`w-full text-left p-2 rounded-md transition flex flex-col ${
-                      selected?.uuid === u.uuid
-                        ? "bg-accent/20 border border-accent/40 text-accent font-semibold"
-                        : "hover:bg-surface/80 text-fg"
-                    }`}
-                  >
-                    <span className="truncate">{u.label}</span>
-                    <span className="text-[10px] text-muted font-normal">{u.district}</span>
-                  </button>
-                ))}
+                {SAMPLE_USERS.map((u) => {
+                  const isCurrent = selected?.uuid === u.uuid;
+                  const row = (
+                    <button
+                      onClick={() => {
+                        setSelected({ uuid: u.uuid, label: u.label });
+                        setUserDropdownOpen(false);
+                      }}
+                      className={`w-full text-left p-2 rounded-md transition flex flex-col ${
+                        isCurrent
+                          ? "bg-accent/20 text-accent font-semibold"
+                          : "hover:bg-surface/80 text-fg"
+                      }`}
+                    >
+                      <span className="truncate">{u.label}</span>
+                      <span className="text-[10px] text-muted font-normal">{u.district}</span>
+                    </button>
+                  );
+
+                  // 지금 보고 있는 페르소나에만 전류 테두리를 준다. 장식이 아니라 상태 표시이고,
+                  // 드롭다운이 열렸을 때만 마운트되므로 rAF 루프도 그때만 돈다.
+                  return isCurrent ? (
+                    <ElectricBorder key={u.uuid} borderRadius={6} speed={0.8} chaos={0.1}>
+                      {row}
+                    </ElectricBorder>
+                  ) : (
+                    <div key={u.uuid}>{row}</div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -125,7 +167,7 @@ export default function NavBar() {
           <button
             onClick={toggle}
             aria-label="테마 전환"
-            className="btn-ghost flex h-8 w-8 items-center justify-center rounded border border-line"
+            className="btn-ghost flex h-8 w-8 shrink-0 items-center justify-center rounded border border-line"
           >
             {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
           </button>
@@ -135,7 +177,7 @@ export default function NavBar() {
             onClick={() => setOpen((o) => !o)}
             aria-label="메뉴"
             aria-expanded={open}
-            className="btn-ghost flex h-8 w-8 items-center justify-center rounded border border-line md:hidden"
+            className="btn-ghost flex h-8 w-8 shrink-0 items-center justify-center rounded border border-line md:hidden"
           >
             {open ? <X size={16} /> : <List size={16} />}
           </button>
@@ -161,6 +203,7 @@ export default function NavBar() {
           ))}
         </div>
       )}
+      </GlassSurface>
     </header>
   );
 }
