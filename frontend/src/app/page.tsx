@@ -33,9 +33,13 @@ import { Reveal } from "@/components/Reveal";
 import {
   SectionLabel,
   Skeleton,
+  AnimatedNumber,
   fmtKRW,
   fmtKRWShort,
 } from "@/components/ui";
+import ShinyText from "@/components/bits/ShinyText";
+import ScrollVelocity from "@/components/bits/ScrollVelocity";
+import GlareHover from "@/components/bits/GlareHover";
 
 // 단일 여정 3단계 — 랜딩 진입점에서 서비스의 한 문장을 행동으로 풀어준다.
 const JOURNEY = [
@@ -923,6 +927,20 @@ export default function HomePage() {
     return { primaryMarket: primaryList, secondaryMarketGroups: secondaryGroups, allMarketGroups: allGroups };
   }, [market]);
 
+  // 상단 티커테이프 문구 — 적재된 실제 스냅샷으로 만든다.
+  // 데이터 콘솔에 고정 홍보 문구를 흘리면 그 순간 장식이 되어버린다.
+  const tickerTape = useMemo(() => {
+    if (!market.length) return "MIDAS MARKET TERMINAL · REAL-TIME INGESTION";
+    return market
+      .slice(0, 12)
+      .map((m) => {
+        const v = Number(m.value);
+        const shown = Number.isFinite(v) ? v.toLocaleString() : String(m.value);
+        return `${shortLabel(m)} ${shown}${m.unit ?? ""}`;
+      })
+      .join("   ·   ");
+  }, [market]);
+
   const assetOptions = useMemo(
     () =>
       [...new Set(users.map((u) => u.preferred_asset).filter(Boolean))].sort() as string[],
@@ -987,12 +1005,23 @@ export default function HomePage() {
       {/* ────────────────────────────────────────────────
          Swiss Financial Editorial Top Ticker Bar
          ──────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between border-b border-line pb-3 font-mono-spec text-[11px] uppercase tracking-widest text-muted">
-        <div className="flex items-center gap-3">
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-accent" />
-          <span>Midas Market Terminal · Real-time Ingestion</span>
+      <div className="flex items-center gap-4 border-b border-line pb-3 font-mono-spec text-[11px] uppercase tracking-widest text-muted">
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-accent shadow-[0_0_8px_var(--accent)]" />
+          <span className="hidden sm:inline">Midas Market Terminal</span>
         </div>
-        <div className="hidden sm:block text-accent">
+        {/* 실제로 흐르는 티커테이프. 스크롤 속도에 반응해 가속/역주행한다.
+            ScrollVelocity의 루트 <section>에는 폭 제어 수단이 없어 테이프 전체 길이만큼
+            늘어난다 → 바깥에서 min-w-0 + overflow-hidden으로 가둬야 가로 스크롤이 안 생긴다. */}
+        <div className="min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)]">
+          <ScrollVelocity
+            texts={[tickerTape]}
+            velocity={22}
+            numCopies={4}
+            className="font-mono-spec text-[11px] uppercase tracking-widest text-muted"
+          />
+        </div>
+        <div className="hidden shrink-0 text-accent sm:block">
           {new Date().toISOString().slice(0, 10)} Edition
         </div>
       </div>
@@ -1008,7 +1037,9 @@ export default function HomePage() {
 
         <div className="grid gap-6 lg:grid-cols-12 lg:items-end">
           <h1 className="font-display font-normal leading-[1.02] tracking-tight text-fg lg:col-span-8 text-[2.6rem] sm:text-[3.8rem] lg:text-[4.5rem]">
-            나와 <span className="font-italic text-gradient-accent">유사한 투자자</span>의<br />
+            나와{" "}
+            <ShinyText text="유사한 투자자" speed={3.5} delay={1.5} spread={100} className="font-italic" />
+            의<br />
             자산배분 &amp; 전략 벤치마크.
           </h1>
           <div className="space-y-4 lg:col-span-4 border-l border-line/60 pl-6">
@@ -1027,7 +1058,16 @@ export default function HomePage() {
          ──────────────────────────────────────────────── */}
       <section className="grid gap-px border border-line bg-line/30 sm:grid-cols-3">
         {JOURNEY.map((s, i) => (
-          <Reveal key={s.title} index={i}>
+          <Reveal key={s.title} index={i} className="h-full">
+            {/* 골드 광원이 카드를 사선으로 쓸고 지나간다 — 유리 패널로 읽히게 하는 장치 */}
+            <GlareHover
+              className="h-full"
+              glareColor="#f3e5ab"
+              glareOpacity={0.16}
+              glareAngle={-40}
+              glareSize={220}
+              transitionDuration={780}
+            >
             <div className="h-full bg-[var(--ink-1)] p-6 transition hover:bg-[color-mix(in_srgb,var(--accent)_4%,var(--ink-1))]">
               <div className="flex items-center justify-between border-b border-line/40 pb-3">
                 <span className="font-mono-spec text-[10px] font-semibold tracking-widest text-accent">
@@ -1042,6 +1082,7 @@ export default function HomePage() {
               </h2>
               <p className="mt-2 text-xs leading-relaxed text-muted">{s.body}</p>
             </div>
+            </GlareHover>
           </Reveal>
         ))}
       </section>
@@ -1108,7 +1149,11 @@ export default function HomePage() {
                           </span>
                         </div>
                         <div className="mt-2.5 font-mono-spec text-3xl font-extrabold text-fg tracking-tight">
-                          {val.toLocaleString()}
+                          <AnimatedNumber
+                            value={val}
+                            // 원본 표기의 소수 자릿수를 그대로 유지한다 (환율 1382.5 등)
+                            decimals={Math.min(2, String(val).split(".")[1]?.length ?? 0)}
+                          />
                           <span className="ml-1.5 text-xs font-normal text-muted">{m.unit}</span>
                         </div>
                       </div>
