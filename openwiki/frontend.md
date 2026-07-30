@@ -15,6 +15,9 @@ frontend/
 │   │   ├── finetune/page.tsx # Document upload & finetuning job monitor
 │   │   └── dashboard/[uuid]/page.tsx # User dashboard with portfolio donut chart
 │   ├── components/         # Reusable UI building blocks
+│   │   ├── bits/            # Animation/UI effect components (BlurText, ClickSpark, etc.)
+│   │   └── AmbientBackground.tsx  # Global ambient light effect for dark theme
+
 │   │   ├── NavBar.tsx      # Header with core/engine navigation groups and theme toggle
 │   │   ├── JobProgress.tsx # Shows async job progress bars fetched from `/api/v1/jobs`
 │   │   ├── GraphView.tsx   # D3‑based force‑graph viewer for Neo4j snapshots

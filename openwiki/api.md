@@ -82,6 +82,10 @@ This repository exposes a **FastAPI** server under the `/api/v1` prefix. The API
 | `GET` | `/graph/build/jobs` | List active/completed graph‑build jobs.
 | `GET` | `/graph/build/jobs/{id}` | Retrieve job status and logs.
 | `GET` | `/graph/snapshot` | Return a JSON snapshot of Neo4j nodes/edges (used by the UI visualiser).
+| `GET` | `/graph/documents` | List currently ingested RAG documents (used by Knowledge Panel).
+| `POST` | `/graph/ingest/jobs` | Trigger a document ingest job (parse & embed uploaded file).
+| `GET` | `/graph/ingest/jobs/{job_id}` | Get status of a document ingest job.
+
 
 ---
 
