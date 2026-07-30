@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { errMsg } from "@/lib/async";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -20,7 +20,15 @@ import {
   type UserDetail,
 } from "@/lib/api";
 import { Reveal } from "@/components/Reveal";
-import { Card, PageTitle, SectionLabel, Skeleton, fmtKRW } from "@/components/ui";
+import {
+  Card,
+  PageTitle,
+  SectionLabel,
+  Skeleton,
+  AnimatedNumber,
+  fmtKRW,
+} from "@/components/ui";
+import Counter from "@/components/bits/Counter";
 
 // Midas 골드 정체성에 맞춘 분할 팔레트.
 // 골드 계열 3단 + 쿨 중립 + 시맨틱 그린 1포인트로 구분.
@@ -95,6 +103,32 @@ export default function DashboardPage() {
         subtitle={String(uuid)}
       />
 
+      {/* 히어로 스탯 — 자산 대시보드의 최상위 수치.
+          기존엔 총자산이 프로필 <dl>의 10개 항목 중 하나로 "성별"과 같은 크기였다.
+          페이지당 오도미터는 여기 하나만 쓴다. */}
+      <Reveal>
+        <div className="glass flex flex-wrap items-end justify-between gap-6 px-6 py-5">
+          <div>
+            <div className="eyebrow mb-3">TOTAL ASSETS · 총자산</div>
+            <AssetOdometer value={Number(p.total_amount)} />
+          </div>
+          <dl className="flex gap-8 font-mono-spec text-sm">
+            <div>
+              <dt className="text-[10px] uppercase tracking-widest text-muted">월 소득</dt>
+              <dd className="mt-1 text-fg">
+                <AnimatedNumber value={Number(p.monthly_income)} suffix="원" />
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[10px] uppercase tracking-widest text-muted">월 가용액</dt>
+              <dd className="mt-1 text-accent">
+                <AnimatedNumber value={Number(p.monthly_investable)} suffix="원" />
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </Reveal>
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 프로필 */}
         <Reveal index={0} className="h-full">
@@ -104,9 +138,7 @@ export default function DashboardPage() {
             <Field label="성별" value={p.sex} />
             <Field label="가구 형태" value={p.family_type} />
             <Field label="주거" value={`${p.housing_type ?? "-"} (${p.district ?? "-"})`} />
-            <Field label="총자산" value={fmtKRW(Number(p.total_amount))} />
-            <Field label="월 소득" value={fmtKRW(Number(p.monthly_income))} />
-            <Field label="월 가용액" value={fmtKRW(Number(p.monthly_investable))} />
+            {/* 총자산·월소득·월가용액은 상단 히어로 밴드로 승격돼 여기선 뺀다 */}
             <Field label="공격성" value={`${p.aggressiveness ?? "-"}/10`} />
             <Field label="금융이해도" value={`${p.financial_literacy ?? "-"}/10`} />
             <Field label="선호 자산" value={p.preferred_asset} />
@@ -339,17 +371,48 @@ export default function DashboardPage() {
   );
 }
 
+/**
+ * 총자산 오도미터. 원 단위 9자리를 그대로 굴리면 콤마가 없어 못 읽으므로
+ * 억 단위로 축약해 자릿수를 3개 안쪽으로 줄인 뒤 굴린다 (1.2억).
+ * 상하 페이드 그라디언트는 끈다 — 카드 배경이 반투명이라 단색 그라디언트가 띠로 보인다.
+ */
+function AssetOdometer({ value }: { value: number }) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return <span className="font-display text-4xl text-muted">-</span>;
+  }
+  const inEok = value >= 1e8;
+  const scaled = inEok
+    ? Number((value / 1e8).toFixed(value % 1e8 === 0 ? 0 : 1))
+    : Math.round(value / 1e4);
+
+  return (
+    <span className="flex items-baseline gap-1.5 text-fg">
+      <Counter
+        value={scaled}
+        fontSize={44}
+        gap={2}
+        horizontalPadding={0}
+        gradientHeight={0}
+        fontWeight={700}
+        counterStyle={{ letterSpacing: "-0.03em" }}
+      />
+      <span className="font-display text-xl text-accent">{inEok ? "억" : "만"}원</span>
+    </span>
+  );
+}
+
 function Field({
   label,
   value,
 }: {
   label: string;
-  value: string | number | null | undefined;
+  // ReactNode도 받는다 — 금액 항목은 카운트업 컴포넌트를 그대로 넘긴다.
+  value: ReactNode;
 }) {
   return (
     <>
       <dt className="text-muted">{label}</dt>
-      <dd className="text-fg">{value ?? "-"}</dd>
+      <dd className="text-fg font-mono-spec">{value ?? "-"}</dd>
     </>
   );
 }
