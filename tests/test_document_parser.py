@@ -9,13 +9,13 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from src.embedding_pipeline.config import DEFAULT_CONFIG
-from src.embedding_pipeline.document_parser import DocumentParser, FinancialChunker
+from pipelines.embedding.config import DEFAULT_CONFIG
+from pipelines.embedding.document_parser import DocumentParser, FinancialChunker
 
 
 def test_financial_chunker():
     """FinancialChunker의 청킹 동작 및 오버랩 보존 테스트."""
-    chunker = FinancialChunker(chunk_size=100, chunk_overlap=30)
+    chunker = FinancialChunker(chunk_size=50, chunk_overlap=15)
     
     # 꽤 긴 금융 텍스트 예시 (한글 기준 약 200자)
     test_text = (
