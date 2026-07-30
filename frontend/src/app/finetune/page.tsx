@@ -237,7 +237,7 @@ export default function FinetunePage() {
 
           {!preview && !uploadedName && (
             <div className="p-4 border border-line/40 rounded-lg bg-[#080c14] text-xs text-muted">
-              ℹ️ 먼저 <span className="text-accent font-semibold">"📚 문서 지식 즉시 등록"</span> 탭에서 문서를 업로드하고 파이프라인을 실행하면 생성된 데이터셋이 이 탭에 자동으로 연결됩니다.
+              ℹ️ 먼저 <span className="text-accent font-semibold">&ldquo;📚 문서 지식 즉시 등록&rdquo;</span> 탭에서 문서를 업로드하고 파이프라인을 실행하면 생성된 데이터셋이 이 탭에 자동으로 연결됩니다.
             </div>
           )}
 
