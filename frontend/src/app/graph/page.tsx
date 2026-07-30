@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
+import { useReducedMotion } from "motion/react";
 import { errMsg } from "@/lib/async";
 import { Play, MagnifyingGlass, ArrowUp } from "@phosphor-icons/react";
 import {
@@ -14,8 +16,31 @@ import { useToast } from "@/lib/toast";
 import JobProgress from "@/components/JobProgress";
 import GraphView from "@/components/GraphView";
 
+// WebGL은 서버에서 못 돈다. 이 페이지가 앱의 유일한 WebGL 캔버스를 소유하며,
+// 그 대가로 AmbientBackground가 /graph에서 전역 앰비언트를 양보한다.
+const Radar = dynamic(() => import("@/components/bits/Radar"), { ssr: false });
+
+function RadarSweep() {
+  return (
+    <Radar
+      // scale이 클수록 좌표가 커져 원이 작아진다. 1.0이 정사각 컨테이너를 꽉 채우는 값.
+      scale={1.0}
+      ringCount={5}
+      spokeCount={8}
+      ringThickness={0.05}
+      spokeThickness={0.008}
+      sweepSpeed={0.5}
+      sweepWidth={2.2}
+      falloff={1.6}
+      brightness={1.0}
+      enableMouseInteraction={false}
+    />
+  );
+}
+
 export default function GraphPage() {
   const toast = useToast();
+  const reduceMotion = useReducedMotion();
   const [limit, setLimit] = useState(40);
   const [buildJobId, setBuildJobId] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<GraphSnapshot | null>(null);
@@ -140,9 +165,24 @@ export default function GraphPage() {
             </>
           )
         ) : (
-          <p className="text-sm text-muted">
-            버튼을 눌러 Neo4j 그래프 스냅샷을 시각화하세요.
-          </p>
+          // 빈 상태 = "스캔 대기". 레이더 스윕이 그 상태를 그대로 말해준다.
+          // 텍스트 뒤에 깔면 링이 글자를 관통해 읽기를 망치므로, 계기판처럼 분리해 나란히 둔다.
+          // reduced-motion이면 캔버스 없이 안내 문구만 남는다.
+          <div className="flex flex-col items-center gap-6 rounded-lg border border-line/50 bg-[var(--ink)] px-6 py-10 sm:flex-row sm:justify-center sm:gap-10">
+            {!reduceMotion && (
+              <div className="h-36 w-36 shrink-0 [mask-image:radial-gradient(closest-side,black_60%,transparent_100%)]">
+                <RadarSweep />
+              </div>
+            )}
+            <div className="text-center sm:text-left">
+              <span className="font-mono-spec text-[10px] uppercase tracking-[0.22em] text-accent">
+                Standing by · 스캔 대기
+              </span>
+              <p className="mt-2 text-sm text-muted">
+                버튼을 눌러 Neo4j 그래프 스냅샷을 시각화하세요.
+              </p>
+            </div>
+          </div>
         )}
       </Card>
 
