@@ -18,6 +18,9 @@ dependencies = [
     "alembic>=1.18.4",
     "pgvector>=0.4.2",
     "psycopg[binary]>=3.3.4",
+    # shared/database/repositories/connection.py 등이 아직 psycopg2를 직접 쓴다.
+    # psycopg3 통합 이전까지는 제거하면 uv sync 시 백엔드가 죽는다.
+    "psycopg2-binary>=2.9.12",
 
     # FastAPI Web Framework & Server
     "fastapi>=0.136.3",
