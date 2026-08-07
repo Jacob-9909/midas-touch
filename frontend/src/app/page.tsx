@@ -1241,10 +1241,10 @@ export default function HomePage() {
         </div>
 
         {/* Swiss Capsule Segmented Control & Quick Add Form */}
-        <div className="flex flex-wrap items-center justify-between gap-3 font-mono-spec text-[11px] bg-[#090d16] border border-line/60 p-2 rounded-xl shadow-inner">
+        <div className="flex flex-wrap items-center justify-between gap-3 font-mono-spec text-[11px] bg-[#090d16] border border-line-50 p-2 rounded-2xl shadow-inner">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1 bg-[#0f1624] p-1 rounded-lg border border-line/40">
-              <span className="text-muted px-1.5 text-[9px] uppercase font-bold tracking-wider">MARKET</span>
+            <div className="flex items-center gap-1 bg-[#0f1624]/80 p-1 rounded-full border border-line/40">
+              <span className="text-muted px-2.5 text-[9px] uppercase font-bold tracking-wider">MARKET</span>
               {([
                 { id: "ALL", label: "전체 시장" },
                 { id: "US", label: "🇺🇸 나스닥·S&P" },
@@ -1256,10 +1256,10 @@ export default function HomePage() {
                   <button
                     key={mk.id}
                     onClick={() => setMarketFilter(mk.id)}
-                    className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+                    className={`rounded-full px-3 py-1 text-[11px] font-medium transition-all ${
                       active
-                        ? "bg-accent text-[#0b0f19] font-bold shadow"
-                        : "text-muted hover:text-fg hover:bg-surface/50"
+                        ? "bg-accent/20 text-accent border border-accent/50 shadow-[0_0_10px_rgba(212,175,96,0.2)] font-semibold"
+                        : "text-muted hover:text-fg hover:bg-surface/50 border border-transparent"
                     }`}
                   >
                     {mk.label}
@@ -1269,8 +1269,8 @@ export default function HomePage() {
             </div>
 
             {/* 크립토 뷰는 섹터 구분 없이 코인 차트만 본다 */}
-            <div className={`flex items-center gap-1 bg-[#0f1624] p-1 rounded-lg border border-line/40 ${marketFilter === "CRYPTO" ? "hidden" : ""}`}>
-              <span className="text-muted px-1.5 text-[9px] uppercase font-bold tracking-wider">SECTOR</span>
+            <div className={`flex items-center gap-1 bg-[#0f1624]/80 p-1 rounded-full border border-line/40 ${marketFilter === "CRYPTO" ? "hidden" : ""}`}>
+              <span className="text-muted px-2.5 text-[9px] uppercase font-bold tracking-wider">SECTOR</span>
               {[
                 { id: "ALL", label: "전체" },
                 { id: "tech", label: "⚡ 테크" },
@@ -1284,10 +1284,10 @@ export default function HomePage() {
                   <button
                     key={sec.id}
                     onClick={() => setStockSectorFilter(sec.id)}
-                    className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-all ${
                       active
-                        ? "bg-accent text-[#0b0f19] font-bold shadow"
-                        : "text-muted hover:text-fg hover:bg-surface/50"
+                        ? "bg-accent/20 text-accent border border-accent/40 font-semibold"
+                        : "text-muted hover:text-fg border border-transparent"
                     }`}
                   >
                     {sec.label}

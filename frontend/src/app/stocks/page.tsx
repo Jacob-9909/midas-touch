@@ -559,14 +559,14 @@ export default function StocksPage() {
         onPick={(t) => (activeTab === "quick" ? runQuick(t) : run(t, strategy))}
       />
 
-      {/* ── 탭 선택 ──────────────────────────────────────────────────────── */}
-      <div className="mb-6 flex gap-1 rounded-2xl border border-line bg-[var(--ink-2)]/30 p-1">
+      {/* ── 탭 선택 (Swiss Sleek Pill Segmented Control) ────────────────────── */}
+      <div className="mb-6 flex gap-1.5 rounded-full border border-line-50 bg-[#090d16]/90 p-1.5 shadow-inner">
         <button
           onClick={() => setActiveTab("quick")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-full py-2 text-xs font-mono-spec transition-all duration-200 ${
             activeTab === "quick"
-              ? "bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] text-accent"
-              : "text-muted hover:text-fg"
+              ? "bg-accent/20 text-accent border border-accent/40 shadow-[0_0_12px_rgba(212,175,96,0.18)] font-semibold"
+              : "text-muted hover:text-fg border border-transparent"
           }`}
         >
           <Lightning size={15} />
@@ -574,10 +574,10 @@ export default function StocksPage() {
         </button>
         <button
           onClick={() => setActiveTab("backtest")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-full py-2 text-xs font-mono-spec transition-all duration-200 ${
             activeTab === "backtest"
-              ? "bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] text-accent"
-              : "text-muted hover:text-fg"
+              ? "bg-accent/20 text-accent border border-accent/40 shadow-[0_0_12px_rgba(212,175,96,0.18)] font-semibold"
+              : "text-muted hover:text-fg border border-transparent"
           }`}
         >
           <ChartLineUp size={15} />

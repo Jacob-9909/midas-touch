@@ -83,19 +83,19 @@ export default function NavBar() {
           </span>
         </Link>
 
-        {/* 데스크톱 링크 — Swiss Hairline Divider & Monospace Active State */}
+        {/* 데스크톱 링크 — Swiss Hairline Divider & Sleek Pill Navigation */}
         <div className="hidden shrink-0 items-center gap-1 md:flex">
           {LINKS.map((l, i) => (
             <span key={l.href} className="flex items-center">
               {i > 0 && LINKS[i - 1].group !== l.group && (
-                <span aria-hidden className="mx-2 h-3.5 w-px bg-line/60" />
+                <span aria-hidden className="mx-2.5 h-3.5 w-px bg-line/50" />
               )}
               <Link
                 href={l.href}
-                className={`whitespace-nowrap rounded px-3 py-1 text-xs font-medium transition-all duration-150 ${
+                className={`whitespace-nowrap rounded-full px-3.5 py-1 text-xs font-mono-spec transition-all duration-200 ${
                   isActive(l.href)
-                    ? "bg-accent/15 text-accent border border-accent/40 font-semibold"
-                    : "text-muted hover:text-fg hover:bg-surface"
+                    ? "bg-accent/15 text-accent border border-accent/40 font-semibold shadow-[0_0_12px_rgba(212,175,96,0.18)]"
+                    : "text-muted hover:text-fg hover:bg-surface/60 border border-transparent"
                 } ${l.group === "engine" && !isActive(l.href) ? "opacity-60" : ""}`}
               >
                 {l.label}
@@ -113,7 +113,7 @@ export default function NavBar() {
           <div className="relative min-w-0">
             <button
               onClick={() => setUserDropdownOpen((v) => !v)}
-              className="flex min-w-0 max-w-full items-center gap-1.5 whitespace-nowrap rounded border border-line px-2.5 py-1 text-xs text-accent hover:border-accent/60 transition bg-surface/40 font-mono-spec"
+              className="flex min-w-0 max-w-full items-center gap-1.5 whitespace-nowrap rounded-full border border-line/60 px-3 py-1 text-xs text-accent hover:border-accent/60 transition bg-surface/40 font-mono-spec shadow-sm"
             >
               <UserCircle weight="fill" size={15} className="shrink-0" />
               <span className="min-w-0 max-w-[150px] truncate font-medium">

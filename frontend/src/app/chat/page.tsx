@@ -156,15 +156,16 @@ export default function ChatPage() {
       <div className="flex gap-4">
         {/* 좌측 사이드바: 대화 목록 / 지식베이스 탭 */}
         <aside className="w-64 shrink-0">
-          <div className="mb-3 flex gap-1 rounded-lg border border-line p-1">
+          {/* 사이드바 탭 (Swiss Sleek Pill Segmented Control) */}
+          <div className="mb-4 flex gap-1 rounded-full border border-line-50 bg-[#090d16]/80 p-1">
             {(["chats", "kb"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                className={`flex-1 rounded-full px-3 py-1.5 text-xs font-mono-spec transition-all duration-200 ${
                   tab === t
-                    ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-accent"
-                    : "text-muted hover:text-fg"
+                    ? "bg-accent/20 text-accent border border-accent/40 font-semibold shadow-[0_0_10px_rgba(212,175,96,0.16)]"
+                    : "text-muted hover:text-fg border border-transparent"
                 }`}
               >
                 {t === "chats" ? "대화" : "지식베이스"}

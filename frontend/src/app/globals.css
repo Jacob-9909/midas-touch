@@ -387,6 +387,68 @@ body::before {
   }
 }
 
+/* Swiss Editorial & recent.design Utilities */
+.border-line-50 {
+  border-color: color-mix(in srgb, var(--line) 50%, transparent);
+}
+
+.pill-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid transparent;
+}
+.pill-tab-active {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 14px -3px color-mix(in srgb, var(--accent) 30%, transparent);
+  font-weight: 600;
+}
+.pill-tab-inactive {
+  color: var(--muted);
+}
+.pill-tab-inactive:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-color: color-mix(in srgb, var(--line) 40%, transparent);
+}
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375em;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-subtle);
+}
+.status-indicator-positive {
+  background: color-mix(in srgb, var(--positive) 12%, transparent);
+  color: var(--positive);
+  border-color: color-mix(in srgb, var(--positive) 30%, transparent);
+}
+.status-indicator-negative {
+  background: color-mix(in srgb, var(--negative) 12%, transparent);
+  color: var(--negative);
+  border-color: color-mix(in srgb, var(--negative) 30%, transparent);
+}
+.status-indicator-gold {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
 /* prefers-reduced-motion: 모든 모션 제거 (skill 6.B 필수) */
 @media (prefers-reduced-motion: reduce) {
   *,
