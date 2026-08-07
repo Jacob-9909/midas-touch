@@ -4,6 +4,10 @@ import { useState } from "react";
 import { errMsg } from "@/lib/async";
 import { Play, UploadSimple } from "@phosphor-icons/react";
 import { apiGet, apiPost, apiUpload, type JobState } from "@/lib/api";
+import OGHeroCard from "@/components/bits/OGHeroCard";
+import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
+import PopularCard from "@/components/bits/PopularCard";
+import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
 import { Card, PageTitle } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import JobProgress from "@/components/JobProgress";
@@ -114,51 +118,26 @@ export default function FinetunePage() {
 
   return (
     <div className="space-y-6">
-      <PageTitle
-        eyebrow="AI Knowledge &amp; MLOps Center"
-        title="AI 지식 통합 및 모델 파인튜닝 센터"
-        subtitle="금융 문서(PDF·TXT·MD)를 업로드하여 Agent RAG 지식 베이스에 즉시 동기화하고, 금융 특화 LLM/Embedding 대조학습(LoRA) 파인튜닝을 관리합니다."
+      {/* OGHeroCard Header */}
+      <OGHeroCard
+        categoryTag="MLOPS & MODEL TRAINING"
+        title="금융 AI 파인튜닝 & 지식 파이프라인"
+        subtitle="PDF, 보고서 문서에서 지식 데이터셋을 자동 추출하고, BGE-M3 대조학습 및 LoRA 파인튜닝으로 나만의 AI 투자 가이드를 생성합니다."
+        badgeContent={<LiveSyncBadge state={busy ? "training" : "live"} label={busy ? "PROCESSING" : "ENGINE READY"} />}
+        metrics={[
+          { label: "RAG INGESTION", value: "BGE-M3 Hard Negative" },
+          { label: "LORA ENGINE", value: "PyTorch & Accelerate" },
+        ]}
       />
 
-      {/* MLOps Status Summary Banner */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="border border-line/60 bg-[#090d16] p-3.5 rounded-lg flex items-center gap-3">
-          <div className="h-10 w-10 rounded bg-accent/15 border border-accent/30 flex items-center justify-center text-accent font-bold">
-            RAG
-          </div>
-          <div>
-            <div className="text-xs text-muted font-mono-spec">지식 베이스 상태</div>
-            <div className="text-sm font-semibold text-fg">Agent RAG Ingestion Active</div>
-          </div>
-        </div>
-        <div className="border border-line/60 bg-[#090d16] p-3.5 rounded-lg flex items-center gap-3">
-          <div className="h-10 w-10 rounded bg-positive/15 border border-positive/30 flex items-center justify-center text-positive font-bold">
-            BGE
-          </div>
-          <div>
-            <div className="text-xs text-muted font-mono-spec">대조학습 마이닝</div>
-            <div className="text-sm font-semibold text-fg">BGE-M3 Hard Negative Mining</div>
-          </div>
-        </div>
-        <div className="border border-line/60 bg-[#090d16] p-3.5 rounded-lg flex items-center gap-3">
-          <div className="h-10 w-10 rounded bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold">
-            LoRA
-          </div>
-          <div>
-            <div className="text-xs text-muted font-mono-spec">모델 파인튜닝 엔진</div>
-            <div className="text-sm font-semibold text-fg">PyTorch &amp; Accelerate Ready</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mode Selector Tabs */}
-      <div className="flex items-center gap-2 border-b border-line pb-2 font-mono-spec text-xs">
+      {/* Mode Selector Tabs (Swiss Sleek Pill Segmented Control) */}
+      <div className="flex flex-wrap items-center gap-2 font-mono-spec text-xs bg-[#090d16]/80 p-1.5 rounded-full border border-line-50">
         <button
           onClick={() => setActiveTab("ingest")}
-          className={`px-4 py-2 rounded-md font-semibold transition ${
+          className={`px-4 py-2 rounded-full font-semibold transition-all duration-200 ${
             activeTab === "ingest"
-              ? "bg-accent text-bg"
-              : "bg-surface text-muted hover:text-fg"
+              ? "bg-accent/20 text-accent border border-accent/40 shadow-[0_0_12px_rgba(212,175,96,0.2)]"
+              : "text-muted hover:text-fg border border-transparent"
           }`}
         >
           📚 1. 문서 지식 즉시 등록 (Instant RAG Ingestion)

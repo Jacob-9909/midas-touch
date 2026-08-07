@@ -30,10 +30,17 @@ import { apiGet, type MarketSnapshot, type UserSummary } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { useToast } from "@/lib/toast";
 import { Reveal } from "@/components/Reveal";
+import OGHeroCard from "@/components/bits/OGHeroCard";
+import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
+import MiniSparkline from "@/components/bits/MiniSparkline";
+import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 import {
+  Card,
+  PageTitle,
   SectionLabel,
-  Skeleton,
   AnimatedNumber,
+  AnimatedKRWShort,
+  Skeleton,
   fmtKRW,
   fmtKRWShort,
 } from "@/components/ui";
@@ -1027,31 +1034,38 @@ export default function HomePage() {
       </div>
 
       {/* ────────────────────────────────────────────────
-         Editorial Hero Header (Swiss Architectural Serif)
+         Editorial Hero Header (OGHeroCard & Swiss Precision)
          ──────────────────────────────────────────────── */}
-      <header className="animate-rise space-y-6 pt-2">
-        <div className="flex items-center gap-3">
-          <span className="eyebrow">VOL. 2026 / EDITORIAL CONSOLE</span>
-          <span className="hidden h-px flex-1 bg-gradient-to-r from-line to-transparent sm:block" />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-12 lg:items-end">
-          <h1 className="font-display font-normal leading-[1.02] tracking-tight text-fg lg:col-span-8 text-[2.6rem] sm:text-[3.8rem] lg:text-[4.5rem]">
-            나와{" "}
-            <ShinyText text="유사한 투자자" speed={3.5} delay={1.5} spread={100} className="font-italic" />
-            의<br />
-            자산배분 &amp; 전략 벤치마크.
-          </h1>
-          <div className="space-y-4 lg:col-span-4 border-l border-line/60 pl-6">
-            <p className="text-xs leading-relaxed text-muted font-sans">
-              유사 투자자의 포트폴리오를 벤치마크로 대조하고, 세법·시장·지식그래프 데이터를 근거로 맞춤형 자산 전략을 제시하는 AI 어시스턴트 콘솔입니다.
-            </p>
-            <div className="font-mono-spec text-[10px] text-muted/60 uppercase tracking-wider">
-              * Informational Intelligence · Not Financial Advice
-            </div>
+      <OGHeroCard
+        categoryTag="VOL. 2026 / EDITORIAL CONSOLE"
+        title="나와 유사한 투자자의 자산배분 & 전략 벤치마크"
+        subtitle="유사 투자자의 포트폴리오를 벤치마크로 대조하고, 세법·시장·지식그래프 데이터를 근거로 맞춤형 자산 전략을 제시하는 AI 어시스턴트 콘솔입니다."
+        badgeContent={
+          <div className="hidden sm:block">
+            <LiveSyncBadge state="live" label="AI-INTELLIGENCE" latencyMs={5} />
           </div>
-        </div>
-      </header>
+        }
+        metrics={[
+          { label: "USD / KRW", value: "1,342.5원", delta: "+0.35%", isPositive: true },
+          { label: "US 10Y BOND", value: "4.12%", delta: "-0.08%", isPositive: false },
+        ]}
+        actions={
+          <div className="flex items-center gap-3">
+            <Link
+              href="/chat"
+              className="rounded-full border border-accent/40 bg-accent/20 px-4 py-2 text-xs font-mono-spec text-accent hover:bg-accent/30 transition shadow-md"
+            >
+              에이전트 상담 시작 →
+            </Link>
+            <Link
+              href="/stocks"
+              className="rounded-full border border-line bg-surface/60 px-4 py-2 text-xs font-mono-spec text-fg hover:border-accent/40 transition"
+            >
+              주식분석 랩
+            </Link>
+          </div>
+        }
+      />
 
       {/* ────────────────────────────────────────────────
          Swiss 3-Step Journey Hairline Grid
@@ -1130,47 +1144,36 @@ export default function HomePage() {
                   ))}
                 </div>
               </div>
-              <div className="grid gap-px border border-line bg-line/30 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-3">
                 {primaryMarket.map((m, i) => {
                   const val = Number(m.value);
                   const key = m.sub_key || m.data_type;
                   const { data: trendData, color: trendColor } = getMacroTrendData(key, val, marketHistoryMap, macroPeriod);
 
                   return (
-                    <div
-                      key={i}
-                      className="bg-[var(--ink-1)] p-5 transition hover:bg-[color-mix(in_srgb,var(--accent)_6%,var(--ink-1))] flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between font-mono-spec text-[11px] text-muted">
-                          <span className="font-semibold text-fg">{shortLabel(m)}</span>
-                          <span className="rounded border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[9px] text-accent font-mono-spec">
-                            {key}
-                          </span>
-                        </div>
-                        <div className="mt-2.5 font-mono-spec text-3xl font-extrabold text-fg tracking-tight">
-                          <AnimatedNumber
-                            value={val}
-                            // 원본 표기의 소수 자릿수를 그대로 유지한다 (환율 1382.5 등)
-                            decimals={Math.min(2, String(val).split(".")[1]?.length ?? 0)}
-                          />
-                          <span className="ml-1.5 text-xs font-normal text-muted">{m.unit}</span>
-                        </div>
-                      </div>
-
-                      {/* Sparkline Trend Graph */}
-                      <div className="my-3">
-                        <MacroSparkline data={trendData} color={trendColor} height={38} />
-                      </div>
-
-                      <div className="flex items-center justify-between border-t border-line/40 pt-2 font-mono-spec text-[10px]">
-                        <span className="text-muted">기준: {m.snapshot_date}</span>
-                        <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          정상 밴드
+                    <SpecularMetricCard key={i} glowColor={trendColor === "positive" ? "emerald" : trendColor === "negative" ? "rose" : "gold"}>
+                      <div className="flex items-center justify-between font-mono-spec text-[11px] text-muted">
+                        <span className="font-semibold text-fg">{shortLabel(m)}</span>
+                        <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[9px] text-accent font-mono-spec">
+                          {key}
                         </span>
                       </div>
-                    </div>
+                      <div className="mt-2.5 flex items-end justify-between">
+                        <div className="font-mono-spec text-2xl font-extrabold text-fg tracking-tight sm:text-3xl">
+                          <AnimatedNumber
+                            value={val}
+                            decimals={Math.min(2, String(val).split(".")[1]?.length ?? 0)}
+                          />
+                          <span className="ml-1 text-xs text-muted font-normal">{m.unit}</span>
+                        </div>
+                        <MiniSparkline
+                          data={trendData}
+                          color={trendColor as "positive" | "negative" | "accent"}
+                          width={70}
+                          height={26}
+                        />
+                      </div>
+                    </SpecularMetricCard>
                   );
                 })}
               </div>

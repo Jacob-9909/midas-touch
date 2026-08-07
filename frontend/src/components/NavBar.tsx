@@ -16,6 +16,7 @@ import { useTheme } from "@/lib/theme";
 import ShinyText from "@/components/bits/ShinyText";
 import ElectricBorder from "@/components/bits/ElectricBorder";
 import GlassSurface from "@/components/bits/GlassSurface";
+import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 
 // 단일 여정을 앞세운다: "core" 핵심 여정(내 현황 → 또래 벤치마킹 → 상담 → 종목 확인)을
 // 먼저 두고, "engine" 부가·데모(청약·지식그래프·파인튜닝)는 구분선 뒤로 강등해 초점을 준다.
@@ -107,6 +108,10 @@ export default function NavBar() {
         {/* 페르소나 라벨 길이가 가변이라, 줄어드는 쪽은 항상 이 그룹이어야 한다.
             (min-w-0 없이는 flex가 로고·링크까지 압축해 글자가 두 줄로 깨진다) */}
         <div className="relative ml-auto flex min-w-0 items-center gap-2.5">
+          {/* 최근 디자인 라이브 상태 뱃지 */}
+          <div className="hidden sm:block">
+            <LiveSyncBadge state="live" label="FIN-STREAM" latencyMs={12} lastUpdated="방금 전" />
+          </div>
           {/* 페르소나 유저 퀵 스위처 */}
           {/* truncate가 실제로 걸리려면 축소 사슬 전체에 min-w-0이 있어야 한다.
               하나라도 빠지면 콘텐츠 폭이 하한이 되어 우측 아이콘 버튼이 잘려 나간다. */}
