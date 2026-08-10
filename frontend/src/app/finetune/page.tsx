@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { errMsg } from "@/lib/async";
 import { Play, UploadSimple } from "@phosphor-icons/react";
 import { apiGet, apiPost, apiUpload, type JobState } from "@/lib/api";
+import OGHeroCard from "@/components/bits/OGHeroCard";
+import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
+import PopularCard from "@/components/bits/PopularCard";
+import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
 import { Card, PageTitle } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import JobProgress from "@/components/JobProgress";
@@ -142,10 +146,16 @@ export default function FinetunePage() {
 
   return (
     <div className="space-y-6">
-      <PageTitle
-        eyebrow="AI Knowledge &amp; MLOps Center"
-        title="AI 지식 통합 및 모델 파인튜닝 센터"
-        subtitle="금융 문서(PDF·TXT·MD)를 업로드하여 Agent RAG 지식 베이스에 즉시 동기화하고, 금융 특화 LLM/Embedding 대조학습(LoRA) 파인튜닝을 관리합니다."
+      {/* OGHeroCard Header */}
+      <OGHeroCard
+        categoryTag="MLOPS & MODEL TRAINING"
+        title="금융 AI 파인튜닝 & 지식 파이프라인"
+        subtitle="PDF, 보고서 문서에서 지식 데이터셋을 자동 추출하고, BGE-M3 대조학습 및 LoRA 파인튜닝으로 나만의 AI 투자 가이드를 생성합니다."
+        badgeContent={<LiveSyncBadge state={busy ? "training" : "live"} label={busy ? "PROCESSING" : "ENGINE READY"} />}
+        metrics={[
+          { label: "RAG INGESTION", value: "BGE-M3 Hard Negative" },
+          { label: "LORA ENGINE", value: "PyTorch & Accelerate" },
+        ]}
       />
 
       {/* MLOps Status Summary Banner */}
@@ -189,14 +199,15 @@ export default function FinetunePage() {
         </div>
       </div>
 
-      {/* Mode Selector Tabs */}
-      <div className="flex items-center gap-2 border-b border-line pb-2 font-mono-spec text-xs">
+      {/* Mode Selector Tabs (Swiss Sleek Pill Segmented Control) */}
+      <div className="flex flex-wrap items-center gap-2 font-mono-spec text-xs bg-[#090d16]/80 p-1.5 rounded-full border border-line-50">
+
         <button
           onClick={() => setActiveTab("ingest")}
-          className={`px-4 py-2 rounded-md font-semibold transition ${
+          className={`px-4 py-2 rounded-full font-semibold transition-all duration-200 ${
             activeTab === "ingest"
-              ? "bg-accent text-bg"
-              : "bg-surface text-muted hover:text-fg"
+              ? "bg-accent/20 text-accent border border-accent/40 shadow-[0_0_12px_rgba(212,175,96,0.2)]"
+              : "text-muted hover:text-fg border border-transparent"
           }`}
         >
           📚 1. 문서 지식 즉시 등록 (Instant RAG Ingestion)

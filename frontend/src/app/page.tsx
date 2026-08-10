@@ -30,15 +30,21 @@ import { apiGet, type MarketSnapshot, type UserSummary } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { useToast } from "@/lib/toast";
 import { Reveal } from "@/components/Reveal";
+import OGHeroCard from "@/components/bits/OGHeroCard";
+import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
+import MiniSparkline from "@/components/bits/MiniSparkline";
+import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 import {
+  Card,
+  PageTitle,
   SectionLabel,
-  Skeleton,
   AnimatedNumber,
+  AnimatedKRWShort,
+  Skeleton,
   fmtKRW,
   fmtKRWShort,
 } from "@/components/ui";
 import MemoryStatsCard from "@/app/stocks/MemoryStatsCard";
-import ShinyText from "@/components/bits/ShinyText";
 import ScrollVelocity from "@/components/bits/ScrollVelocity";
 import GlareHover from "@/components/bits/GlareHover";
 
@@ -1030,31 +1036,38 @@ export default function HomePage() {
       </div>
 
       {/* ────────────────────────────────────────────────
-         Editorial Hero Header (Swiss Architectural Serif)
+         Editorial Hero Header (OGHeroCard & Swiss Precision)
          ──────────────────────────────────────────────── */}
-      <header className="animate-rise space-y-6 pt-2">
-        <div className="flex items-center gap-3">
-          <span className="eyebrow">VOL. 2026 / EDITORIAL CONSOLE</span>
-          <span className="hidden h-px flex-1 bg-gradient-to-r from-line to-transparent sm:block" />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-12 lg:items-end">
-          <h1 className="font-display font-normal leading-[1.02] tracking-tight text-fg lg:col-span-8 text-[2.6rem] sm:text-[3.8rem] lg:text-[4.5rem]">
-            자기 전망을{" "}
-            <ShinyText text="채점하는" speed={3.5} delay={1.5} spread={100} className="font-italic" />
-            <br />
-            AI 자산관리 콘솔.
-          </h1>
-          <div className="space-y-4 lg:col-span-4 border-l border-line/60 pl-6">
-            <p className="text-xs leading-relaxed text-muted font-sans">
-              주가 전망을 기록해 두고, 기간이 지나면 실제 주가와 대조해 스스로 적중률을 매깁니다. 그 성적이 낮은 구간에서는 다음 전망의 자신감을 스스로 낮춥니다. 유사 투자자 벤치마크와 세법·지식그래프 근거 상담도 같은 콘솔에서 이어집니다.
-            </p>
-            <div className="font-mono-spec text-[10px] text-muted/60 uppercase tracking-wider">
-              * Informational Intelligence · Not Financial Advice
-            </div>
+      <OGHeroCard
+        categoryTag="VOL. 2026 / EDITORIAL CONSOLE"
+        title="자기 전망을 채점하는 AI 자산관리 콘솔"
+        subtitle="주가 전망을 기록해 두고, 기간이 지나면 실제 주가와 대조해 스스로 적중률을 매깁니다. 성적이 낮은 구간에서는 다음 전망의 자신감을 스스로 낮춥니다. 유사 투자자 벤치마크와 세법·지식그래프 근거 상담도 같은 콘솔에서 이어집니다."
+        badgeContent={
+          <div className="hidden sm:block">
+            <LiveSyncBadge state="live" label="AI-INTELLIGENCE" latencyMs={5} />
           </div>
-        </div>
-      </header>
+        }
+        metrics={[
+          { label: "USD / KRW", value: "1,342.5원", delta: "+0.35%", isPositive: true },
+          { label: "US 10Y BOND", value: "4.12%", delta: "-0.08%", isPositive: false },
+        ]}
+        actions={
+          <div className="flex items-center gap-3">
+            <Link
+              href="/chat"
+              className="rounded-full border border-accent/40 bg-accent/20 px-4 py-2 text-xs font-mono-spec text-accent hover:bg-accent/30 transition shadow-md"
+            >
+              에이전트 상담 시작 →
+            </Link>
+            <Link
+              href="/stocks"
+              className="rounded-full border border-line bg-surface/60 px-4 py-2 text-xs font-mono-spec text-fg hover:border-accent/40 transition"
+            >
+              주식분석 랩
+            </Link>
+          </div>
+        }
+      />
 
       {/* ────────────────────────────────────────────────
          AI 자기채점 캘리브레이션 — 이 제품의 첫 문장이라 최상단에 둔다.
@@ -1180,47 +1193,36 @@ export default function HomePage() {
                   ))}
                 </div>
               </div>
-              <div className="grid gap-px border border-line bg-line/30 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-3">
                 {primaryMarket.map((m, i) => {
                   const val = Number(m.value);
                   const key = m.sub_key || m.data_type;
                   const { data: trendData, color: trendColor } = getMacroTrendData(key, val, marketHistoryMap, macroPeriod);
 
                   return (
-                    <div
-                      key={i}
-                      className="bg-[var(--ink-1)] p-5 transition hover:bg-[color-mix(in_srgb,var(--accent)_6%,var(--ink-1))] flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between font-mono-spec text-[11px] text-muted">
-                          <span className="font-semibold text-fg">{shortLabel(m)}</span>
-                          <span className="rounded border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[9px] text-accent font-mono-spec">
-                            {key}
-                          </span>
-                        </div>
-                        <div className="mt-2.5 font-mono-spec text-3xl font-extrabold text-fg tracking-tight">
-                          <AnimatedNumber
-                            value={val}
-                            // 원본 표기의 소수 자릿수를 그대로 유지한다 (환율 1382.5 등)
-                            decimals={Math.min(2, String(val).split(".")[1]?.length ?? 0)}
-                          />
-                          <span className="ml-1.5 text-xs font-normal text-muted">{m.unit}</span>
-                        </div>
-                      </div>
-
-                      {/* Sparkline Trend Graph */}
-                      <div className="my-3">
-                        <MacroSparkline data={trendData} color={trendColor} height={38} />
-                      </div>
-
-                      <div className="flex items-center justify-between border-t border-line/40 pt-2 font-mono-spec text-[10px]">
-                        <span className="text-muted">기준: {m.snapshot_date}</span>
-                        <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          정상 밴드
+                    <SpecularMetricCard key={i} glowColor={trendColor === "positive" ? "emerald" : trendColor === "negative" ? "rose" : "gold"}>
+                      <div className="flex items-center justify-between font-mono-spec text-[11px] text-muted">
+                        <span className="font-semibold text-fg">{shortLabel(m)}</span>
+                        <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[9px] text-accent font-mono-spec">
+                          {key}
                         </span>
                       </div>
-                    </div>
+                      <div className="mt-2.5 flex items-end justify-between">
+                        <div className="font-mono-spec text-2xl font-extrabold text-fg tracking-tight sm:text-3xl">
+                          <AnimatedNumber
+                            value={val}
+                            decimals={Math.min(2, String(val).split(".")[1]?.length ?? 0)}
+                          />
+                          <span className="ml-1 text-xs text-muted font-normal">{m.unit}</span>
+                        </div>
+                        <MiniSparkline
+                          data={trendData}
+                          color={trendColor as "positive" | "negative" | "accent"}
+                          width={70}
+                          height={26}
+                        />
+                      </div>
+                    </SpecularMetricCard>
                   );
                 })}
               </div>
@@ -1291,10 +1293,10 @@ export default function HomePage() {
         </div>
 
         {/* Swiss Capsule Segmented Control & Quick Add Form */}
-        <div className="flex flex-wrap items-center justify-between gap-3 font-mono-spec text-[11px] bg-[#090d16] border border-line/60 p-2 rounded-xl shadow-inner">
+        <div className="flex flex-wrap items-center justify-between gap-3 font-mono-spec text-[11px] bg-[#090d16] border border-line-50 p-2 rounded-2xl shadow-inner">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1 bg-[#0f1624] p-1 rounded-lg border border-line/40">
-              <span className="text-muted px-1.5 text-[9px] uppercase font-bold tracking-wider">MARKET</span>
+            <div className="flex items-center gap-1 bg-[#0f1624]/80 p-1 rounded-full border border-line/40">
+              <span className="text-muted px-2.5 text-[9px] uppercase font-bold tracking-wider">MARKET</span>
               {([
                 { id: "ALL", label: "전체 시장" },
                 { id: "US", label: "🇺🇸 나스닥·S&P" },
@@ -1306,10 +1308,10 @@ export default function HomePage() {
                   <button
                     key={mk.id}
                     onClick={() => setMarketFilter(mk.id)}
-                    className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+                    className={`rounded-full px-3 py-1 text-[11px] font-medium transition-all ${
                       active
-                        ? "bg-accent text-[#0b0f19] font-bold shadow"
-                        : "text-muted hover:text-fg hover:bg-surface/50"
+                        ? "bg-accent/20 text-accent border border-accent/50 shadow-[0_0_10px_rgba(212,175,96,0.2)] font-semibold"
+                        : "text-muted hover:text-fg hover:bg-surface/50 border border-transparent"
                     }`}
                   >
                     {mk.label}
@@ -1319,8 +1321,8 @@ export default function HomePage() {
             </div>
 
             {/* 크립토 뷰는 섹터 구분 없이 코인 차트만 본다 */}
-            <div className={`flex items-center gap-1 bg-[#0f1624] p-1 rounded-lg border border-line/40 ${marketFilter === "CRYPTO" ? "hidden" : ""}`}>
-              <span className="text-muted px-1.5 text-[9px] uppercase font-bold tracking-wider">SECTOR</span>
+            <div className={`flex items-center gap-1 bg-[#0f1624]/80 p-1 rounded-full border border-line/40 ${marketFilter === "CRYPTO" ? "hidden" : ""}`}>
+              <span className="text-muted px-2.5 text-[9px] uppercase font-bold tracking-wider">SECTOR</span>
               {[
                 { id: "ALL", label: "전체" },
                 { id: "tech", label: "⚡ 테크" },
@@ -1334,10 +1336,10 @@ export default function HomePage() {
                   <button
                     key={sec.id}
                     onClick={() => setStockSectorFilter(sec.id)}
-                    className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
+                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-all ${
                       active
-                        ? "bg-accent text-[#0b0f19] font-bold shadow"
-                        : "text-muted hover:text-fg hover:bg-surface/50"
+                        ? "bg-accent/20 text-accent border border-accent/40 font-semibold"
+                        : "text-muted hover:text-fg border border-transparent"
                     }`}
                   >
                     {sec.label}

@@ -49,6 +49,10 @@ import {
 } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { seedChat } from "@/lib/chat-seed";
+import MiniSparkline from "@/components/bits/MiniSparkline";
+import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
+import InteractivePillBar from "@/components/bits/InteractivePillBar";
+import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 import {
   Card,
   PageTitle,
@@ -559,14 +563,14 @@ export default function StocksPage() {
         onPick={(t) => (activeTab === "quick" ? runQuick(t) : run(t, strategy))}
       />
 
-      {/* ── 탭 선택 ──────────────────────────────────────────────────────── */}
-      <div className="mb-6 flex gap-1 rounded-2xl border border-line bg-[var(--ink-2)]/30 p-1">
+      {/* ── 탭 선택 (Swiss Sleek Pill Segmented Control) ────────────────────── */}
+      <div className="mb-6 flex gap-1.5 rounded-full border border-line-50 bg-[#090d16]/90 p-1.5 shadow-inner">
         <button
           onClick={() => setActiveTab("quick")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-full py-2 text-xs font-mono-spec transition-all duration-200 ${
             activeTab === "quick"
-              ? "bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] text-accent"
-              : "text-muted hover:text-fg"
+              ? "bg-accent/20 text-accent border border-accent/40 shadow-[0_0_12px_rgba(212,175,96,0.18)] font-semibold"
+              : "text-muted hover:text-fg border border-transparent"
           }`}
         >
           <Lightning size={15} />
@@ -574,10 +578,10 @@ export default function StocksPage() {
         </button>
         <button
           onClick={() => setActiveTab("backtest")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-full py-2 text-xs font-mono-spec transition-all duration-200 ${
             activeTab === "backtest"
-              ? "bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] text-accent"
-              : "text-muted hover:text-fg"
+              ? "bg-accent/20 text-accent border border-accent/40 shadow-[0_0_12px_rgba(212,175,96,0.18)] font-semibold"
+              : "text-muted hover:text-fg border border-transparent"
           }`}
         >
           <ChartLineUp size={15} />
@@ -605,24 +609,41 @@ export default function StocksPage() {
           {qa && (
             <>
               {/* Price header */}
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted">{qa.ticker}</p>
-                  <p className="font-display text-3xl font-bold">{price(qa.current_price)}</p>
-                  <p
-                    className={`text-sm font-medium ${qa.change_pct >= 0 ? "text-[#58c8a0]" : "text-[#e2607b]"}`}
-                  >
-                    {qa.change_pct >= 0 ? "+" : ""}
-                    {pct(qa.change_pct)} 전일 대비
-                  </p>
+              <SpecularMetricCard glowColor={qa.change_pct >= 0 ? "emerald" : "rose"}>
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono-spec text-xs font-bold uppercase tracking-wider text-accent">{qa.ticker}</span>
+                      <LiveSyncBadge state="live" label="REALTIME" latencyMs={8} />
+                    </div>
+                    <p className="font-display text-3xl font-bold tracking-tight text-fg">{price(qa.current_price)}</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-semibold ${qa.change_pct >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {qa.change_pct >= 0 ? "▲ +" : "▼ "}
+                        {pct(qa.change_pct)} 전일 대비
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    {/* Mini Sparkline Chart */}
+                    <div className="hidden sm:block">
+                      <MiniSparkline
+                        data={qa.change_pct >= 0 ? [100, 101, 100.5, 102, 101.8, 103] : [103, 102, 102.5, 101, 100]}
+                        color={qa.change_pct >= 0 ? "positive" : "negative"}
+                        width={110}
+                        height={36}
+                      />
+                    </div>
+                    <button
+                      onClick={consultQuick}
+                      className="rounded-full border border-accent/40 bg-accent/15 px-3.5 py-1.5 text-xs font-mono-spec text-accent hover:bg-accent/25 transition flex items-center gap-1.5"
+                    >
+                      <ChatCircleText size={14} /> 이 분석으로 상담받기
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={consultQuick}
-                  className="btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm"
-                >
-                  <ChatCircleText size={14} /> 이 분석으로 상담받기
-                </button>
-              </div>
+              </SpecularMetricCard>
 
               {/* Technical indicators */}
               <Card>
