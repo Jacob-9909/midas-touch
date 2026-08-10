@@ -21,16 +21,16 @@ from .api_client import (
 )
 
 __all__ = [
-    "fetch_recent_apt",
-    "fetch_officetel",
-    "fetch_remaining_apt",
-    "fetch_opt_supply",
-    "fetch_public_rent",
-    "fetch_apt_housing_types",
     "fetch_apt_competition",
-    "fetch_officetel_competition",
-    "fetch_public_rent_competition",
-    "fetch_opt_competition",
+    "fetch_apt_housing_types",
     "fetch_apt_scores",
     "fetch_apt_special_supply",
+    "fetch_officetel",
+    "fetch_officetel_competition",
+    "fetch_opt_competition",
+    "fetch_opt_supply",
+    "fetch_public_rent",
+    "fetch_public_rent_competition",
+    "fetch_recent_apt",
+    "fetch_remaining_apt",
 ]

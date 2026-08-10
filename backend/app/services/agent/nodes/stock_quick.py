@@ -22,8 +22,8 @@ def stock_quick_node(state: AgentState) -> dict:
     if not ticker:
         return {
             "tool_context": [
-                "[stock_quick 안내] 기술적 분석할 종목 티커(예: AAPL, 005930.KS)를 알려주시면 "
-                "RSI·MACD·KDJ·이동평균·볼린저 밴드 등 현재 지표를 분석해 드립니다."
+                ("[stock_quick 안내] 기술적 분석할 종목 티커(예: AAPL, 005930.KS)를 알려주시면 "
+                "RSI·MACD·KDJ·이동평균·볼린저 밴드 등 현재 지표를 분석해 드립니다.")
             ]
         }
 
@@ -56,5 +56,5 @@ def stock_quick_node(state: AgentState) -> dict:
             "(현재 시점 스냅샷. 다중 시간축 전망·차트는 '주식분석'의 빠른 분석 탭 참고.)"
         )
         return {"tool_context": [summary]}
-    except Exception as exc:  # noqa: BLE001 - 외부 데이터/계산 실패는 컨텍스트로 흡수
+    except Exception as exc:
         return {"tool_context": [f"[stock_quick 실패·{ticker}] {exc}"]}

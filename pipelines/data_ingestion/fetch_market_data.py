@@ -8,11 +8,12 @@ This module manages fetching historical and real-time data for:
 And formats them to match Azure SQL `market_snapshots` table schema.
 """
 
-import os
 import logging
+import os
 from datetime import datetime, timedelta
-import requests
+
 import pandas as pd
+import requests
 import yfinance as yf
 from dotenv import load_dotenv
 
@@ -32,9 +33,7 @@ def _is_valid_key(key_name: str) -> bool:
         return False
     if val.startswith("<") or val.endswith(">"):
         return False
-    if "API-키" in val or "stlouisfed" in val:
-        return False
-    return True
+    return not ("API-키" in val or "stlouisfed" in val)
 
 
 FRED_API_KEY = os.environ.get("FRED_API_KEY") if _is_valid_key("FRED_API_KEY") else None
@@ -261,7 +260,7 @@ def fetch_realtime_stock(symbol: str) -> dict:
         # Determine currency
         currency = info.get("currency")
         if not currency:
-            currency = "KRW" if (symbol.endswith(".KS") or symbol.endswith(".KQ")) else "USD"
+            currency = "KRW" if (symbol.endswith((".KS", ".KQ"))) else "USD"
             
         # Get current price
         price = info.get("currentPrice") or info.get("regularMarketPrice")
@@ -310,9 +309,9 @@ def fetch_realtime_stock(symbol: str) -> dict:
 
 def main() -> None:
     import argparse
-    import sys
-    from datetime import datetime, timedelta
     from collections import Counter
+    from datetime import datetime
+
     from shared.database.connector import bulk_upsert_market_snapshots
 
     parser = argparse.ArgumentParser(description="Midas Touch 시장 데이터 수집 및 PostgreSQL 적재 파이프라인")

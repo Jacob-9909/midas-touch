@@ -19,20 +19,20 @@ import time
 from pathlib import Path
 from typing import Any
 
-from pipelines.embedding.config import PipelineConfig, DEFAULT_CONFIG
-from pipelines.embedding.document_parser import DocumentParser, Passage
+from pipelines.embedding.config import DEFAULT_CONFIG, PipelineConfig
 from pipelines.embedding.dataset_builder import (
     DatasetIO,
     DatasetSplitter,
     TripletAssembler,
     compute_dataset_stats,
 )
+from pipelines.embedding.document_parser import DocumentParser, Passage
 from pipelines.embedding.hard_negative_miner import HardNegativeMiner, compute_mining_stats
 from pipelines.embedding.query_synthesizer import (
     QuerySynthesizer,
     SyntheticQuery,
-    synthesis_results_to_jsonl,
 )
+
 
 # ---------------------------------------------------------------------------
 # 로거 설정
@@ -183,8 +183,7 @@ class CheckpointManager:
         path = self._dir / f"{stage}.jsonl"
         if isinstance(data, list) and data and isinstance(data[0], dict):
             with open(path, "w", encoding="utf-8") as f:
-                for row in data:
-                    f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                f.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in data)
             logger.info("체크포인트 저장 [%s]: %s", stage, path)
         else:
             logger.warning("체크포인트 저장 실패 [%s]: 지원되지 않는 데이터 형식", stage)
@@ -382,7 +381,6 @@ class EmbeddingDatasetPipeline:
         queries: list[SyntheticQuery],
         force: set[str],
     ) -> tuple[list, dict]:
-        from pipelines.embedding.hard_negative_miner import MiningResult
 
         logger.info("[3/4] 하드 네거티브 마이닝 시작...")
         stage = "hard_negative_mining"
@@ -474,8 +472,9 @@ class EmbeddingDatasetPipeline:
 
     def _db_persist_triplets(self, train_triplets: list, eval_triplets: list) -> None:
         try:
-            from shared.database.connector import bulk_upsert_emb_triplets
             from dataclasses import asdict
+
+            from shared.database.connector import bulk_upsert_emb_triplets
             train_rows = [asdict(t) for t in train_triplets]
             eval_rows = [asdict(t) for t in eval_triplets]
             t_count = bulk_upsert_emb_triplets(train_rows, "train")
@@ -507,8 +506,9 @@ class EmbeddingDatasetPipeline:
 
     @staticmethod
     def _deserialize_mining_results(rows: list[dict]) -> list:
-        from pipelines.embedding.hard_negative_miner import MiningResult, HardNegativeCandidate
         from collections import defaultdict
+
+        from pipelines.embedding.hard_negative_miner import HardNegativeCandidate, MiningResult
 
         grouped: dict[str, list] = defaultdict(list)
         meta: dict[str, str] = {}
@@ -588,6 +588,7 @@ async def main() -> None:
         # 파일명 기준 개별 폴더 격리 설정을 위해 config 복사/교체
         import unicodedata
         from dataclasses import replace
+
         from pipelines.embedding.config import PathConfig
         file_stem = unicodedata.normalize('NFC', single_file.stem)
         config = replace(config, paths=PathConfig(sub_dir=file_stem))

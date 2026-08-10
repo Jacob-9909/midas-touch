@@ -13,10 +13,10 @@ os.environ.setdefault("NVIDIA_API_KEY_2", "nvapi-test-key-two")
 os.environ.setdefault("AGENT_LLM_MODEL", "openai/gpt-oss-120b")
 os.environ.setdefault("NIM_RPM", "0")  # 테스트에서 실제 60초 대기하지 않도록 RPM 제한 해제
 
-from httpx import Request, Response  # noqa: E402
-from openai import BadRequestError, RateLimitError  # noqa: E402
+from httpx import Request, Response
+from openai import BadRequestError, RateLimitError
 
-from backend.app.services.agent import llm as agent_llm  # noqa: E402
+from backend.app.services.agent import llm as agent_llm
 
 
 def _rate_limit_error() -> RateLimitError:

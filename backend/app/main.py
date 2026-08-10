@@ -12,15 +12,16 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from shared.database.connector import get_connection
+
 from backend.app.api.chat import router as chat_router
-from backend.app.api.users import router as users_router
+from backend.app.api.cheongyak import router as cheongyak_router
 from backend.app.api.finetune import router as finetune_router
 from backend.app.api.graph import router as graph_router
 from backend.app.api.query import router as query_router
-from backend.app.api.stocks import router as stocks_router
-from backend.app.api.cheongyak import router as cheongyak_router
 from backend.app.api.research import router as research_router
+from backend.app.api.stocks import router as stocks_router
+from backend.app.api.users import router as users_router
+from shared.database.connector import get_connection
 
 # uvicorn은 자기 로거만 설정해서, 앱 로거의 INFO가 root(기본 WARNING)에서 잘린다.
 # 캐시 예열·일일 적재 로그를 기동 화면에서 바로 보려면 root 레벨을 열어줘야 한다.
@@ -59,7 +60,7 @@ async def _validation_loop() -> None:
         try:
             stats = await asyncio.to_thread(_run_validation)
             _log.info("analysis validation: %s", stats)
-        except Exception as exc:  # noqa: BLE001 - 검증 실패가 서버를 죽이면 안 됨
+        except Exception as exc:
             _log.warning("analysis validation failed: %s", exc)
         await asyncio.sleep(interval_s)
 
@@ -103,7 +104,7 @@ async def _market_ingest_loop() -> None:
                 _log.info("market ingest: %s", await asyncio.to_thread(_run_market_ingest))
             else:
                 _log.info("market ingest skipped (최근 적재 이력이 간격 이내)")
-        except Exception as exc:  # noqa: BLE001 - 적재 실패가 서버를 죽이면 안 됨
+        except Exception as exc:
             _log.warning("market ingest failed: %s", exc)
         await asyncio.sleep(interval_s)
 
@@ -144,7 +145,7 @@ async def _warm_caches() -> None:
         try:
             await asyncio.to_thread(fn)
             _log.info("cache warmed: %s", name)
-        except Exception as exc:  # noqa: BLE001 - 예열 실패가 서버를 죽이면 안 됨
+        except Exception as exc:
             _log.warning("cache warm failed (%s): %s", name, exc)
 
 

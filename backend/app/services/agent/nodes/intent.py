@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from ..llm import build_chat_model
@@ -67,9 +65,9 @@ def _is_smalltalk(text: str) -> bool:
     return any(tok in lowered for tok in _SMALLTALK_TOKENS)
 
 
-def _keyword_route(text: str) -> List[str]:
+def _keyword_route(text: str) -> list[str]:
     """structured-output 실패 시 키워드 기반 폴백 라우팅. 모호하면 graph_rag로 근거를 확보한다."""
-    route: List[str] = []
+    route: list[str] = []
     if any(k in text for k in ("유사", "또래", "비슷한", "트윈", "페르소나", "자산배분", "포트폴리오", "추천")):
         route.append("persona_rag")
     if any(k in text for k in ("근거", "출처", "법적", "법령", "조항", "관계")):
@@ -111,7 +109,7 @@ def classify_intent(state: AgentState) -> dict:
     class _Route(BaseModel):
         """답변에 필요한 검색 도구 목록과 세법 조회 대상 자산 종류."""
 
-        tools: List[
+        tools: list[
             Literal[
                 "persona_rag",
                 "graph_rag",
@@ -125,7 +123,7 @@ def classify_intent(state: AgentState) -> dict:
                 "cheongyak_lookup",
             ]
         ] = Field(default_factory=list)
-        asset_types: List[str] = Field(
+        asset_types: list[str] = Field(
             default_factory=list,
             description="tax_and_market_lookup의 세법 조회를 특정 자산(예: 주식, 채권)으로 좁힐 때만 채운다.",
         )
@@ -138,7 +136,7 @@ def classify_intent(state: AgentState) -> dict:
         )
 
     user_text = latest_user_text(state)
-    asset_types: List[str] = []
+    asset_types: list[str] = []
     ticker: str = ""
 
     # 순수 인사·잡담이면 분류 LLM을 건너뛰고 곧장 작문(도구 없음)으로 보낸다(지연·비용 절감).
@@ -156,7 +154,7 @@ def classify_intent(state: AgentState) -> dict:
         tools = list(dict.fromkeys(result.tools))  # 중복 제거, 순서 유지
         asset_types = list(dict.fromkeys(result.asset_types))
         ticker = (result.ticker or "").strip()
-    except Exception:  # noqa: BLE001 - 분류 실패 시 키워드 폴백
+    except Exception:
         tools = _keyword_route(user_text)
 
     # tool_context=None → 리듀서가 빈 리스트로 리셋(이전 턴 컨텍스트 제거)

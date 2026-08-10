@@ -115,7 +115,7 @@ def _fetch_nts_law_detail_http(
         if not plain:
             return "(상세 페이지에서 텍스트 추출 실패)"
         return plain
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.info("상세 페이지 GET 실패 url=%r err=%s", u[:100], exc)
         return f"(상세 페이지 요청 실패: {exc})"
 
@@ -189,7 +189,7 @@ def _playwright_batch_taxlaw(urls: list[str], max_chars: int) -> list[str]:
                         timeout=timeout,
                     )
                     out.append(_extract_body(page))
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     logger.info(
                         "Playwright 상세 실패 url=%r err=%s", u[:100], exc
                     )
@@ -364,7 +364,7 @@ def nts_cgm_search_once(query: str, *, display: int = 8) -> str:
         r = requests.get(NTS_LAW_SEARCH_URL, params=params, timeout=25)
         r.raise_for_status()
         body = r.text.strip()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return f"(국세청 법령해석 API 요청 실패: {exc})"
 
     if body.startswith("{"):

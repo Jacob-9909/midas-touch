@@ -1,4 +1,3 @@
-import pandas as pd
 from datasets import load_dataset
 
 SELECTED_COLUMNS = [
@@ -16,6 +15,7 @@ print("필요한 컬럼 추출 중...")
 df_filtered = df[SELECTED_COLUMNS].copy()
 
 import os
+
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 output_file = os.path.join(PROJECT_ROOT, "data", "base_personas.csv")
 os.makedirs(os.path.dirname(output_file), exist_ok=True)

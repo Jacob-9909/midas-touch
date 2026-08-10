@@ -71,6 +71,7 @@ _MACRO_YFINANCE_MAP = [
 def _update_macro_cache():
     import time
     from datetime import datetime
+
     import yfinance as yf
 
     today_str = datetime.today().strftime("%Y-%m-%d")
@@ -141,8 +142,8 @@ def _do_macro_thread():
 def get_market_snapshots(force_refresh: bool = False) -> dict:
     """data_type/sub_key별 최신 시장 지표 (야후 파이낸스 실시간 배치 + DB 폴백)."""
     global _IS_UPDATING_MACRO
-    import time
     import threading
+    import time
 
     now = time.time()
     if (force_refresh or not _MACRO_CACHE["data"] or (now - _MACRO_CACHE["last_updated"] >= _MACRO_TTL)) and not _IS_UPDATING_MACRO:

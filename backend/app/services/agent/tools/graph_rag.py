@@ -98,7 +98,7 @@ def retrieve_graph_context(query: str) -> tuple[list[str], list[str]]:
             ):
                 if rec.get("name"):
                     node_names.add(rec["name"])
-        except Exception:  # noqa: BLE001 - 시드 확보 실패 시 본문 컨텍스트만으로 진행
+        except Exception:
             pass
 
     # 2단계: Cypher로 2-hop 관계망 추출
@@ -119,7 +119,7 @@ def retrieve_graph_context(query: str) -> tuple[list[str], list[str]]:
                     f"-[{rec.get('rel')}]-> "
                     f"({rec.get('target')}:{rec.get('t_label', '')})"
                 )
-        except Exception as exc:  # noqa: BLE001 - 관계 추출 실패 시 텍스트 컨텍스트로 폴백
+        except Exception as exc:
             subgraph_triplets.append(f"(관계 추출 실패: {exc})")
 
     triplets = sorted(set(subgraph_triplets))

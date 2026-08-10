@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 _CREATE_SQL = """
 CREATE TABLE IF NOT EXISTS stock_analysis_memory (
@@ -150,7 +150,7 @@ def _accuracy_by_level(rows: list[tuple[str, bool]]) -> dict[str, dict]:
     return out
 
 
-def _close_on_or_after(dates: list, closes: list, target) -> Optional[float]:
+def _close_on_or_after(dates: list, closes: list, target) -> float | None:
     """target(날짜) 이상인 첫 봉의 종가. 주말·휴일이면 그 다음 거래일로 자동 이월.
 
     dates는 오름차순 가정. target 이후 봉이 아직 없으면(미래) None → 호출부가 다음 사이클로 미룸.
@@ -163,7 +163,7 @@ def _close_on_or_after(dates: list, closes: list, target) -> Optional[float]:
 
 
 def _judge_outcome(
-    decision: Optional[str],
+    decision: str | None,
     ret_pct: float,
     move_band: float = _BUY_SELL_BAND_PCT,
     hold_band: float = _HOLD_BAND_PCT,
@@ -218,7 +218,7 @@ def _feature_vector(indicators: dict) -> list[float]:
     ]
 
 
-def _asof_window(as_of: Optional[datetime], days: int) -> tuple[list[str], list]:
+def _asof_window(as_of: datetime | None, days: int) -> tuple[list[str], list]:
     """'해당 시점에 이미 결과가 공개돼 있던' 분석만 고르는 WHERE 조각 + 파라미터. 순수 함수.
 
     as_of=None(실시간 경로)이면 기존과 동일하게 NOW() 기준 최근 days일.
@@ -237,7 +237,7 @@ def _asof_window(as_of: Optional[datetime], days: int) -> tuple[list[str], list]
     )
 
 
-def calibrated_level(pct: Optional[float]) -> Optional[str]:
+def calibrated_level(pct: float | None) -> str | None:
     """보정 적중률(%) → 자신감 레벨. None이면 None(보정 불가). 결정에 실제 반영하는 매핑."""
     if pct is None:
         return None
@@ -265,7 +265,7 @@ class AnalysisMemory:
                 cur.execute(_INDEX_SQL)
                 cur.execute(_CREATE_HORIZON_SQL)
             self._available = True
-        except Exception:  # noqa: BLE001 - DB 없거나 권한 없으면 메모리 기능만 비활성
+        except Exception:
             self._available = False
             return
 
@@ -280,13 +280,13 @@ class AnalysisMemory:
                     f"ADD COLUMN IF NOT EXISTS feature_vec vector({_FEATURE_DIM})"
                 )
             self._vec_available = True
-        except Exception:  # noqa: BLE001 - pgvector 미설치/권한 없음 → 폴백
+        except Exception:
             self._vec_available = False
 
     # ── 저장 ────────────────────────────────────────────
     def _find_duplicate(
-        self, ticker: str, indicators: dict, as_of: Optional[datetime] = None
-    ) -> Optional[int]:
+        self, ticker: str, indicators: dict, as_of: datetime | None = None
+    ) -> int | None:
         """같은 종목·같은 날 직전 분석과 거의 동일(≥_DEDUP_SIM_THRESHOLD)하면 그 id 반환(중복 방지).
 
         as_of를 주면 '오늘'이 아니라 그 날짜를 기준으로 본다(과거 시점 백필의 재실행 안전장치).
@@ -311,7 +311,7 @@ class AnalysisMemory:
                 return None
             sim = _similarity(indicators, _safe_json(row[1], {}))
             return int(row[0]) if sim >= _DEDUP_SIM_THRESHOLD else None
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
 
     def store(
@@ -319,9 +319,9 @@ class AnalysisMemory:
         ticker: str,
         indicators: dict,
         outlook: dict,
-        price: Optional[float] = None,
-        created_at: Optional[datetime] = None,
-    ) -> Optional[int]:
+        price: float | None = None,
+        created_at: datetime | None = None,
+    ) -> int | None:
         """분석 1건을 저장하고 id를 반환. 실패/미가용 시 None.
 
         같은 종목·같은 날 거의 동일한 스냅샷이면 새로 적재하지 않고 기존 id를 반환한다(메모리 오염 방지).
@@ -376,7 +376,7 @@ class AnalysisMemory:
                 cur.execute(sql, tuple(params))
                 row = cur.fetchone()
             return int(row[0]) if row else None
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
 
     # ── 유사 패턴 검색 ───────────────────────────────────
@@ -386,7 +386,7 @@ class AnalysisMemory:
         indicators: dict,
         limit: int,
         cross_ticker: bool,
-        as_of: Optional[datetime] = None,
+        as_of: datetime | None = None,
     ) -> list[tuple]:
         """유사 후보 행을 가져온다. pgvector 가용 시 특징벡터 거리순(교차종목), 아니면 최근 동일종목.
 
@@ -438,7 +438,7 @@ class AnalysisMemory:
         current_indicators: dict,
         limit: int = 3,
         cross_ticker: bool = True,
-        as_of: Optional[datetime] = None,
+        as_of: datetime | None = None,
     ) -> list[dict]:
         """현재 지표와 유사한 과거 분석을 검색.
 
@@ -497,7 +497,7 @@ class AnalysisMemory:
 
             scored.sort(key=lambda x: -x[0])
             return [p[1] for p in scored[:limit]]
-        except Exception:  # noqa: BLE001
+        except Exception:
             return []
 
     # ── 결과 검증 (best-effort) ──────────────────────────
@@ -573,14 +573,14 @@ class AnalysisMemory:
                         )
                         stats["validated"] += 1
                         stats["correct" if ok else "incorrect"] += 1
-                    except Exception:  # noqa: BLE001 - 건별 실패 흡수
+                    except Exception:
                         stats["errors"] += 1
             return stats
-        except Exception:  # noqa: BLE001
+        except Exception:
             return stats
 
     # ── 다중 시간축 검증 ─────────────────────────────────
-    def validate_horizons(self, limit: int = 50, since_days: Optional[int] = None) -> dict:
+    def validate_horizons(self, limit: int = 50, since_days: int | None = None) -> dict:
         """outlook의 24h/3d/1w/1m 전망을 각 구간 종가로 개별 채점해 자식 테이블에 적재한다.
 
         구간마다 경과 시점이 달라(24h=1일, 1m=30일) 점진적으로 채워진다. 분석 1건당 yfinance를 한 번만
@@ -671,14 +671,14 @@ class AnalysisMemory:
                             )
                             stats["validated"] += 1
                             stats["correct" if ok else "incorrect"] += 1
-                    except Exception:  # noqa: BLE001 - 건별 실패 흡수
+                    except Exception:
                         stats["errors"] += 1
             return stats
-        except Exception:  # noqa: BLE001
+        except Exception:
             return stats
 
     # ── 통계 ────────────────────────────────────────────
-    def get_stats(self, ticker: Optional[str] = None, days: int = 90) -> dict:
+    def get_stats(self, ticker: str | None = None, days: int = 90) -> dict:
         """검증된 분석의 정확도·분포 통계. 미가용/없으면 0 통계."""
         empty = {"total": 0, "validated": 0, "accuracy_pct": 0.0, "avg_return_pct": 0.0}
         if not self._available:
@@ -717,10 +717,10 @@ class AnalysisMemory:
                 "accuracy_pct": round(correct / validated * 100, 2) if validated else 0.0,
                 "avg_return_pct": round(avg_ret, 2),
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             return empty
 
-    def get_horizon_stats(self, ticker: Optional[str] = None, days: int = 180) -> dict:
+    def get_horizon_stats(self, ticker: str | None = None, days: int = 180) -> dict:
         """다중 시간축(24h/3d/1w/1m)별 적중률·평균수익 통계. 미가용/없으면 빈 horizons."""
         empty = {"horizons": {}}
         if not self._available:
@@ -758,14 +758,14 @@ class AnalysisMemory:
                     "avg_return_pct": round(float(avg or 0), 2),
                 }
             return {"horizons": out}
-        except Exception:  # noqa: BLE001
+        except Exception:
             return empty
 
     def get_level_accuracy(
         self,
-        ticker: Optional[str] = None,
+        ticker: str | None = None,
         days: int = 180,
-        as_of: Optional[datetime] = None,
+        as_of: datetime | None = None,
     ) -> dict:
         """검증된 분석의 자신감 레벨별 적중률 {level:{accuracy,n}}. LLM 프롬프트 피드백용.
 
@@ -777,7 +777,7 @@ class AnalysisMemory:
         try:
             from shared.database.repositories.connection import db_cursor
 
-            def _rows(scope_ticker: Optional[str]) -> list[tuple[str, bool]]:
+            def _rows(scope_ticker: str | None) -> list[tuple[str, bool]]:
                 win, wparams = _asof_window(as_of, days)
                 where = ["validated_at IS NOT NULL", "was_correct IS NOT NULL", *win]
                 params: list[Any] = [*wparams]
@@ -798,16 +798,16 @@ class AnalysisMemory:
             if ticker and sum(v["n"] for v in acc.values()) < _MIN_CALIB_SAMPLES:
                 acc = _accuracy_by_level(_rows(None))
             return acc
-        except Exception:  # noqa: BLE001
+        except Exception:
             return {}
 
     # ── 신뢰도 캘리브레이션 ──────────────────────────────
     def calibrate(
         self,
-        level: Optional[str],
-        ticker: Optional[str] = None,
+        level: str | None,
+        ticker: str | None = None,
         days: int = 180,
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """AI 자신감(level)을 같은 레벨 과거 적중률로 보정한다.
 
         반환: {level, raw_pct(AI 암묵 자신감), calibrated_pct(과거 실제 적중률), sample_size}.
@@ -820,7 +820,7 @@ class AnalysisMemory:
         try:
             from shared.database.repositories.connection import db_cursor
 
-            def _rows(scope_ticker: Optional[str]) -> list[tuple[str, bool]]:
+            def _rows(scope_ticker: str | None) -> list[tuple[str, bool]]:
                 where = ["validated_at IS NOT NULL", "was_correct IS NOT NULL", "confidence = %s",
                          "created_at > NOW() - (%s || ' days')::interval"]
                 params: list[Any] = [lvl, int(days)]
@@ -852,12 +852,12 @@ class AnalysisMemory:
                 "sample_size": acc["n"],
                 "scope": scope,
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
 
 
 # ── 싱글턴 ──────────────────────────────────────────────
-_instance: Optional[AnalysisMemory] = None
+_instance: AnalysisMemory | None = None
 
 
 def get_analysis_memory() -> AnalysisMemory:

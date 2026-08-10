@@ -22,8 +22,8 @@ def stock_backtest_node(state: AgentState) -> dict:
     if not ticker:
         return {
             "tool_context": [
-                "[stock_backtest 안내] 백테스트할 종목 티커(예: AAPL, 005930.KS)를 알려주시면 "
-                "최근 1년 SMA 교차 전략으로 시뮬레이션해 드립니다."
+                ("[stock_backtest 안내] 백테스트할 종목 티커(예: AAPL, 005930.KS)를 알려주시면 "
+                "최근 1년 SMA 교차 전략으로 시뮬레이션해 드립니다.")
             ]
         }
 
@@ -47,5 +47,5 @@ def stock_backtest_node(state: AgentState) -> dict:
             "(단일 전략·기본 파라미터 기준. 상세 차트·전략비교는 '주식분석' 페이지 참고.)"
         )
         return {"tool_context": [summary]}
-    except Exception as exc:  # noqa: BLE001 - 외부 데이터/계산 실패는 컨텍스트로 흡수
+    except Exception as exc:
         return {"tool_context": [f"[stock_backtest 실패·{ticker}] {exc}"]}

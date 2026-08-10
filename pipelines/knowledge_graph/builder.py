@@ -15,8 +15,8 @@ import logging
 import os
 import sys
 import time
-import asyncio
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # 프로젝트 루트 경로 추가 (src 임포트 호환)
@@ -26,17 +26,19 @@ sys.path.append(str(project_root))
 load_dotenv()
 
 # LlamaIndex 라이브러리 임포트
+from concurrent.futures import ThreadPoolExecutor
+from queue import Queue
+from threading import Lock
+
 from llama_index.core import Document, Settings
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
 from llama_index.core.indices.property_graph import (
     PropertyGraphIndex,
     SchemaLLMPathExtractor,
 )
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
+
 from shared.utils.nim_openai import NIMOpenAI
-from concurrent.futures import ThreadPoolExecutor
-from threading import Lock
-from queue import Queue
 
 # 로깅 설정
 logging.basicConfig(

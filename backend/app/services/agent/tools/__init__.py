@@ -7,4 +7,4 @@ from .tax_lookup import tax_and_market_lookup
 
 ALL_TOOLS = [persona_rag, graph_rag, doc_rag, tax_and_market_lookup]
 
-__all__ = ["persona_rag", "graph_rag", "doc_rag", "tax_and_market_lookup", "ALL_TOOLS"]
+__all__ = ["ALL_TOOLS", "doc_rag", "graph_rag", "persona_rag", "tax_and_market_lookup"]

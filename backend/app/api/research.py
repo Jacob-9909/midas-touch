@@ -59,7 +59,7 @@ def _known_rates(label: str) -> str:
             if k in latest
         ]
         return "\n".join(lines)
-    except Exception:  # noqa: BLE001 — DB가 없어도 검색 결과만으로 요약한다
+    except Exception:
         return ""
 
 
@@ -90,7 +90,7 @@ def _ko_brief(label: str, body: str) -> str:
             [("system", system), ("human", human)]
         )
         return str(msg.content).strip() or body
-    except Exception:  # noqa: BLE001 — LLM이 죽어도 위젯은 원문으로 뜬다
+    except Exception:
         return body
 
 

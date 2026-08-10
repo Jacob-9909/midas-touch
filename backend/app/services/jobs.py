@@ -69,7 +69,7 @@ class Job:
             (JOBS_DIR / f"{self.job_id}.json").write_text(
                 json.dumps(data, ensure_ascii=False), encoding="utf-8"
             )
-        except Exception:  # noqa: BLE001 - 영속화 실패가 작업을 막지 않도록
+        except Exception:
             pass
 
 
@@ -105,7 +105,7 @@ class JobManager:
                     job.error = "서버 재시작으로 작업이 중단되었습니다."
                     job.finished_at = job.finished_at or time.time()
                 self._jobs[job.job_id] = job
-            except Exception:  # noqa: BLE001
+            except Exception:
                 continue
 
     def get(self, job_id: str) -> Job | None:
@@ -142,7 +142,7 @@ class JobManager:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             job.status = "failed"
             job.error = f"프로세스 시작 실패: {exc}"
             job.finished_at = time.time()

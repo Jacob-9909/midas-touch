@@ -1,23 +1,22 @@
 """Consolidated SQLAlchemy ORM models for Midas Touch (PostgreSQL + pgvector)."""
 
-from datetime import datetime
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
-    Column,
-    Integer,
-    SmallInteger,
     BigInteger,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    SmallInteger,
     String,
     Text,
-    Numeric,
-    Boolean,
-    DateTime,
-    Date,
-    ForeignKey,
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base, relationship
-from pgvector.sqlalchemy import Vector
 
 PostgresBase = declarative_base()
 

@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from ..state import AgentState
 from ._common import TOOL_NODES
 
 
-def dispatch(state: AgentState) -> List[str]:
+def dispatch(state: AgentState) -> list[str]:
     route = [t for t in (state.get("route") or []) if t in TOOL_NODES]
     return route or ["synthesize"]  # 도구 불필요 시 곧장 작문

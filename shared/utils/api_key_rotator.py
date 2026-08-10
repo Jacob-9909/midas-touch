@@ -1,6 +1,6 @@
+import logging
 import os
 import time
-import logging
 
 logger = logging.getLogger("api_key_rotator")
 

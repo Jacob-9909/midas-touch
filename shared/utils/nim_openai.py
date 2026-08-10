@@ -1,19 +1,21 @@
+import asyncio
+import logging
 import os
 import time
-import logging
-import asyncio
-from llama_index.llms.openai import OpenAI
-from llama_index.core.llms import LLMMetadata
+
 from llama_index.core.base.llms.types import MessageRole
+from llama_index.core.llms import LLMMetadata
+from llama_index.llms.openai import OpenAI
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    InternalServerError,
+    RateLimitError,
+)
+
 from shared.utils.api_key_rotator import APIKeyRotator
 from shared.utils.nim_rate_limit import reserve
 from shared.utils.nim_stats import record_failure
-from openai import (
-    RateLimitError,
-    APITimeoutError,
-    APIConnectionError,
-    InternalServerError,
-)
 
 logger = logging.getLogger("nim_openai")
 

@@ -91,12 +91,12 @@ def quick_analysis(ticker: str = Query(min_length=1, max_length=20)) -> dict:
         analyzer.fetch_data()
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=502, detail=f"데이터 조회 실패: {exc}")
 
     try:
         indicators = analyzer.quick_analysis()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=502, detail=f"지표 계산 실패: {exc}")
 
     # 과거 유사 패턴(교차종목) + 자신감별 적중률 → LLM 프롬프트 컨텍스트로 주입(미가용이면 빈 값).
@@ -197,7 +197,7 @@ def ticker_search(q: str = "") -> list[dict]:
         )
         resp.raise_for_status()
         quotes = resp.json().get("quotes", [])
-    except Exception:  # noqa: BLE001
+    except Exception:
         return local
     remote = [
         {
@@ -232,7 +232,7 @@ def run_backtest(req: BacktestRequest) -> dict:
         return analyzer.backtest(req.strategy)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=502, detail=f"백테스트 실패: {exc}")
 
 
@@ -261,7 +261,7 @@ def grid_search(req: GridSearchRequest) -> dict:
         result = analyzer.grid_search(req.strategy)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=502, detail=f"그리드 서치 실패: {exc}")
 
     return {
@@ -277,7 +277,7 @@ def run_analysis(req: AnalysisRequest) -> dict:
     """백테스트 메트릭 → NIM LLM 한국어 투자 리포트(마크다운)."""
     try:
         report = generate_analysis(req.ticker, req.strategy, req.metrics)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=502, detail=f"리포트 생성 실패: {exc}")
     return {"ticker": req.ticker, "strategy": req.strategy, "report": report}
 
@@ -401,6 +401,7 @@ _IS_UPDATING_HEATMAP = False
 def _do_update_heatmap():
     global _IS_UPDATING_HEATMAP
     import time
+
     import yfinance as yf
 
     try:
@@ -498,7 +499,7 @@ def get_price_history(
 
     try:
         hist = yf.Ticker(symbol).history(period=period)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=502, detail=f"시세 조회 실패: {exc}")
 
     if hist.empty:

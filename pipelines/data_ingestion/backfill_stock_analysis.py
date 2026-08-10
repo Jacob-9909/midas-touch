@@ -37,7 +37,8 @@ import argparse
 import os
 import sys
 import time
-from datetime import date, datetime, time as dtime, timedelta
+from datetime import date, datetime, timedelta
+from datetime import time as dtime
 
 from dotenv import load_dotenv
 
@@ -47,13 +48,13 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from backend.app.services.trading.ai_analysis import generate_quick_report  # noqa: E402
-from backend.app.services.trading.analysis_memory import (  # noqa: E402
+from backend.app.services.trading.ai_analysis import generate_quick_report
+from backend.app.services.trading.analysis_memory import (
     AnalysisMemory,
     _asof_window,
     get_analysis_memory,
 )
-from backend.app.services.trading.stock_analyzer import StockAnalyzer  # noqa: E402
+from backend.app.services.trading.stock_analyzer import StockAnalyzer
 
 # 유동성 있고 히트맵/관심종목에도 이미 올라와 있는 종목들. 미국 + 한국을 섞어 교차종목 유사검색이
 # 의미 있게 돌도록 한다. --tickers 로 갈아끼울 수 있다.
@@ -135,7 +136,7 @@ def backfill(
             )
             df = analyzer.fetch_data()
             indicators = analyzer.quick_analysis()
-        except Exception as exc:  # noqa: BLE001 - 상장 전/거래 정지/티커 오류 등
+        except Exception as exc:
             stats["data_error"] += 1
             print(f"{prefix} — 데이터 실패: {exc}")
             continue

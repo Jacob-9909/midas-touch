@@ -10,7 +10,7 @@
 import os
 import sys
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
@@ -163,21 +163,22 @@ class TestChatService(unittest.TestCase):
     def test_profile_context_formats_amounts(self) -> None:
         import backend.app.services.chat_service as cs
 
-        prof = dict(
-            age=35, sex="남", occupation="개발자", family_type="1인", housing_type="전세",
-            district="강남", total_amount=100000000, monthly_income=5000000,
-            monthly_investable=2000000, stock_amount=50000000, bond_amount=10000000,
-            deposit_amount=30000000, real_estate_amount=10000000, aggressiveness=7,
-            financial_literacy=8, preferred_asset="주식", specific_items="삼성전자",
-            target_return_percent=10, investable_period_months=24,
-        )
+        prof = {
+            "age": 35, "sex": "남", "occupation": "개발자", "family_type": "1인", "housing_type": "전세",
+            "district": "강남", "total_amount": 100000000, "monthly_income": 5000000,
+            "monthly_investable": 2000000, "stock_amount": 50000000, "bond_amount": 10000000,
+            "deposit_amount": 30000000, "real_estate_amount": 10000000, "aggressiveness": 7,
+            "financial_literacy": 8, "preferred_asset": "주식", "specific_items": "삼성전자",
+            "target_return_percent": 10, "investable_period_months": 24,
+        }
         ctx = cs._build_profile_context(prof)
         self.assertIn("100,000,000", ctx)
         self.assertIn("개발자", ctx)
 
     def test_require_profile_raises_404(self) -> None:
-        import backend.app.services.chat_service as cs
         from fastapi import HTTPException
+
+        import backend.app.services.chat_service as cs
 
         svc = object.__new__(cs.ChatService)  # __init__(에이전트 생성) 우회
         orig = cs.get_user_by_uuid
@@ -200,12 +201,12 @@ class TestChatService(unittest.TestCase):
 # ---------------------------------------------------------------------------
 class TestSessionsEndpoint(unittest.TestCase):
     def test_sessions_mapping(self) -> None:
-        import backend.app.api.chat as chat
+        from backend.app.api import chat
 
         orig = chat.list_chat_sessions
         chat.list_chat_sessions = lambda user_uuid=None, limit=50: [
             {"session_id": "s1", "user_uuid": "u1", "title": "주식 질문",
-             "message_count": 4, "updated_at": datetime(2026, 6, 18, tzinfo=timezone.utc)},
+             "message_count": 4, "updated_at": datetime(2026, 6, 18, tzinfo=UTC)},
             {"session_id": "s2", "user_uuid": None, "title": None,
              "message_count": 0, "updated_at": None},
         ]

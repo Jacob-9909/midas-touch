@@ -318,7 +318,7 @@ class TestAnalysisMemory(unittest.TestCase):
         self.assertEqual(_accuracy_by_level([]), {})
 
     def test_calibrate_unknown_level_or_degrade(self) -> None:
-        from backend.app.services.trading.analysis_memory import AnalysisMemory, _LEVEL_RAW_PCT
+        from backend.app.services.trading.analysis_memory import _LEVEL_RAW_PCT, AnalysisMemory
 
         # 매핑 검증
         self.assertEqual(set(_LEVEL_RAW_PCT), {"high", "medium", "low"})

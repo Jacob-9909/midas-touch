@@ -19,7 +19,8 @@ from pathlib import Path
 import numpy as np
 import torch
 from datasets import Dataset
-from peft import LoraConfig as PeftLoraConfig, TaskType, get_peft_model
+from peft import LoraConfig as PeftLoraConfig
+from peft import TaskType, get_peft_model
 from sentence_transformers import (
     SentenceTransformer,
     SentenceTransformerTrainer,
@@ -28,7 +29,7 @@ from sentence_transformers import (
 )
 from sentence_transformers.evaluation import InformationRetrievalEvaluator
 
-from pipelines.embedding.config import PipelineConfig, DEFAULT_CONFIG
+from pipelines.embedding.config import DEFAULT_CONFIG, PipelineConfig
 from pipelines.embedding.dataset_builder import DatasetIO, Triplet
 from pipelines.embedding.pipeline import setup_logging
 
@@ -366,6 +367,7 @@ def main() -> None:
     if args.file:
         import unicodedata
         from dataclasses import replace
+
         from pipelines.embedding.config import PathConfig
         file_stem = unicodedata.normalize('NFC', Path(args.file).stem)
         config = replace(config, paths=PathConfig(sub_dir=file_stem))
@@ -373,7 +375,7 @@ def main() -> None:
     if args.test_only:
         logger.info("테스트 모드: 데이터셋 로드만 수행합니다.")
         train_dataset, eval_triplets = load_train_eval_datasets(config)
-        evaluator = build_ir_evaluator(eval_triplets)
+        build_ir_evaluator(eval_triplets)  # 빌드 검증만 수행
         logger.info("테스트 완료. train=%d, eval=%d", len(train_dataset), len(eval_triplets))
         return
 
