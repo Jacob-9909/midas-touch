@@ -128,8 +128,19 @@ async def _warm_caches() -> None:
     """
     from backend.app.api.stocks import _do_update_heatmap
     from backend.app.api.users import _update_macro_cache
+    from backend.app.services.agent.tools._embedding import get_embedding_model
+    from backend.app.services.agent.tools.graph_rag import _get_retriever_bundle
 
-    for name, fn in (("macro", _update_macro_cache), ("heatmap", _do_update_heatmap)):
+    # 첫 GraphRAG 요청이 콜드 비용을 전부 뒤집어쓰면 데모가 멈춘 것처럼 보인다(실측 콜드 ~8분,
+    # 웜 11초). 무거운 쪽은 bge-m3 로드가 아니라 PropertyGraphIndex.from_existing이다.
+    # ponytail: 비용을 부팅 시점으로 옮기기만 한다. from_existing 자체를 빠르게 하려면
+    # 리트리버를 직접 Cypher로 짜야 하는데 그건 별개 작업이다.
+    for name, fn in (
+        ("embedding", get_embedding_model),
+        ("graph-retriever", _get_retriever_bundle),
+        ("macro", _update_macro_cache),
+        ("heatmap", _do_update_heatmap),
+    ):
         try:
             await asyncio.to_thread(fn)
             _log.info("cache warmed: %s", name)

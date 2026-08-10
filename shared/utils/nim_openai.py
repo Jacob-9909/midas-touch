@@ -7,6 +7,7 @@ from llama_index.core.llms import LLMMetadata
 from llama_index.core.base.llms.types import MessageRole
 from shared.utils.api_key_rotator import APIKeyRotator
 from shared.utils.nim_rate_limit import reserve
+from shared.utils.nim_stats import record_failure
 from openai import (
     RateLimitError,
     APITimeoutError,
@@ -50,7 +51,9 @@ class NIMOpenAI(OpenAI):
         self._min_delay = float(os.environ.get("NIM_GRAPH_DELAY", "0"))
         self._current_delay = self._min_delay
         self._backoff_step = 2.0  # 오류 발생 시 증가할 초 단위
-        self._decay_step = 0.2    # 성공 시 점진적으로 감소할 초 단위
+        # 성공하면 절반으로 줄인다. 가산 증가 + 미세 감쇠(0.2초)를 쓰면 시작 직후 커넥션 오류 몇 번에
+        # 딜레이가 30초까지 치솟고 사실상 회복되지 않아, 워커를 늘려도 전부 sleep만 하게 된다.
+        self._max_delay = 10.0
 
     @property
     def metadata(self) -> LLMMetadata:
@@ -80,16 +83,20 @@ class NIMOpenAI(OpenAI):
             await asyncio.sleep(wait)
 
     def _handle_success(self) -> None:
-        # 성공 시 딜레이를 점진적으로 최소 딜레이 방향으로 감쇠(Decay)
+        # 성공 시 딜레이를 절반으로 감쇠(Decay). RPM 자체는 nim_rate_limit이 정확히 막으므로
+        # 이 딜레이는 일시적 오류에 대한 완충일 뿐, 오래 끌 이유가 없다.
         if self._current_delay > self._min_delay:
             old_delay = self._current_delay
-            self._current_delay = max(self._min_delay, self._current_delay - self._decay_step)
+            halved = self._current_delay / 2
+            # 0.1초 미만으로 남은 잔여 딜레이는 그냥 최소값으로 스냅(반감만 하면 영원히 0에 못 닿는다)
+            self._current_delay = self._min_delay if halved < self._min_delay + 0.1 else halved
             logger.info("[NIM API] 호출 성공! 동적 딜레이 감쇠 적용: %.2f초 -> %.2f초", old_delay, self._current_delay)
 
     def _handle_api_error(self, exc: Exception) -> None:
+        record_failure("pipeline", exc)  # 실패 원인 계측(NIM 안정성 실측)
         # API 오류 또는 지연 발생 시 동적으로 딜레이를 늘림 (가산 증가)
         old_delay = self._current_delay
-        self._current_delay = self._current_delay + self._backoff_step
+        self._current_delay = min(self._max_delay, self._current_delay + self._backoff_step)
         
         # 실패한 키를 쿨다운(사용 제외) 처리해 다음 재시도에서 스킵되게 합니다.
         # 429는 창이 지나면 바로 풀리므로 짧게 — 키가 2개뿐인데 5분씩 재우면 둘 다 쿨다운되어
@@ -169,6 +176,48 @@ class NIMOpenAI(OpenAI):
             except Exception as e:
                 logger.error("[NIM API] 비동기 호출 중 일반 예외 발생: %s", e)
                 raise
+
+    # ── 구조화 출력(structured output) ───────────────────────────────────────
+    # NIM(vLLM)의 tool-call 경로는 중첩 스키마를 지키지 못한다. KGSchema를 요구해도
+    # {"triplets": [["상장주식","거래구분","장내거래"]]} 처럼 3원소 배열로 평탄화해서 뱉고,
+    # llama_index는 파싱 실패를 삼켜(triplets=[]) 조용히 0건이 된다.
+    # guided decoding(response_format=json_schema)은 문법 자체를 강제하므로 이 경로로 고정한다.
+    # ponytail: 프롬프트를 그대로 한 번 던지는 최소 구현. 스키마가 커져 guided decoding이
+    #           느려지면 그때 청크 분할/스키마 축소를 고민한다.
+    def _json_schema_format(self, output_cls) -> dict:
+        return {
+            "type": "json_schema",
+            "json_schema": {
+                "name": getattr(output_cls, "__name__", "Output"),
+                "schema": output_cls.model_json_schema(),
+                "strict": True,
+            },
+        }
+
+    @staticmethod
+    def _parse_json_output(output_cls, content: str):
+        # guided decoding이라 보통 순수 JSON이지만, 추론형 모델이 앞뒤에 텍스트를 붙이는 경우를 방어
+        text = (content or "").strip()
+        if not text.startswith("{"):
+            start, end = text.find("{"), text.rfind("}")
+            if start == -1 or end <= start:
+                raise ValueError(f"구조화 출력에서 JSON을 찾지 못했습니다: {text[:200]!r}")
+            text = text[start : end + 1]
+        return output_cls.model_validate_json(text)
+
+    def structured_predict(self, output_cls, prompt, llm_kwargs=None, **prompt_args):
+        response = self.chat(
+            prompt.format_messages(**prompt_args),
+            response_format=self._json_schema_format(output_cls),
+        )
+        return self._parse_json_output(output_cls, response.message.content)
+
+    async def astructured_predict(self, output_cls, prompt, llm_kwargs=None, **prompt_args):
+        response = await self.achat(
+            prompt.format_messages(**prompt_args),
+            response_format=self._json_schema_format(output_cls),
+        )
+        return self._parse_json_output(output_cls, response.message.content)
 
     # 동기/비동기 메소드 오버라이딩 인터셉트
     def chat(self, *args, **kwargs):

@@ -7,10 +7,11 @@ from langchain_core.messages import HumanMessage
 from ..state import AgentState
 
 # 도구 이름 == 그래프 노드 이름 (추적을 쉽게 하려고 동일하게 맞춘다).
-# 앞 3개: 내부 DB(RAG) 도구 / 가운데 3개: 라이브 웹 리서치 / 뒤 3개: 대화형 액션.
+# 앞 4개: 내부 DB(RAG) 도구 / 가운데 3개: 라이브 웹 리서치 / 뒤 3개: 대화형 액션.
 TOOL_NODES = (
     "persona_rag",
     "graph_rag",
+    "doc_rag",
     "tax_and_market_lookup",
     "product_research",
     "news_research",

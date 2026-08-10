@@ -73,23 +73,42 @@ def retrieve_graph_context(query: str) -> tuple[list[str], list[str]]:
     # 1단계: 벡터 검색으로 연관 노드/본문 추출
     retrieved_nodes = retriever.retrieve(query)
 
+    chunk_ids: list[str] = []
     node_names: set[str] = set()
     text_contexts: list[str] = []
     for node_with_score in retrieved_nodes:
         node = node_with_score.node
-        node_name = node.metadata.get("name") or node.text.split("\n")[0]
-        if node_name:
-            node_names.add(node_name)
+        # 벡터 검색이 돌려주는 건 Chunk 노드다. Chunk에는 name 프로퍼티가 없으므로
+        # (있으면 엔티티 노드니 그대로 쓰고) 없으면 아래에서 MENTIONS를 한 홉 타고 엔티티 이름을 얻는다.
+        name = node.metadata.get("name")
+        if name:
+            node_names.add(name)
+        else:
+            chunk_ids.append(node.node_id)
         if node.text:
             text_contexts.append(node.text)
+
+    # Chunk -[:MENTIONS]-> Entity 로 시드 엔티티 이름 확보 (이게 없으면 아래 2-hop이 영구히 0건)
+    if chunk_ids:
+        try:
+            for rec in graph_store.structured_query(
+                "MATCH (c)-[:MENTIONS]->(e) WHERE c.id IN $ids AND e.name IS NOT NULL "
+                "RETURN DISTINCT e.name AS name LIMIT 50",
+                {"ids": chunk_ids},
+            ):
+                if rec.get("name"):
+                    node_names.add(rec["name"])
+        except Exception:  # noqa: BLE001 - 시드 확보 실패 시 본문 컨텍스트만으로 진행
+            pass
 
     # 2단계: Cypher로 2-hop 관계망 추출
     subgraph_triplets: list[str] = []
     if node_names:
         cypher_query = """
-        MATCH (n)-[r]-(m)
-        WHERE n.name IN $node_names OR m.name IN $node_names
-        RETURN n.name AS source, labels(n)[0] AS s_label, type(r) AS rel, m.name AS target, labels(m)[0] AS t_label
+        MATCH (n)-[r]->(m)
+        WHERE (n.name IN $node_names OR m.name IN $node_names)
+          AND type(r) <> 'MENTIONS' AND n.name IS NOT NULL AND m.name IS NOT NULL
+        RETURN n.name AS source, labels(n)[-1] AS s_label, type(r) AS rel, m.name AS target, labels(m)[-1] AS t_label
         LIMIT 35
         """
         try:

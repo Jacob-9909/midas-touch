@@ -15,6 +15,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from backend.app.services.jobs import PROJECT_ROOT, job_manager
+from shared.database.repositories import get_emb_corpus_stats
 
 router = APIRouter(prefix="/api/v1/finetune", tags=["finetune"])
 
@@ -115,6 +116,16 @@ def _count_lines(path: Path) -> int:
         return 0
     with open(path, "r", encoding="utf-8") as f:
         return sum(1 for line in f if line.strip())
+
+
+@router.get("/corpus")
+def corpus_stats(limit: int = 20) -> dict:
+    """이미 DB에 적재된 대조학습 코퍼스 현황 + train 트리플렛 샘플.
+
+    문서를 새로 업로드하지 않아도(=파이프라인 산출물이 없어도) 지금까지 구축해둔
+    학습 데이터셋을 그대로 보여주기 위한 조회 엔드포인트.
+    """
+    return get_emb_corpus_stats(preview_limit=limit)
 
 
 @router.get("/datasets")

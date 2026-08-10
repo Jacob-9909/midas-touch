@@ -10,7 +10,9 @@ from .embeddings import (
     bulk_upsert_emb_passages,
     bulk_upsert_emb_queries,
     bulk_upsert_emb_triplets,
+    get_emb_corpus_stats,
     list_emb_sources,
+    search_similar_passages_db,
 )
 from .market import (
     bulk_upsert_market_snapshots,
@@ -70,5 +72,7 @@ __all__ = [
     "bulk_upsert_emb_passages",
     "bulk_upsert_emb_queries",
     "bulk_upsert_emb_triplets",
+    "get_emb_corpus_stats",
     "list_emb_sources",
+    "search_similar_passages_db",
 ]

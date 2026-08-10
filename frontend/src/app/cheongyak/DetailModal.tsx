@@ -50,6 +50,14 @@ export default function DetailModal({ item, kind, onClose, onConsult }: DetailMo
   const [data, setData] = useState<DetailData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 경쟁률·가점·특별공급 실적은 청약홈이 접수 마감 후에만 공개한다. 접수 전/중 공고에서
+  // 빈 표가 뜨는 건 오류가 아니라 아직 데이터가 없는 것 — 그대로 밝힌다.
+  const pending = item.status === "접수예정" || item.status === "접수중";
+  const emptyText = (what: string) =>
+    pending
+      ? `접수 마감 후 공개되는 정보입니다. (현재 상태: ${item.status})`
+      : `이 공고는 ${what} 데이터가 제공되지 않습니다.`;
+
   // ESC 닫기
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -192,7 +200,7 @@ export default function DetailModal({ item, kind, onClose, onConsult }: DetailMo
 
             <Section title="경쟁률">
               {data.competition.length === 0 ? (
-                <EmptyHint text="경쟁률 데이터가 아직 없습니다(접수 마감 후 공개)." />
+                <EmptyHint text={emptyText("경쟁률")} />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
@@ -230,7 +238,7 @@ export default function DetailModal({ item, kind, onClose, onConsult }: DetailMo
             {SHOW_SCORES_KINDS.includes(kind) && (
               <Section title="당첨 가점 (최저/평균/최고)">
                 {data.scores.length === 0 ? (
-                  <EmptyHint text="가점 데이터가 아직 없습니다." />
+                  <EmptyHint text={emptyText("당첨 가점")} />
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
@@ -258,8 +266,11 @@ export default function DetailModal({ item, kind, onClose, onConsult }: DetailMo
               </Section>
             )}
 
-            {SHOW_SPECIAL_KINDS.includes(kind) && data.special.length > 0 && (
+            {SHOW_SPECIAL_KINDS.includes(kind) && (
               <Section title="특별공급 신청현황">
+                {data.special.length === 0 ? (
+                  <EmptyHint text={emptyText("특별공급 신청현황")} />
+                ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
@@ -284,6 +295,7 @@ export default function DetailModal({ item, kind, onClose, onConsult }: DetailMo
                     </tbody>
                   </table>
                 </div>
+                )}
               </Section>
             )}
           </>

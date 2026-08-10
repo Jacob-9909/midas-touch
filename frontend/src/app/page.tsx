@@ -37,6 +37,7 @@ import {
   fmtKRW,
   fmtKRWShort,
 } from "@/components/ui";
+import MemoryStatsCard from "@/app/stocks/MemoryStatsCard";
 import ShinyText from "@/components/bits/ShinyText";
 import ScrollVelocity from "@/components/bits/ScrollVelocity";
 import GlareHover from "@/components/bits/GlareHover";
@@ -712,6 +713,8 @@ export default function HomePage() {
   const [stockHeatmapData, setStockHeatmapData] = useState<StockHeatmapItem[]>(STOCK_HEATMAP_DATA);
   const [heatmapMeta, setHeatmapMeta] = useState<{ source?: string; last_updated?: string }>({});
   const [marketHistoryMap, setMarketHistoryMap] = useState<Record<string, number[]>>({});
+  // 캘리브레이션 스코프 — 빈 문자열이면 전체 종목.
+  const [calTicker, setCalTicker] = useState("");
 
   // 커스텀 티커 추가 & 드래그앤드롭 섹터 재배치 State
   const [newTickerInput, setNewTickerInput] = useState("");
@@ -1037,14 +1040,14 @@ export default function HomePage() {
 
         <div className="grid gap-6 lg:grid-cols-12 lg:items-end">
           <h1 className="font-display font-normal leading-[1.02] tracking-tight text-fg lg:col-span-8 text-[2.6rem] sm:text-[3.8rem] lg:text-[4.5rem]">
-            나와{" "}
-            <ShinyText text="유사한 투자자" speed={3.5} delay={1.5} spread={100} className="font-italic" />
-            의<br />
-            자산배분 &amp; 전략 벤치마크.
+            자기 전망을{" "}
+            <ShinyText text="채점하는" speed={3.5} delay={1.5} spread={100} className="font-italic" />
+            <br />
+            AI 자산관리 콘솔.
           </h1>
           <div className="space-y-4 lg:col-span-4 border-l border-line/60 pl-6">
             <p className="text-xs leading-relaxed text-muted font-sans">
-              유사 투자자의 포트폴리오를 벤치마크로 대조하고, 세법·시장·지식그래프 데이터를 근거로 맞춤형 자산 전략을 제시하는 AI 어시스턴트 콘솔입니다.
+              주가 전망을 기록해 두고, 기간이 지나면 실제 주가와 대조해 스스로 적중률을 매깁니다. 그 성적이 낮은 구간에서는 다음 전망의 자신감을 스스로 낮춥니다. 유사 투자자 벤치마크와 세법·지식그래프 근거 상담도 같은 콘솔에서 이어집니다.
             </p>
             <div className="font-mono-spec text-[10px] text-muted/60 uppercase tracking-wider">
               * Informational Intelligence · Not Financial Advice
@@ -1052,6 +1055,53 @@ export default function HomePage() {
           </div>
         </div>
       </header>
+
+      {/* ────────────────────────────────────────────────
+         AI 자기채점 캘리브레이션 — 이 제품의 첫 문장이라 최상단에 둔다.
+         ──────────────────────────────────────────────── */}
+      <section className="animate-rise space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SectionLabel>AI 자기채점 · 시간축별 적중률 (Self-Calibration)</SectionLabel>
+          <Link
+            href="/stocks"
+            className="font-mono-spec text-[10px] uppercase tracking-widest text-muted transition hover:text-accent"
+          >
+            종목 분석에서 보기 →
+          </Link>
+        </div>
+        <p className="max-w-[76ch] text-xs leading-relaxed text-muted">
+          대부분의 AI는 확신에 찬 답만 내놓고 &ldquo;그거 맞긴 하냐&rdquo;에 답하지 못합니다. 이 콘솔은
+          24시간·3일·1주·1개월 전망을 전부 기록해 두고, 기간이 지나면 실제 주가와 대조해 적중 여부를 채웁니다.
+          그 성적이 다음 전망의 신뢰도를 깎는 근거로 되돌아갑니다.
+        </p>
+
+        {/* 종목 스코프 — "내가 보는 종목에서 이 AI가 얼마나 맞았나"가 초개인화 연결고리다. */}
+        <div className="flex flex-wrap items-center gap-1.5 font-mono-spec text-[11px]">
+          <span className="px-1 text-[9px] font-bold uppercase tracking-wider text-muted">SCOPE</span>
+          {[{ id: "", label: "전체 종목" }, ...customTickers.map((t) => ({ id: t.ticker, label: t.ticker }))].map(
+            (opt) => (
+              <button
+                key={opt.id || "ALL"}
+                onClick={() => setCalTicker(opt.id)}
+                className={`rounded-md border px-2.5 py-1 text-[11px] font-medium transition ${
+                  calTicker === opt.id
+                    ? "border-accent bg-accent text-[#0b0f19] font-bold"
+                    : "border-line/60 text-muted hover:border-accent/40 hover:text-fg"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ),
+          )}
+          {customTickers.length === 0 && (
+            <span className="text-[10px] text-muted/70">
+              아래 히트맵에서 종목을 추가하면 해당 종목만의 적중률로 좁혀 볼 수 있습니다
+            </span>
+          )}
+        </div>
+
+        <MemoryStatsCard ticker={calTicker || undefined} showcase />
+      </section>
 
       {/* ────────────────────────────────────────────────
          Swiss 3-Step Journey Hairline Grid

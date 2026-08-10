@@ -140,13 +140,53 @@ def list_strategies() -> dict:
     }
 
 
+# 야후 파이낸스는 한글 사명을 색인하지 않아 "삼성전자"로 검색하면 0건이 나온다.
+# 그래서 국내 대표 종목만 한글명 → 야후 심볼로 직접 매핑해 폴백한다.
+# ponytail: 데모에 나올 법한 시총 상위·친숙한 종목 50여 개로 범위를 못 박았다. 전체 상장사
+#   커버는 KRX 종목마스터 적재가 필요해 과하다 — 검색 누락이 실제로 문제되면 그때 교체.
+_KR_TICKERS: tuple[tuple[str, str], ...] = (
+    ("삼성전자", "005930.KS"), ("삼성전자우", "005935.KS"), ("SK하이닉스", "000660.KS"),
+    ("LG에너지솔루션", "373220.KS"), ("삼성바이오로직스", "207940.KS"), ("현대차", "005380.KS"),
+    ("기아", "000270.KS"), ("셀트리온", "068270.KS"), ("POSCO홀딩스", "005490.KS"),
+    ("NAVER", "035420.KS"), ("네이버", "035420.KS"), ("LG화학", "051910.KS"),
+    ("삼성SDI", "006400.KS"), ("카카오", "035720.KS"), ("KB금융", "105560.KS"),
+    ("신한지주", "055550.KS"), ("하나금융지주", "086790.KS"), ("우리금융지주", "316140.KS"),
+    ("삼성물산", "028260.KS"), ("현대모비스", "012330.KS"), ("SK이노베이션", "096770.KS"),
+    ("삼성생명", "032830.KS"), ("삼성화재", "000810.KS"), ("한국전력", "015760.KS"),
+    ("KT&G", "033780.KS"), ("LG전자", "066570.KS"), ("SK텔레콤", "017670.KS"),
+    ("KT", "030200.KS"), ("포스코퓨처엠", "003670.KS"), ("HMM", "011200.KS"),
+    ("크래프톤", "259960.KS"), ("삼성전기", "009150.KS"), ("에스오일", "010950.KS"),
+    ("두산에너빌리티", "034020.KS"), ("한화에어로스페이스", "012450.KS"),
+    ("HD현대중공업", "329180.KS"), ("대한항공", "003490.KS"), ("LG", "003550.KS"),
+    ("아모레퍼시픽", "090430.KS"), ("CJ제일제당", "097950.KS"), ("하이브", "352820.KS"),
+    ("넷마블", "251270.KS"), ("미래에셋증권", "006800.KS"), ("기업은행", "024110.KS"),
+    ("유한양행", "000100.KS"), ("한미약품", "128940.KS"), ("현대건설", "000720.KS"),
+    ("에코프로비엠", "247540.KQ"), ("에코프로", "086520.KQ"), ("알테오젠", "196170.KQ"),
+    ("HLB", "028300.KQ"), ("JYP Ent.", "035900.KQ"),
+    ("KODEX 200", "069500.KS"), ("TIGER 미국S&P500", "360750.KS"),
+    ("KOSEF 국고채10년", "148070.KS"), ("ACE KRX금현물", "411060.KS"),
+)
+
+
+def _kr_name_matches(query: str) -> list[dict]:
+    """한글/한국어 사명 부분일치로 국내 종목을 찾는다(야후 검색 실패분 보완)."""
+    key = query.replace(" ", "").upper()
+    return [
+        {"symbol": symbol, "name": name, "exchange": "KRX", "type": "EQUITY"}
+        for name, symbol in _KR_TICKERS
+        if key in name.replace(" ", "").upper()
+    ][:8]
+
+
 @router.get("/ticker-search")
 def ticker_search(q: str = "") -> list[dict]:
-    """야후 파이낸스 티커 자동완성 프록시."""
+    """야후 파이낸스 티커 자동완성 프록시 (+ 국내 종목 한글명 폴백)."""
     query = q.strip()
     if len(query) < 1:
         return []
     import requests
+
+    local = _kr_name_matches(query)
 
     try:
         resp = requests.get(
@@ -158,8 +198,8 @@ def ticker_search(q: str = "") -> list[dict]:
         resp.raise_for_status()
         quotes = resp.json().get("quotes", [])
     except Exception:  # noqa: BLE001
-        return []
-    return [
+        return local
+    remote = [
         {
             "symbol": item.get("symbol", ""),
             "name": item.get("shortname") or item.get("longname") or "",
@@ -169,6 +209,8 @@ def ticker_search(q: str = "") -> list[dict]:
         for item in quotes
         if item.get("symbol")
     ]
+    seen = {r["symbol"] for r in local}
+    return (local + [r for r in remote if r["symbol"] not in seen])[:8]
 
 
 @router.post("/backtest")

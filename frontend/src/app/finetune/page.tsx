@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { errMsg } from "@/lib/async";
 import { Play, UploadSimple } from "@phosphor-icons/react";
 import { apiGet, apiPost, apiUpload, type JobState } from "@/lib/api";
@@ -24,6 +24,22 @@ interface DatasetPreview {
   eval_preview: Triplet[];
 }
 
+// 이미 DB에 적재된 대조학습 코퍼스 현황(업로드 없이도 표시).
+interface CorpusStats {
+  train_count: number;
+  eval_count: number;
+  query_count: number;
+  passage_count: number;
+  source_count: number;
+  avg_margin: number;
+  by_type: { query_type: string; count: number }[];
+  train_preview: Triplet[];
+}
+
+function fmt(n: number | undefined): string {
+  return (n ?? 0).toLocaleString();
+}
+
 export default function FinetunePage() {
   const toast = useToast();
   const [file, setFile] = useState<File | null>(null);
@@ -34,6 +50,18 @@ export default function FinetunePage() {
   const [preview, setPreview] = useState<DatasetPreview | null>(null);
   const [busy, setBusy] = useState(false);
   const [activeTab, setActiveTab] = useState<"ingest" | "train">("ingest");
+  const [corpus, setCorpus] = useState<CorpusStats | null>(null);
+
+  // 이미 구축해둔 코퍼스 현황은 진입 즉시 조회한다(업로드 전에도 빈 화면이 아니게).
+  useEffect(() => {
+    let alive = true;
+    apiGet<CorpusStats>("/api/v1/finetune/corpus")
+      .then((c) => alive && setCorpus(c))
+      .catch(() => alive && setCorpus(null));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const upload = async () => {
     if (!file) return;
@@ -127,8 +155,12 @@ export default function FinetunePage() {
             RAG
           </div>
           <div>
-            <div className="text-xs text-muted font-mono-spec">지식 베이스 상태</div>
-            <div className="text-sm font-semibold text-fg">Agent RAG Ingestion Active</div>
+            <div className="text-xs text-muted font-mono-spec">지식 베이스 (emb_passages)</div>
+            <div className="text-sm font-semibold text-fg">
+              {corpus
+                ? `${fmt(corpus.passage_count)} 단락 · 문서 ${fmt(corpus.source_count)}종`
+                : "집계 중…"}
+            </div>
           </div>
         </div>
         <div className="border border-line/60 bg-[#090d16] p-3.5 rounded-lg flex items-center gap-3">
@@ -136,8 +168,12 @@ export default function FinetunePage() {
             BGE
           </div>
           <div>
-            <div className="text-xs text-muted font-mono-spec">대조학습 마이닝</div>
-            <div className="text-sm font-semibold text-fg">BGE-M3 Hard Negative Mining</div>
+            <div className="text-xs text-muted font-mono-spec">대조학습 트리플렛 (BGE-M3 마이닝)</div>
+            <div className="text-sm font-semibold text-fg">
+              {corpus
+                ? `${fmt(corpus.train_count + corpus.eval_count)}건 · train ${fmt(corpus.train_count)} / eval ${fmt(corpus.eval_count)}`
+                : "집계 중…"}
+            </div>
           </div>
         </div>
         <div className="border border-line/60 bg-[#090d16] p-3.5 rounded-lg flex items-center gap-3">
@@ -145,8 +181,10 @@ export default function FinetunePage() {
             LoRA
           </div>
           <div>
-            <div className="text-xs text-muted font-mono-spec">모델 파인튜닝 엔진</div>
-            <div className="text-sm font-semibold text-fg">PyTorch &amp; Accelerate Ready</div>
+            <div className="text-xs text-muted font-mono-spec">LLM 합성 쿼리 (anchor)</div>
+            <div className="text-sm font-semibold text-fg">
+              {corpus ? `${fmt(corpus.query_count)}건 생성 완료` : "집계 중…"}
+            </div>
           </div>
         </div>
       </div>
@@ -237,7 +275,8 @@ export default function FinetunePage() {
 
           {!preview && !uploadedName && (
             <div className="p-4 border border-line/40 rounded-lg bg-[#080c14] text-xs text-muted">
-              ℹ️ 먼저 <span className="text-accent font-semibold">&ldquo;📚 문서 지식 즉시 등록&rdquo;</span> 탭에서 문서를 업로드하고 파이프라인을 실행하면 생성된 데이터셋이 이 탭에 자동으로 연결됩니다.
+              ℹ️ 아래는 지금까지 <span className="text-accent font-semibold">DB에 구축해둔 대조학습 코퍼스</span>입니다.
+              새 문서를 반영하려면 <span className="text-accent font-semibold">&ldquo;📚 문서 지식 즉시 등록&rdquo;</span> 탭에서 업로드 후 파이프라인을 실행하세요.
             </div>
           )}
 
@@ -245,7 +284,7 @@ export default function FinetunePage() {
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/40 pb-2">
                 <div>
-                  <h3 className="text-sm font-semibold text-fg">마이닝된 대조학습 데이터셋 프리뷰</h3>
+                  <h3 className="text-sm font-semibold text-fg">이번 문서에서 마이닝된 데이터셋 프리뷰</h3>
                   <p className="text-xs text-muted">
                     학습 데이터(train) <span className="text-accent font-bold">{preview.train_count}건</span> · 평가 데이터(eval) <span className="text-fg font-bold">{preview.eval_count}건</span>
                   </p>
@@ -259,6 +298,36 @@ export default function FinetunePage() {
                 </button>
               </div>
               <TripletTable rows={preview.train_preview} />
+            </div>
+          )}
+
+          {/* 업로드 전(=이번 세션 산출물 없음)에는 DB에 쌓아둔 전체 코퍼스를 보여준다. */}
+          {!preview && corpus && (
+            <div className="space-y-3">
+              <div className="border-b border-line/40 pb-2">
+                <h3 className="text-sm font-semibold text-fg">구축된 대조학습 코퍼스 현황 (전체)</h3>
+                <p className="text-xs text-muted">
+                  트리플렛 <span className="text-accent font-bold">{fmt(corpus.train_count + corpus.eval_count)}건</span>
+                  {" · "}합성 쿼리 <span className="text-fg font-bold">{fmt(corpus.query_count)}건</span>
+                  {" · "}평균 마진 <span className="font-mono text-fg">{corpus.avg_margin.toFixed(3)}</span>
+                </p>
+              </div>
+              {corpus.by_type.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {corpus.by_type.map((t) => (
+                    <span
+                      key={t.query_type}
+                      className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted"
+                    >
+                      {t.query_type} <span className="text-accent">{fmt(t.count)}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted">
+                마진(margin)이 큰 순서로 상위 {corpus.train_preview.length}건 — 하드 네거티브가 잘 분리된 샘플입니다.
+              </p>
+              <TripletTable rows={corpus.train_preview} />
             </div>
           )}
         </Card>
