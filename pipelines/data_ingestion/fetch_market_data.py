@@ -17,6 +17,8 @@ import requests
 import yfinance as yf
 from dotenv import load_dotenv
 
+from shared.utils.timez import KST, now_kst
+
 load_dotenv()
 
 # Configure logging
@@ -291,7 +293,7 @@ def fetch_realtime_stock(symbol: str) -> dict:
             "change": float(change),
             "change_percent": float(change_pct),
             "currency": currency,
-            "fetched_at": datetime.now().isoformat()
+            "fetched_at": now_kst().isoformat()
         }
     except Exception as e:
         logger.error(f"Error fetching real-time stock {symbol}: {e}")
@@ -303,14 +305,13 @@ def fetch_realtime_stock(symbol: str) -> dict:
             "change_percent": 0.0,
             "currency": "USD",
             "error": str(e),
-            "fetched_at": datetime.now().isoformat()
+            "fetched_at": now_kst().isoformat()
         }
 
 
 def main() -> None:
     import argparse
     from collections import Counter
-    from datetime import datetime
 
     from shared.database.connector import bulk_upsert_market_snapshots
 
@@ -337,14 +338,14 @@ def main() -> None:
     args = parser.parse_args()
 
     # Determine date range
-    today = datetime.now()
+    today = now_kst()
     if args.end:
-        end_dt = datetime.strptime(args.end, "%Y-%m-%d")
+        end_dt = datetime.strptime(args.end, "%Y-%m-%d").replace(tzinfo=KST)
     else:
         end_dt = today
 
     if args.start:
-        start_dt = datetime.strptime(args.start, "%Y-%m-%d")
+        start_dt = datetime.strptime(args.start, "%Y-%m-%d").replace(tzinfo=KST)
     else:
         if args.backfill:
             # 90 days of history for backfill

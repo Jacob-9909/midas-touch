@@ -70,11 +70,12 @@ _MACRO_YFINANCE_MAP = [
 
 def _update_macro_cache():
     import time
-    from datetime import datetime
 
     import yfinance as yf
 
-    today_str = datetime.today().strftime("%Y-%m-%d")
+    from shared.utils.timez import now_kst
+
+    today_str = now_kst().strftime("%Y-%m-%d")
     db_rows = []
     try:
         db_rows = get_latest_market_snapshots()

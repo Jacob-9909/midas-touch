@@ -72,12 +72,13 @@ def _run_market_ingest() -> dict:
     (snapshot_date, data_type, sub_key)라 겹치는 날짜를 다시 넣어도 행이 늘지 않고,
     값이 같으면 내용도 그대로다. 휴장일·지연 정정 때문에 하루가 아니라 일주일을 겹쳐 받는다.
     """
-    from datetime import datetime, timedelta
+    from datetime import timedelta
 
     from pipelines.data_ingestion.fetch_market_data import MarketDataPipeline
     from shared.database.connector import bulk_upsert_market_snapshots
+    from shared.utils.timez import now_kst
 
-    end = datetime.now()
+    end = now_kst()
     start = end - timedelta(days=int(os.getenv("MARKET_INGEST_LOOKBACK_DAYS", "7")))
     rows = MarketDataPipeline().fetch_all(
         start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")

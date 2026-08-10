@@ -42,6 +42,8 @@ from datetime import time as dtime
 
 from dotenv import load_dotenv
 
+from shared.utils.timez import today_kst
+
 load_dotenv()
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -226,7 +228,8 @@ def _self_check() -> None:
     # 2) _asof_window: as_of를 주면 '채점 결과가 이미 나와 있던' 구간으로 상한이 걸려야 한다.
     live_sql, live_p = _asof_window(None, 180)
     assert len(live_sql) == 1 and live_p == [180], (live_sql, live_p)
-    past = datetime(2025, 6, 1)
+    # self-check 고정 픽스처: DB created_at(naive) 모사·상호 비교/identity 검증용이라 tz 미부여.
+    past = datetime(2025, 6, 1)  # noqa: DTZ001
     past_sql, past_p = _asof_window(past, 180)
     assert len(past_sql) == 2, past_sql
     assert sum(s.count("%s") for s in past_sql) == len(past_p), (past_sql, past_p)
@@ -247,11 +250,11 @@ def _self_check() -> None:
     # (id, decision, confidence, price, summary, snapshot, created_at, was_correct, ret, ticker)
     rows = [
         (1, "BUY", "high", 100.0, "채점 끝난 과거", ind,
-         datetime(2025, 1, 10), True, 5.0, "AAPL"),
+         datetime(2025, 1, 10), True, 5.0, "AAPL"),  # noqa: DTZ001
         (2, "BUY", "high", 100.0, "과거지만 채점 전", ind,
-         datetime(2025, 5, 29), True, 5.0, "AAPL"),
+         datetime(2025, 5, 29), True, 5.0, "AAPL"),  # noqa: DTZ001
         (3, "SELL", "low", 100.0, "미래", ind,
-         datetime(2025, 9, 1), False, -9.0, "AAPL"),
+         datetime(2025, 9, 1), False, -9.0, "AAPL"),  # noqa: DTZ001
     ]
     mem._fetch_candidates = lambda *a, **k: rows  # type: ignore[method-assign]
 
@@ -299,7 +302,7 @@ def main() -> None:
         _self_check()
         return
 
-    today = date.today()
+    today = today_kst()
     start = (date.fromisoformat(args.start) if args.start
              else today - timedelta(days=DEFAULT_START_DAYS_AGO))
     end = (date.fromisoformat(args.end) if args.end

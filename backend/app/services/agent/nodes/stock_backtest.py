@@ -9,7 +9,9 @@ intent가 추출한 ticker(state["ticker"])가 있으면 StockAnalyzer로 sma_cr
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+from shared.utils.timez import now_kst
 
 from ..state import AgentState
 
@@ -30,8 +32,8 @@ def stock_backtest_node(state: AgentState) -> dict:
     try:
         from backend.app.services.trading import StockAnalyzer
 
-        end = datetime.today().strftime("%Y-%m-%d")
-        start = (datetime.today() - timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+        end = now_kst().strftime("%Y-%m-%d")
+        start = (now_kst() - timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
         analyzer = StockAnalyzer(ticker=ticker, start_date=start, end_date=end)
         analyzer.fetch_data()
         res = analyzer.backtest(_STRATEGY)

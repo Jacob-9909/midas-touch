@@ -10,6 +10,8 @@ from __future__ import annotations
 import datetime
 import os
 
+from shared.utils.timez import today_kst
+
 from ..agent.llm import build_chat_model
 
 
@@ -214,7 +216,7 @@ def _fetch_vix(as_of: str | None = None) -> str:
         import yfinance as yf
 
         vix = yf.Ticker("^VIX")
-        anchor = datetime.date.fromisoformat(as_of) if as_of else datetime.date.today()
+        anchor = datetime.date.fromisoformat(as_of) if as_of else today_kst()
         # yfinance의 end는 배타적 → anchor 당일 봉까지 포함하려면 +1일. 휴일 대비로 10일치를 받는다.
         hist = vix.history(
             start=(anchor - datetime.timedelta(days=10)).isoformat(),

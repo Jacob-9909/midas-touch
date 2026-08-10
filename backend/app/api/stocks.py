@@ -28,6 +28,7 @@ from shared.database.repositories.watchlist import (
     list_watchlist,
     remove_watchlist,
 )
+from shared.utils.timez import KST, now_kst
 
 router = APIRouter(prefix="/api/v1/stocks", tags=["stocks"])
 
@@ -42,11 +43,11 @@ _PERIOD_DAYS: dict[str, int] = {
 
 def _resolve_window(req) -> tuple[str, str]:
     """(start, end) 날짜 문자열을 계산한다. start_date가 있으면 그대로, 없으면 period로 역산."""
-    end = req.end_date or datetime.today().strftime("%Y-%m-%d")
+    end = req.end_date or now_kst().strftime("%Y-%m-%d")
     if req.start_date:
         return req.start_date, end
     days = _PERIOD_DAYS.get(req.period, 370)
-    start = (datetime.today() - timedelta(days=days)).strftime("%Y-%m-%d")
+    start = (now_kst() - timedelta(days=days)).strftime("%Y-%m-%d")
     return start, end
 
 
@@ -83,8 +84,8 @@ def quick_analysis(ticker: str = Query(min_length=1, max_length=20)) -> dict:
     LLM 전망 실패 시 outlook:{error:...} 로 graceful degrade.
     """
     symbol = ticker.strip().upper()
-    end = datetime.today().strftime("%Y-%m-%d")
-    start = (datetime.today() - timedelta(days=400)).strftime("%Y-%m-%d")
+    end = now_kst().strftime("%Y-%m-%d")
+    start = (now_kst() - timedelta(days=400)).strftime("%Y-%m-%d")
 
     analyzer = StockAnalyzer(ticker=symbol, start_date=start, end_date=end)
     try:
@@ -551,5 +552,5 @@ def get_stock_heatmap(force_refresh: bool = False) -> dict:
     return {
         "stocks": _HEATMAP_CACHE["data"],
         "source": _HEATMAP_CACHE["source"],
-        "last_updated": datetime.fromtimestamp(_HEATMAP_CACHE["last_updated"]).strftime("%Y-%m-%d %H:%M:%S") if _HEATMAP_CACHE["last_updated"] > 0 else "",
+        "last_updated": datetime.fromtimestamp(_HEATMAP_CACHE["last_updated"], tz=KST).strftime("%Y-%m-%d %H:%M:%S") if _HEATMAP_CACHE["last_updated"] > 0 else "",
     }
