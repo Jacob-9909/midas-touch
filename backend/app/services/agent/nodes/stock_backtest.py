@@ -9,7 +9,9 @@ intent가 추출한 ticker(state["ticker"])가 있으면 StockAnalyzer로 sma_cr
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+from shared.utils.timez import now_kst
 
 from ..state import AgentState
 
@@ -22,16 +24,16 @@ def stock_backtest_node(state: AgentState) -> dict:
     if not ticker:
         return {
             "tool_context": [
-                "[stock_backtest 안내] 백테스트할 종목 티커(예: AAPL, 005930.KS)를 알려주시면 "
-                "최근 1년 SMA 교차 전략으로 시뮬레이션해 드립니다."
+                ("[stock_backtest 안내] 백테스트할 종목 티커(예: AAPL, 005930.KS)를 알려주시면 "
+                "최근 1년 SMA 교차 전략으로 시뮬레이션해 드립니다.")
             ]
         }
 
     try:
         from backend.app.services.trading import StockAnalyzer
 
-        end = datetime.today().strftime("%Y-%m-%d")
-        start = (datetime.today() - timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+        end = now_kst().strftime("%Y-%m-%d")
+        start = (now_kst() - timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
         analyzer = StockAnalyzer(ticker=ticker, start_date=start, end_date=end)
         analyzer.fetch_data()
         res = analyzer.backtest(_STRATEGY)
@@ -47,5 +49,5 @@ def stock_backtest_node(state: AgentState) -> dict:
             "(단일 전략·기본 파라미터 기준. 상세 차트·전략비교는 '주식분석' 페이지 참고.)"
         )
         return {"tool_context": [summary]}
-    except Exception as exc:  # noqa: BLE001 - 외부 데이터/계산 실패는 컨텍스트로 흡수
+    except Exception as exc:
         return {"tool_context": [f"[stock_backtest 실패·{ticker}] {exc}"]}

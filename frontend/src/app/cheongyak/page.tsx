@@ -216,16 +216,23 @@ export default function CheongyakPage() {
   }, [statusFiltered]);
 
   // 지도 선택 → district 매칭 우선 정렬 + (옵션) 내 지역만 필터.
+  // 2순위는 '결과 공개' 여부 — 경쟁률·가점은 접수 마감 후에만 API로 내려오므로, 상세가 빈 채로
+  // 열리는 접수예정 공고를 목록 맨 위에 두지 않는다. (상태 칩으로 언제든 접수예정만 볼 수 있다)
   const view = useMemo(() => {
     if (!statusFiltered) return null;
     const key = (district || "").replace(/특별시|광역시|특별자치시|특별자치도|도$/g, "").trim();
     const matches = (it: CheongyakSummary) =>
       key.length >= 2 && (it.region?.includes(key) || it.address?.includes(key));
+    const hasResults = (it: CheongyakSummary) => it.status === "마감";
     let list = statusFiltered;
     const prov = PROVINCES.find((p) => p.short === mapRegion);
     if (prov) list = list.filter((it) => matchProvince(it, prov));
     if (onlyMyRegion && key) list = list.filter(matches);
-    return [...list].sort((a, b) => Number(matches(b)) - Number(matches(a)));
+    return [...list].sort(
+      (a, b) =>
+        Number(matches(b)) - Number(matches(a)) ||
+        Number(hasResults(b)) - Number(hasResults(a)),
+    );
   }, [statusFiltered, district, onlyMyRegion, mapRegion]);
 
   const consult = (item: CheongyakSummary) => {
@@ -300,6 +307,9 @@ export default function CheongyakPage() {
               </button>
             );
           })}
+          <span className="w-full text-xs text-muted sm:w-auto sm:pl-1">
+            경쟁률·가점은 접수 마감 후 공개되어, 결과가 있는 공고를 먼저 보여줍니다.
+          </span>
         </div>
       )}
 

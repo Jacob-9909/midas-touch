@@ -57,7 +57,7 @@
 - **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4
 - **Backend**: Python 3.12, FastAPI, Uvicorn, LangGraph, LangChain, Alembic
 - **Database**: PostgreSQL 16 (pgvector), Neo4j Graph DB
-- **LLM / Model**: NVIDIA NIM (qwen/qwen3-next-80b-a3b-instruct, BAAI/bge-m3), Tavily, yfinance
+- **LLM / Model**: NVIDIA NIM (openai/gpt-oss-120b, BAAI/bge-m3), Tavily, yfinance
 - **Package & Tooling**: uv (pyproject.toml 기반 패키지 관리), ruff (린터), pytest (단위/통합 테스트)
 
 ---

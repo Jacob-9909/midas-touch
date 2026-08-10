@@ -1,15 +1,15 @@
 """SQLAlchemy Models package for consolidated Midas Touch database schemas."""
 
 from shared.database.models.postgres_models import (
-    PostgresBase,
-    User,
+    LegalReference,
+    MacroIndicator,
+    MarketSnapshot,
+    NewsEmbedding,
+    PersonaEmbedding,
     Portfolio,
     PortfolioItem,
-    TaxRule,
-    MarketSnapshot,
-    LegalReference,
-    NewsEmbedding,
+    PostgresBase,
     StrategyDoc,
-    MacroIndicator,
-    PersonaEmbedding,
+    TaxRule,
+    User,
 )

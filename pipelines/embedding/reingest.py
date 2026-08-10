@@ -7,9 +7,10 @@ emb_passages 테이블에 재적재하는 일회성/재사용 유틸리티.
     python -m pipelines.embedding.reingest <pdf_path>
 """
 
-import sys
 import logging
+import sys
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load env variables

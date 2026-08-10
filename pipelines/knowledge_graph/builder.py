@@ -15,8 +15,8 @@ import logging
 import os
 import sys
 import time
-import asyncio
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # 프로젝트 루트 경로 추가 (src 임포트 호환)
@@ -26,17 +26,19 @@ sys.path.append(str(project_root))
 load_dotenv()
 
 # LlamaIndex 라이브러리 임포트
+from concurrent.futures import ThreadPoolExecutor
+from queue import Queue
+from threading import Lock
+
 from llama_index.core import Document, Settings
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
 from llama_index.core.indices.property_graph import (
     PropertyGraphIndex,
     SchemaLLMPathExtractor,
 )
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
+
 from shared.utils.nim_openai import NIMOpenAI
-from concurrent.futures import ThreadPoolExecutor
-from threading import Lock
-from queue import Queue
 
 # 로깅 설정
 logging.basicConfig(
@@ -47,6 +49,94 @@ logging.basicConfig(
 logger = logging.getLogger("graph_builder")
 
 NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
+
+
+# ── 세법 전용 추출 스키마 (모듈 상수: 검증 스크립트에서도 그대로 재사용) ──────────
+from enum import Enum
+
+
+# 허용 엔티티 종류 (Enum 정의 - LlamaIndex 내부 검증기에서 대문자로 변환되므로 값을 대문자로 정의해야 함)
+class Entities(str, Enum):
+    AssetClass = "ASSETCLASS"                 # 자산군 (예: 주식, 채권, 연금, 부동산)
+    PortfolioItem = "PORTFOLIOITEM"           # 종목/상품 (예: ISA, IRP, 일반적금, 청년도약계좌)
+    IncomeType = "INCOMETYPE"                 # 소득유형 (예: 배당소득, 이자소득, 양도소득, 연금소득)
+    TaxRule = "TAXRULE"                       # 세율/세제규칙 (예: 비과세혜택규정, 배당소득세율규칙)
+    LegalReference = "LEGALREFERENCE"         # 근거법령 (예: 소득세법 제14조, 금소법)
+    TaxExemptCondition = "TAXEXEMPTCONDITION" # 비과세/감면 요건 (예: 5년이상납입유지, 가입당시소득5천만원이하)
+    ContributionLimit = "CONTRIBUTIONLIMIT"   # 납입/투자 한도 (예: 연간 1800만원한도, 납입한도 2천만원)
+    TaxRateInfo = "TAXRATEINFO"               # 구체적 세율 정보 (예: 15.4% 세율, 9% 원천징수)
+
+
+# 허용 관계 종류 (Enum 정의)
+class Relations(str, Enum):
+    BELONGS_TO = "BELONGS_TO"
+    GENERATES = "GENERATES"
+    SUBJECT_TO = "SUBJECT_TO"
+    BASED_ON = "BASED_ON"
+
+
+# 유효 관계 제약조건 스키마 정의 (List[Tuple[str, str, str]])
+KG_VALIDATION_SCHEMA = [
+    ("PORTFOLIOITEM", "BELONGS_TO", "ASSETCLASS"),
+    ("ASSETCLASS", "GENERATES", "INCOMETYPE"),
+    ("INCOMETYPE", "SUBJECT_TO", "TAXRULE"),
+    ("PORTFOLIOITEM", "SUBJECT_TO", "TAXRULE"),
+    ("TAXRULE", "BASED_ON", "LEGALREFERENCE"),
+    ("PORTFOLIOITEM", "HAS_LIMIT", "CONTRIBUTIONLIMIT"),
+    ("ASSETCLASS", "HAS_LIMIT", "CONTRIBUTIONLIMIT"),
+    ("TAXEXEMPTCONDITION", "PROVIDES_BENEFIT", "INCOMETYPE"),
+    ("TAXEXEMPTCONDITION", "PROVIDES_BENEFIT", "TAXRULE"),
+    ("TAXEXEMPTCONDITION", "APPLIES_WHEN", "PORTFOLIOITEM"),
+    ("TAXEXEMPTCONDITION", "APPLIES_WHEN", "INCOMETYPE"),
+    ("TAXRULE", "DEFINES_RATE", "TAXRATEINFO"),
+    ("TAXRATEINFO", "BASED_ON", "LEGALREFERENCE"),
+]
+
+EXTRACT_PROMPT = (
+    "당신은 금융 및 세법 전문 지식 그래프 추출기입니다.\n"
+    "주어진 텍스트 본문에서 한국 금융 세제와 자산 운용에 관련된 노드(Entity)와 관계(Relationship)를 정확하게 추출하십시오.\n\n"
+    "### 기본(Base) 스키마 가이드:\n"
+    "1. 엔티티 유형(Entities) 정의:\n"
+    "   - ASSETCLASS (자산군): 예) 주식, 채권, 연금, 부동산\n"
+    "   - PORTFOLIOITEM (종목/상품): 예) ISA, IRP, 일반적금, 청년도약계좌\n"
+    "   - INCOMETYPE (소득유형): 예) 배당소득, 이자소득, 양도소득, 연금소득\n"
+    "   - TAXRULE (세율/세제규칙): 예) 비과세혜택규정, 배당소득세율규칙\n"
+    "   - LEGALREFERENCE (근거법령): 예) 소득세법 제14조, 금융소비자보호법\n"
+    "   - TAXEXEMPTCONDITION (비과세/감면 요건): 예) 5년이상납입유지, 가입당시소득5천만원이하\n"
+    "   - CONTRIBUTIONLIMIT (납입/투자 한도): 예) 연간 1800만원한도, 납입한도 2천만원\n"
+    "   - TAXRATEINFO (구체적 세율 정보): 예) 15.4% 세율, 9% 원천징수\n"
+    "2. 관계 유형(Relations) 정의:\n"
+    "   - BELONGS_TO, GENERATES, SUBJECT_TO, BASED_ON, HAS_LIMIT, APPLIES_WHEN, PROVIDES_BENEFIT, DEFINES_RATE\n\n"
+    "### ⚠️ 동적 스키마 확장 규칙 (중요):\n"
+    "- 본문을 분석할 때 위의 기본 스키마에 딱 들어맞지 않지만, 세무/금융 맥락상 매우 중요하다고 판단되는 고유한 개념이나 속성\n"
+    "  (예: 특정 세금 우대 혜택 명칭, 특별 공제 대상, 대주주 판정 요건 등)이 등장하는 경우,\n"
+    "  **새로운 엔티티 유형 및 관계 유형을 동적으로 창안하여 자유롭게 추출하십시오.**\n"
+    "- 단, 무분별한 노드 난립을 막기 위해 개념이 명확하고 중복되지 않는 용어를 사용하십시오.\n\n"
+    "최대 {max_triplets_per_chunk}개의 추출된 경로로 출력을 제한하십시오.\n"
+    "-------\n"
+    "{text}\n"
+    "-------\n"
+)
+
+
+def make_extractor(api_key: str | None = None) -> SchemaLLMPathExtractor:
+    """세법 스키마 추출기 1개 생성. NIMOpenAI가 키 로테이션/RPM 슬롯/구조화 출력을 담당한다."""
+    nim_llm = NIMOpenAI(
+        model=os.environ["NIM_GENERATION_MODEL"],
+        api_key=api_key,
+        api_base=NIM_BASE_URL,
+        temperature=0.0,
+        max_tokens=10000,
+    )
+    return SchemaLLMPathExtractor(
+        llm=nim_llm,
+        possible_entities=Entities,
+        possible_relations=Relations,
+        kg_validation_schema=KG_VALIDATION_SCHEMA,
+        strict=False,
+        extract_prompt=EXTRACT_PROMPT,
+        num_workers=1,
+    )
 
 # 외부 라이브러리(HTTP 요청, OpenAI, Hugging Face 등)의 불필요한 INFO 로그 억제
 for noisy_logger in [
@@ -217,7 +307,7 @@ def save_processed_passage_ids(passage_ids: list[str]) -> None:
         logger.error("processed passage_id 저장 오류: %s", exc)
 
 
-def build_knowledge_graph(documents: list[Document], delay: float = 0.0) -> None:
+def build_knowledge_graph(documents: list[Document], delay: float = 0.0, workers: int = 8) -> None:
     """Neo4j 데이터베이스에 세법 및 금융 자산 지식 그래프 자동 구축."""
     if not documents:
         logger.info("새로 적재할 문서가 없습니다.")
@@ -245,123 +335,14 @@ def build_knowledge_graph(documents: list[Document], delay: float = 0.0) -> None
     object.__setattr__(graph_store, "get_schema", thread_safe_get_schema)
 
 
-    # 2. 세법 전용 스키마 지식 추출 가이드 정의 (Strict Schema Extractor)
-    logger.info("금융 세법/자산 전용 스키마 지식 추출 프롬프트/가이드 구성 중...")
-    
-    from enum import Enum
-    
-    # 허용 엔티티 종류 (Enum 정의 - LlamaIndex 내부 검증기에서 대문자로 변환되므로 값을 대문자로 정의해야 함)
-    class Entities(str, Enum):
-        AssetClass = "ASSETCLASS"                 # 자산군 (예: 주식, 채권, 연금, 부동산)
-        PortfolioItem = "PORTFOLIOITEM"           # 종목/상품 (예: ISA, IRP, 일반적금, 청년도약계좌)
-        IncomeType = "INCOMETYPE"                 # 소득유형 (예: 배당소득, 이자소득, 양도소득, 연금소득)
-        TaxRule = "TAXRULE"                       # 세율/세제규칙 (예: 비과세혜택규정, 배당소득세율규칙)
-        LegalReference = "LEGALREFERENCE"         # 근거법령 (예: 소득세법 제14조, 금소법)
-        TaxExemptCondition = "TAXEXEMPTCONDITION" # 비과세/감면 요건 (예: 5년이상납입유지, 가입당시소득5천만원이하)
-        ContributionLimit = "CONTRIBUTIONLIMIT"   # 납입/투자 한도 (예: 연간 1800만원한도, 납입한도 2천만원)
-        TaxRateInfo = "TAXRATEINFO"               # 구체적 세율 정보 (예: 15.4% 세율, 9% 원천징수)
-    
-    # 허용 관계 종류 (Enum 정의)
-    class Relations(str, Enum):
-        BELONGS_TO = "BELONGS_TO"
-        GENERATES = "GENERATES"
-        SUBJECT_TO = "SUBJECT_TO"
-        BASED_ON = "BASED_ON"
-    
-    # 유효 관계 제약조건 스키마 정의 (List[Tuple[str, str, str]])
-    kg_validation_schema = [
-        ("PORTFOLIOITEM", "BELONGS_TO", "ASSETCLASS"),
-        ("ASSETCLASS", "GENERATES", "INCOMETYPE"),
-        ("INCOMETYPE", "SUBJECT_TO", "TAXRULE"),
-        ("PORTFOLIOITEM", "SUBJECT_TO", "TAXRULE"),
-        ("TAXRULE", "BASED_ON", "LEGALREFERENCE"),
-        ("PORTFOLIOITEM", "HAS_LIMIT", "CONTRIBUTIONLIMIT"),
-        ("ASSETCLASS", "HAS_LIMIT", "CONTRIBUTIONLIMIT"),
-        ("TAXEXEMPTCONDITION", "PROVIDES_BENEFIT", "INCOMETYPE"),
-        ("TAXEXEMPTCONDITION", "PROVIDES_BENEFIT", "TAXRULE"),
-        ("TAXEXEMPTCONDITION", "APPLIES_WHEN", "PORTFOLIOITEM"),
-        ("TAXEXEMPTCONDITION", "APPLIES_WHEN", "INCOMETYPE"),
-        ("TAXRULE", "DEFINES_RATE", "TAXRATEINFO"),
-        ("TAXRATEINFO", "BASED_ON", "LEGALREFERENCE"),
-    ]
-
-    custom_extract_prompt = (
-        "당신은 금융 및 세법 전문 지식 그래프 추출기입니다.\n"
-        "주어진 텍스트 본문에서 한국 금융 세제와 자산 운용에 관련된 노드(Entity)와 관계(Relationship)를 정확하게 추출하십시오.\n\n"
-        "### 기본(Base) 스키마 가이드:\n"
-        "1. 엔티티 유형(Entities) 정의:\n"
-        "   - ASSETCLASS (자산군): 예) 주식, 채권, 연금, 부동산\n"
-        "   - PORTFOLIOITEM (종목/상품): 예) ISA, IRP, 일반적금, 청년도약계좌\n"
-        "   - INCOMETYPE (소득유형): 예) 배당소득, 이자소득, 양도소득, 연금소득\n"
-        "   - TAXRULE (세율/세제규칙): 예) 비과세혜택규정, 배당소득세율규칙\n"
-        "   - LEGALREFERENCE (근거법령): 예) 소득세법 제14조, 금융소비자보호법\n"
-        "   - TAXEXEMPTCONDITION (비과세/감면 요건): 예) 5년이상납입유지, 가입당시소득5천만원이하\n"
-        "   - CONTRIBUTIONLIMIT (납입/투자 한도): 예) 연간 1800만원한도, 납입한도 2천만원\n"
-        "   - TAXRATEINFO (구체적 세율 정보): 예) 15.4% 세율, 9% 원천징수\n"
-        "2. 관계 유형(Relations) 정의:\n"
-        "   - BELONGS_TO, GENERATES, SUBJECT_TO, BASED_ON, HAS_LIMIT, APPLIES_WHEN, PROVIDES_BENEFIT, DEFINES_RATE\n\n"
-        "### ⚠️ 동적 스키마 확장 규칙 (중요):\n"
-        "- 본문을 분석할 때 위의 기본 스키마에 딱 들어맞지 않지만, 세무/금융 맥락상 매우 중요하다고 판단되는 고유한 개념이나 속성\n"
-        "  (예: 특정 세금 우대 혜택 명칭, 특별 공제 대상, 대주주 판정 요건 등)이 등장하는 경우,\n"
-        "  **새로운 엔티티 유형 및 관계 유형을 동적으로 창안하여 자유롭게 추출하십시오.**\n"
-        "- 단, 무분별한 노드 난립을 막기 위해 개념이 명확하고 중복되지 않는 용어를 사용하십시오.\n\n"
-        "최대 {max_triplets_per_chunk}개의 추출된 경로로 출력을 제한하십시오.\n"
-        "-------\n"
-        "{text}\n"
-        "-------\n"
-    )
-
-    # 2. API 키 로드 및 각 모델별 LLM + Extractor 풀 빌드
-    #    키 1개당 추출기 1개 = 병렬 워커 1개 (키별로 레이트리밋을 분산)
-    extractors = []
-
-    # 환경변수에서 NVIDIA API 키 목록 동적 로드
-    nim_keys = []
-    if os.environ.get("NVIDIA_API_KEY"):
-        nim_keys.append(os.environ.get("NVIDIA_API_KEY"))
-    if os.environ.get("NVIDIA_API_KEY_2"):
-        nim_keys.append(os.environ.get("NVIDIA_API_KEY_2"))
-    
-    i = 3
-    while True:
-        k = os.environ.get(f"NVIDIA_API_KEY_{i}")
-        if not k:
-            break
-        nim_keys.append(k)
-        i += 1
-        
-    if not nim_keys:
-        raise RuntimeError(
-            "NVIDIA_API_KEY가 설정되어 있지 않습니다. .env에 최소 1개의 키를 추가하세요."
-        )
-
-    nim_model = os.environ.get("NIM_GENERATION_MODEL")
-    for idx, key in enumerate(nim_keys, start=1):
-        # NIMOpenAI를 쓰면 호출마다 키별 RPM 슬롯 예약(nim_rate_limit) + 429 백오프가 적용된다.
-        nim_llm = NIMOpenAI(
-            model=nim_model,
-            api_key=key,
-            api_base=NIM_BASE_URL,
-            temperature=0.0,
-            max_tokens=10000,
-        )
-        extractors.append((
-            SchemaLLMPathExtractor(
-                llm=nim_llm,
-                possible_entities=Entities,
-                possible_relations=Relations,
-                kg_validation_schema=kg_validation_schema,
-                strict=False,
-                extract_prompt=custom_extract_prompt,
-                num_workers=1,
-            ),
-            f"NVIDIA-NIM-{idx}"
-        ))
+    # 2. 추출기 풀 빌드 (워커 수 = 병렬도).
+    #    NIMOpenAI가 호출마다 키를 선제 로테이션하므로 워커 수를 키 개수에 묶을 이유가 없다.
+    #    분당 호출 한도는 nim_rate_limit(파일 락)이 키별로 통제한다.
+    logger.info("금융 세법/자산 전용 스키마 추출기 %d개 준비 중...", workers)
+    extractors = [(make_extractor(), f"NIM-W{idx}") for idx in range(1, workers + 1)]
 
     num_workers = len(extractors)
-    logger.info("총 %d개의 병렬 추출기(NVIDIA NIM 키 %d개)를 준비했습니다.",
-                num_workers, len(nim_keys))
-    
+
     # 3. ThreadPoolExecutor 빌드 및 Neo4j 적재 (루프를 돌며 병렬 처리 및 즉시 커밋)
     total_docs = len(documents)
     logger.info("지식 그래프 구축 및 Neo4j 추가 적재 시작 (총 %d개 단락 병렬 처리)...", total_docs)
@@ -438,8 +419,8 @@ def build_knowledge_graph(documents: list[Document], delay: float = 0.0) -> None
                 logger.warning("⚠️ 사용자에 의해 작업이 인터럽트 되었습니다. 중단을 시도합니다.")
                 executor.shutdown(wait=False, cancel_futures=True)
                 raise
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("KG 빌드 작업 실패: %s", exc)
             
     elapsed = time.perf_counter() - start_time
     logger.info("=" * 60)
@@ -462,6 +443,12 @@ def main() -> None:
         type=float,
         default=0.0,
         help="각 NIM 추출기가 작업을 완료한 후 다음 작업을 시작하기 전 대기할 시간(초) (기본값: 0.0)"
+    )
+    parser.add_argument(
+        "--workers", "-w",
+        type=int,
+        default=8,
+        help="병렬 추출 워커 수 (기본값: 8). 분당 호출 한도는 nim_rate_limit이 키별로 따로 통제한다."
     )
     args = parser.parse_args()
 
@@ -495,7 +482,7 @@ def main() -> None:
             target_docs = unprocessed_documents[:limit]
             logger.info("이번 실행에서 처리할 %d개의 미처리 단락으로 그래프 빌드를 시작합니다.", len(target_docs))
         
-        build_knowledge_graph(target_docs, delay=args.delay)
+        build_knowledge_graph(target_docs, delay=args.delay, workers=args.workers)
         
     except Exception as exc:
         logger.exception("지식 그래프 생성 도중 오류 발생: %s", exc)

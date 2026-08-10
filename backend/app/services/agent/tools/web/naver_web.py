@@ -95,12 +95,12 @@ def naver_web_search_once(query: str, max_results: int = 4) -> str:
         lines: list[str] = []
         for it in items:
             title = strip_html_bold(it.get("title") or "")
-            desc = strip_html_bold((it.get("description") or ""))[:300]
+            desc = strip_html_bold(it.get("description") or "")[:300]
             lines.append(f"- {title}: {desc}")
         out = "\n".join(lines) if lines else "(결과 없음)"
         _log_result(out, api_total=data.get("total"), item_count=len(items))
         return out
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         out = f"(네이버 검색 오류: {exc})"
         _log_result(out)
         return out

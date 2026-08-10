@@ -8,7 +8,7 @@ state 조립, 세션 메타데이터 upsert)을 한곳으로 모은다. 비스�
 from __future__ import annotations
 
 import json
-from typing import Iterator
+from collections.abc import Iterator
 
 from fastapi import HTTPException
 
@@ -74,7 +74,7 @@ class ChatService:
             state = self._agent.get_state(config)
             messages = state.values.get("messages", []) if state and state.values else []
             message_count = len(messages)
-        except Exception:  # noqa: BLE001 - 메타데이터 기록 실패가 답변을 막지 않게 한다
+        except Exception:
             message_count = 0
 
         upsert_chat_session(
@@ -91,7 +91,7 @@ class ChatService:
         state_in, config = self._prepare_inputs(session_id, message, user_uuid)
         try:
             result = self._agent.invoke(state_in, config)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc))
 
         self._record_session(session_id, message, user_uuid, config)
@@ -115,5 +115,5 @@ class ChatService:
                     yield f"data: {json.dumps({'type': 'token', 'content': content}, ensure_ascii=False)}\n\n"
             self._record_session(session_id, message, user_uuid, config)
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)}, ensure_ascii=False)}\n\n"

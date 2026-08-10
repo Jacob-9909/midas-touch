@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from ..llm import build_chat_model
@@ -19,6 +17,7 @@ _INTENT_PROMPT = """당신은 한국인 자산관리 AI의 라우터입니다. �
 
 - persona_rag: 또래 벤치마킹 — "나와 비슷한 투자자들은 어떻게 하나", 권장 자산배분 비율, 또래의 종목/섹터 선호. (의뢰인 본인 유형은 이미 알고 있으니, '비교 대상 또래'가 필요할 때만.)
 - graph_rag: 세법 조항의 법적 근거, 세율·공제 한도의 '출처/근거', 자산 간 관계.
+- doc_rag: 국세청 발간 세법 해설서(『주식과 세금』·『주택과 세금』) 원문 검색. **세법 질문의 기본 도구다.** 대주주 기준·보유액 요건, 증여세/상속세 공제 한도와 계산식, 취득세·재산세·종부세 세율표, 1세대 1주택 비과세 요건, 주택임대소득 과세요건, 신고·납부 절차·기한, 실수 사례 등 구체적 조건·금액·계산식이 필요하면 반드시 고르십시오.
 - tax_and_market_lookup: 특정 자산의 절세 조건이나 현재 시장 수치만 빠르게 확인.
 - product_research: 국내 금융상품의 '현재 금리/조건'을 라이브로(네이버 검색) — 정기예금·적금·연금저축·국채 ETF 등 실시간 상품 비교가 필요할 때.
 - news_research: 미국·일본·한국 기준금리/거시 금리 '동향'을 라이브로(웹 검색) — 최신 금리 흐름·정책 맥락이 필요할 때.
@@ -28,7 +27,7 @@ _INTENT_PROMPT = """당신은 한국인 자산관리 AI의 라우터입니다. �
 - cheongyak_lookup: 최근/예정 청약(분양) 공고를 물을 때(예: "요즘 청약 뭐 있어?", "분양 공고 알려줘").
 
 복합 질문이면 필요한 도구를 여러 개 고르십시오. 단순 인사·잡담 등 데이터가 필요 없는 질문이면
-아무 도구도 고르지 마십시오. 내부 DB(persona_rag/graph_rag/tax_and_market_lookup)로 충분하면
+아무 도구도 고르지 마십시오. 내부 DB(persona_rag/graph_rag/doc_rag/tax_and_market_lookup)로 충분하면
 라이브 도구(product_research/news_research/nts_law_research/stock_backtest/stock_quick/cheongyak_lookup)는 굳이 고르지 마십시오.
 
 tax_and_market_lookup을 골랐고 질문이 특정 자산 종류(예: 주식·채권·예금·부동산)에 한정되면,
@@ -66,13 +65,23 @@ def _is_smalltalk(text: str) -> bool:
     return any(tok in lowered for tok in _SMALLTALK_TOKENS)
 
 
-def _keyword_route(text: str) -> List[str]:
+def _keyword_route(text: str) -> list[str]:
     """structured-output 실패 시 키워드 기반 폴백 라우팅. 모호하면 graph_rag로 근거를 확보한다."""
-    route: List[str] = []
+    route: list[str] = []
     if any(k in text for k in ("유사", "또래", "비슷한", "트윈", "페르소나", "자산배분", "포트폴리오", "추천")):
         route.append("persona_rag")
     if any(k in text for k in ("근거", "출처", "법적", "법령", "조항", "관계")):
         route.append("graph_rag")
+    # 국세청 해설서 원문(doc_rag) — 구체적 세목·요건·계산이 등장하면 원문 발췌를 붙인다.
+    if any(
+        k in text
+        for k in (
+            "대주주", "소액주주", "양도소득", "양도세", "증여", "상속", "취득세", "재산세",
+            "종부세", "종합부동산세", "비과세", "공제", "세율", "세금", "절세", "과세",
+            "신고", "납부", "임대소득", "1세대", "다주택", "장기보유",
+        )
+    ):
+        route.append("doc_rag")
     if any(k in text for k in ("세율", "세금", "절세", "공제", "환율", "금리", "시세", "시장", "지표")):
         route.append("tax_and_market_lookup")
     # 라이브 웹 리서치(현재 금리/상품·금리 동향·국세청 해석)
@@ -100,10 +109,11 @@ def classify_intent(state: AgentState) -> dict:
     class _Route(BaseModel):
         """답변에 필요한 검색 도구 목록과 세법 조회 대상 자산 종류."""
 
-        tools: List[
+        tools: list[
             Literal[
                 "persona_rag",
                 "graph_rag",
+                "doc_rag",
                 "tax_and_market_lookup",
                 "product_research",
                 "news_research",
@@ -113,7 +123,7 @@ def classify_intent(state: AgentState) -> dict:
                 "cheongyak_lookup",
             ]
         ] = Field(default_factory=list)
-        asset_types: List[str] = Field(
+        asset_types: list[str] = Field(
             default_factory=list,
             description="tax_and_market_lookup의 세법 조회를 특정 자산(예: 주식, 채권)으로 좁힐 때만 채운다.",
         )
@@ -126,7 +136,7 @@ def classify_intent(state: AgentState) -> dict:
         )
 
     user_text = latest_user_text(state)
-    asset_types: List[str] = []
+    asset_types: list[str] = []
     ticker: str = ""
 
     # 순수 인사·잡담이면 분류 LLM을 건너뛰고 곧장 작문(도구 없음)으로 보낸다(지연·비용 절감).
@@ -144,7 +154,7 @@ def classify_intent(state: AgentState) -> dict:
         tools = list(dict.fromkeys(result.tools))  # 중복 제거, 순서 유지
         asset_types = list(dict.fromkeys(result.asset_types))
         ticker = (result.ticker or "").strip()
-    except Exception:  # noqa: BLE001 - 분류 실패 시 키워드 폴백
+    except Exception:
         tools = _keyword_route(user_text)
 
     # tool_context=None → 리듀서가 빈 리스트로 리셋(이전 턴 컨텍스트 제거)

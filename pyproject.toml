@@ -63,6 +63,20 @@ dev = [
 line-length = 100
 target-version = "py312"
 
+[tool.ruff.lint]
+# ruff 기본 프로파일을 사용하되, 아래 규칙은 전용 정리 패스 전까지 유예한다.
+ignore = [
+    "B008",  # FastAPI Depends()/Query() 기본인자 관용구 (오탐)
+    # BLE001: broad except 자체는 유예(종류가 많음). 단, silent swallow는 전부 로깅 처리했고
+    #         S110/S112(try-except-pass/continue)는 다시 켜서 무로그 삼킴을 강제 차단한다.
+    "BLE001",
+    # --- TODO(lint-cleanup): 소규모 잔여, 전용 패스에서 정리 ---
+    "TRY401", "PYI034", "SIM117", "B026", "ASYNC230",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # 패키지 재노출(re-export) 관용구
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

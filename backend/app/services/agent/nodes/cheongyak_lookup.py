@@ -20,7 +20,7 @@ def cheongyak_lookup_node(state: AgentState) -> dict:
         rows = fetch_recent_apt(days_back=30, days_forward=60)
     except RuntimeError as exc:  # 키 미설정
         return {"tool_context": [f"[cheongyak_lookup 미수행] {exc}"]}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"tool_context": [f"[cheongyak_lookup 실패] 공공데이터 API 호출 실패: {exc}"]}
 
     if not rows:

@@ -25,6 +25,7 @@ from .nodes import (
     cheongyak_lookup_node,
     classify_intent,
     dispatch,
+    doc_rag_node,
     graph_rag_node,
     news_research_node,
     nts_law_research_node,
@@ -45,6 +46,7 @@ def build_agent(checkpointer):
     builder.add_node("intent", classify_intent)
     builder.add_node("persona_rag", persona_rag_node)
     builder.add_node("graph_rag", graph_rag_node)
+    builder.add_node("doc_rag", doc_rag_node)
     builder.add_node("tax_and_market_lookup", tax_lookup_node)
     # 라이브 웹 리서치 도구 노드(wealth_advisor 이식)
     builder.add_node("product_research", product_research_node)

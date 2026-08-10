@@ -5,6 +5,7 @@
 
 from ._common import TOOL_NODES
 from .cheongyak_lookup import cheongyak_lookup_node
+from .doc_rag import doc_rag_node
 from .graph_rag import graph_rag_node
 from .intent import classify_intent
 from .news_research import news_research_node
@@ -22,6 +23,7 @@ __all__ = [
     "cheongyak_lookup_node",
     "classify_intent",
     "dispatch",
+    "doc_rag_node",
     "graph_rag_node",
     "news_research_node",
     "nts_law_research_node",

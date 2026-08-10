@@ -11,13 +11,12 @@ QuantDinger-inspired additions:
 from __future__ import annotations
 
 import copy
-from datetime import datetime, timedelta
+import logging
 from itertools import product
 
 import numpy as np
 import pandas as pd
 import yfinance as yf
-
 
 # ── Technical indicator helpers (QuantDinger-style, no external lib) ──────────
 
@@ -433,8 +432,7 @@ class StockAnalyzer:
 
             # 1) 보유 중이면 리스크 청산을 먼저 판정하고, 없으면 신호 청산을 본다.
             if s > 0:
-                if px > peak_px:
-                    peak_px = px
+                peak_px = max(peak_px, px)
                 ret = (px - entry_px) / entry_px if entry_px else 0.0
                 draw = (px - peak_px) / peak_px if peak_px else 0.0
                 if sl is not None and ret <= -sl:
@@ -629,7 +627,8 @@ class StockAnalyzer:
             try:
                 res = analyzer.backtest(strategy_name)
                 ret = res["metrics"]["total_return"]
-            except Exception:
+            except Exception as exc:
+                logging.getLogger(__name__).debug("그리드서치 조합 건너뜀: %s", exc)
                 continue
 
             is_best = best_ret is None or ret > best_ret

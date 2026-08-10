@@ -68,5 +68,5 @@ def query_graph_rag(request: QueryRequest) -> QueryResponse:
             subgraph_triplets=triplets,
             source_texts=source_texts,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
