@@ -8,6 +8,7 @@ wealth_advisor의 ai_analysis(Google Gemini)를 midas의 NIM LLM(agent/llm.py:bu
 from __future__ import annotations
 
 import datetime
+import logging
 import os
 
 from shared.utils.timez import today_kst
@@ -225,8 +226,8 @@ def _fetch_vix(as_of: str | None = None) -> str:
         if not hist.empty:
             val = round(float(hist["Close"].iloc[-1]), 2)
             return f"[VIX 변동성지수] value: {val}"
-    except Exception:
-        pass
+    except Exception as exc:
+        logging.getLogger(__name__).warning("VIX 데이터 조회 실패: %s", exc)
     return "[VIX 데이터 없음]"
 
 
@@ -249,6 +250,6 @@ def _fetch_profile(ticker: str) -> str:
                 f"52-Week Range: {p.get('range', 'N/A')}\n"
                 f"Price: {p.get('price', 'N/A')}"
             )
-    except Exception:
-        pass
+    except Exception as exc:
+        logging.getLogger(__name__).warning("기업 프로필 조회 실패: %s", exc)
     return "기업 프로필 데이터 조회 실패"

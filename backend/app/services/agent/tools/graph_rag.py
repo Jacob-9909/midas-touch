@@ -12,6 +12,7 @@ GraphRAG 검색 로직의 **단일 구현처**. `retrieve_graph_context()`가 (�
 
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 
 from langchain_core.tools import tool
@@ -98,8 +99,8 @@ def retrieve_graph_context(query: str) -> tuple[list[str], list[str]]:
             ):
                 if rec.get("name"):
                     node_names.add(rec["name"])
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).debug("그래프 시드 확보 실패, 본문 컨텍스트로 진행: %s", exc)
 
     # 2단계: Cypher로 2-hop 관계망 추출
     subgraph_triplets: list[str] = []

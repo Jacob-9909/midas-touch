@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from typing import Literal
 
@@ -418,8 +419,8 @@ def _do_update_heatmap():
             rate = getattr(fx, "last_price", None) or getattr(fx, "previous_close", None)
             if rate and rate > 0:
                 usdkrw = float(rate)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("USD/KRW 환율 조회 실패, 기본값 사용: %s", exc)
 
         for s in _HEATMAP_STOCKS:
             t_symbol = s["ticker"]
@@ -450,8 +451,8 @@ def _do_update_heatmap():
                         if mcap:
                             # 원화 시총 → 달러 10억 단위 (미국 종목과 동일 축)
                             cap = round(mcap / usdkrw / 1_000_000_000, 1) if is_kr else round(mcap / 1_000_000_000, 1)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).debug("히트맵 종목 처리 건너뜀: %s", exc)
 
             items.append({
                 "ticker": t_symbol,

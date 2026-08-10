@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from collections import Counter
@@ -33,8 +34,9 @@ def record_failure(path: str, exc: Exception, file: Path = FILE) -> None:
         file.parent.mkdir(parents=True, exist_ok=True)
         with file.open("a") as f:
             f.write(f"{time.time():.0f}\t{path}\t{type(exc).__name__}\t{status}\n")
-    except Exception:
-        pass  # 계측이 본 호출을 막으면 본말전도
+    except Exception as stats_exc:
+        # 계측이 본 호출을 막으면 본말전도 — 실패는 debug로만.
+        logging.getLogger(__name__).debug("NIM 통계 기록 실패(무시): %s", stats_exc)
 
 
 def summary(file: Path = FILE) -> dict:

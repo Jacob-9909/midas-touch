@@ -11,6 +11,7 @@ QuantDinger-inspired additions:
 from __future__ import annotations
 
 import copy
+import logging
 from itertools import product
 
 import numpy as np
@@ -626,7 +627,8 @@ class StockAnalyzer:
             try:
                 res = analyzer.backtest(strategy_name)
                 ret = res["metrics"]["total_return"]
-            except Exception:
+            except Exception as exc:
+                logging.getLogger(__name__).debug("그리드서치 조합 건너뜀: %s", exc)
                 continue
 
             is_best = best_ret is None or ret > best_ret

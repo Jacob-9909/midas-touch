@@ -1,5 +1,6 @@
 import asyncio
 import itertools
+import logging
 import os
 import re
 import sys
@@ -405,8 +406,8 @@ async def main():
         repo_id = "Jacob-9909/midas-touch-finance"
         try:
             api.create_repo(repo_id=repo_id, repo_type="dataset", private=True, token=hf_token, exist_ok=True)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).debug("HF 레포 생성 스킵(이미 존재 가능): %s", exc)
         api.upload_file(
             path_or_fileobj=output_file,
             path_in_repo="augmented_personas.csv",

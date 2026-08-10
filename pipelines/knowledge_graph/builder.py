@@ -419,8 +419,8 @@ def build_knowledge_graph(documents: list[Document], delay: float = 0.0, workers
                 logger.warning("⚠️ 사용자에 의해 작업이 인터럽트 되었습니다. 중단을 시도합니다.")
                 executor.shutdown(wait=False, cancel_futures=True)
                 raise
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("KG 빌드 작업 실패: %s", exc)
             
     elapsed = time.perf_counter() - start_time
     logger.info("=" * 60)

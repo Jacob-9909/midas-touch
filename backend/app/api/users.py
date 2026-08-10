@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 
 from shared.database.connector import (
@@ -79,8 +81,8 @@ def _update_macro_cache():
     db_rows = []
     try:
         db_rows = get_latest_market_snapshots()
-    except Exception:
-        pass
+    except Exception as exc:
+        logging.getLogger(__name__).warning("시장 스냅샷 조회 실패: %s", exc)
 
     db_map = {(r.get("data_type"), r.get("sub_key")): r for r in db_rows}
     active_tickers = [item["ticker"] for item in _MACRO_YFINANCE_MAP if item["ticker"]]
@@ -109,8 +111,8 @@ def _update_macro_cache():
                             if last_price and float(last_price) > 0:
                                 val = round(float(last_price), 2)
                                 date_str = today_str
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).debug("종목 시세 조회 건너뜀: %s", exc)
 
             live_snapshots.append({
                 "snapshot_date": date_str,

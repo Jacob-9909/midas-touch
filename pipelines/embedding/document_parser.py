@@ -85,8 +85,8 @@ class FinancialChunker:
         if self.use_token_mode and self.tokenizer is not None:
             try:
                 return len(self.tokenizer.encode(text, add_special_tokens=False))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("토크나이저 길이 계산 실패, 글자 수로 대체: %s", exc)
         return len(text)
 
     def split_text(self, text: str) -> list[str]:
