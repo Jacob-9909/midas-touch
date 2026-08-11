@@ -374,7 +374,9 @@ export function searchTickers(q: string): Promise<TickerSearchItem[]> {
 }
 
 export function getQuickAnalysis(ticker: string): Promise<QuickAnalysis> {
-  return apiGet(`/api/v1/stocks/quick-analysis?ticker=${encodeURIComponent(ticker)}`);
+  // 이 GET은 yfinance 조회 + NIM LLM 다중 시간축 생성을 동기로 수행해 통상 ~10s 걸린다.
+  // 기본 4s 타임아웃(가벼운 메타 GET 기준)이면 항상 abort 되므로 넉넉히 준다.
+  return apiGet(`/api/v1/stocks/quick-analysis?ticker=${encodeURIComponent(ticker)}`, 60000);
 }
 
 export function runBacktest(body: BacktestRequest): Promise<BacktestResult> {
