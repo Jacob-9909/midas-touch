@@ -10,6 +10,13 @@ from __future__ import annotations
 import os
 
 import pytest
+from dotenv import load_dotenv
+
+# pipelines.embedding.config 는 import 시점에 NIM_GENERATION_MODEL 을 필수로 요구한다
+# (하드코딩 기본값 금지 정책). 로컬은 .env 로 채워지지만 CI 엔 없어서 test 수집이 죽는다.
+# 실제 값(.env/시스템 환경변수)을 우선하고, 없을 때만 테스트용 placeholder 를 주입한다.
+load_dotenv()
+os.environ.setdefault("NIM_GENERATION_MODEL", "ci-test-placeholder")
 
 # DB 연결을 실제로 필요로 하는 통합 테스트 클래스.
 # ponytail: 클래스명이 곧 스킵 스위치다. 클래스 rename 시 여기도 갱신.
