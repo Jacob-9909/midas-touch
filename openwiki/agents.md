@@ -42,6 +42,7 @@ Each node is a single file; `graph.py` only imports them and wires the topology 
 | `stock_backtest` | external | Historical performance / backtest for a ticker (yfinance). |
 | `stock_quick` | external | Current technical‑indicator diagnosis (RSI/MACD/MA…). |
 | `cheongyak_lookup` | external | Recent/upcoming housing‑subscription notices (Cheongyak Home). |
+| `doc_rag` | internal | Korean tax‑law text search via National Tax Service documents (full‑text retrieval). |
 | `synthesize` | writer | Single LLM call composing the final answer from `SYSTEM_PROMPT` + profile summary + accumulated `tool_context`. |
 
 Prompts live in `prompts.py`; the shared LLM client in `llm.py`; small helpers in `nodes/_common.py`.
@@ -52,7 +53,7 @@ Prompts live in `prompts.py`; the shared LLM client in `llm.py`; small helpers i
 
 Nodes call retrieval tools rather than embedding the I/O inline:
 
-* `persona_rag.py`, `graph_rag.py`, `tax_lookup.py` — internal DB / Neo4j retrieval.
+* `persona_rag.py`, `graph_rag.py`, `tax_lookup.py`, `doc_rag.py` — internal DB / Neo4j retrieval and Korean tax‑law document search.
 * `_embedding.py` — shared query‑embedding helper (must use the same model that populated `persona_embeddings`).
 * `web/` — live search clients: `naver_web.py`, `tavily_search.py`, `nts_law.py`, with shared `_config.py`.
 

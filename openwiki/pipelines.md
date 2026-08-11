@@ -26,6 +26,8 @@ PYTHONPATH=. uv run python -m pipelines.data_ingestion.ingest_personas --file da
 These pipelines prepare data for **contrastive fine‑tuning** of LLMs.
 
 * `document_parser.py` – Reads raw PDFs/TXTs/MD/JSONL, splits into token‑level chunks, extracts headings and tables, and stores cleaned passages in `emb_passages`.
+* `backfill_passage_embeddings.py` – Generates embeddings for existing `emb_passages` records using the configured model, enabling immediate RAG queries on previously imported data.
+* `cleanup_passages.py` – Cleans up and normalises passage text, removing duplicates and overly short chunks before re‑embedding.
 * `hard_negative_miner.py` – Implements a Retrieval‑Augmented Generation (RAG) style hard‑negative mining using the **BGE‑M3** embedding model. Produces `(query, positive, negative)` triples.
 * `dataset_builder.py` – Combines passages and mined negatives into the final **triplet dataset** (`emb_training_triplets`).
 * `pipeline.py` – Orchestrates the end‑to‑end flow: parsing → embedding → mining → dataset creation. Accepts CLI flags to target a single file or the whole `data/raw_documents/` folder.
