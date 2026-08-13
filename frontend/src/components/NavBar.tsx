@@ -39,7 +39,7 @@ const SAMPLE_USERS = [
 
 export default function NavBar() {
   const pathname = usePathname();
-  const { selected, setSelected } = useSelectedUser();
+  const { selected, setSelected, authEnabled, logout } = useSelectedUser();
   const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -115,6 +115,19 @@ export default function NavBar() {
           {/* 페르소나 유저 퀵 스위처 */}
           {/* truncate가 실제로 걸리려면 축소 사슬 전체에 min-w-0이 있어야 한다.
               하나라도 빠지면 콘텐츠 폭이 하한이 되어 우측 아이콘 버튼이 잘려 나간다. */}
+          {/* 인증 켜짐: 로그인된 본인 + 로그아웃. 꺼짐: 데모 페르소나 스위처. */}
+          {authEnabled && (
+            <button
+              onClick={logout}
+              className="flex min-w-0 max-w-full items-center gap-1.5 whitespace-nowrap rounded-full border border-line/60 px-3 py-1 text-xs text-accent hover:border-accent/60 transition bg-surface/40 font-mono-spec shadow-sm"
+            >
+              <UserCircle weight="fill" size={15} className="shrink-0" />
+              <span className="min-w-0 max-w-[150px] truncate font-medium">
+                {selected ? `${selected.label} · 로그아웃` : "로그아웃"}
+              </span>
+            </button>
+          )}
+          {!authEnabled && (
           <div className="relative min-w-0">
             <button
               onClick={() => setUserDropdownOpen((v) => !v)}
@@ -167,6 +180,7 @@ export default function NavBar() {
               </div>
             )}
           </div>
+          )}
 
           {/* 테마 토글 */}
           <button
