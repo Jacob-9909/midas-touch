@@ -30,6 +30,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState(""); // 스트리밍 대기 구간 진행상태(도구 수집 등)
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [tab, setTab] = useState<"chats" | "kb">("chats");
   const endRef = useRef<HTMLDivElement>(null);
@@ -125,6 +126,7 @@ export default function ChatPage() {
     setInput("");
     setMessages((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
     setBusy(true);
+    setStatus("");
     try {
       await streamChat(
         { session_id: currentId, user_uuid: selected.uuid, message: text },
@@ -137,6 +139,7 @@ export default function ChatPage() {
             };
             return next;
           }),
+        (msg) => setStatus(msg), // 도구 수집 등 진행상태
       );
       await refreshSessions();
     } catch (e) {
@@ -144,6 +147,7 @@ export default function ChatPage() {
       setMessages((m) => m.slice(0, -1)); // 빈 assistant 버블 제거
     } finally {
       setBusy(false);
+      setStatus("");
     }
   };
 
@@ -298,7 +302,12 @@ export default function ChatPage() {
                         m.content ? (
                           <Markdown>{m.content}</Markdown>
                         ) : busy ? (
-                          <span className="caret" />
+                          <span className="inline-flex items-center gap-2 text-muted">
+                            {status && (
+                              <span className="font-mono-spec text-xs">{status}…</span>
+                            )}
+                            <span className="caret" />
+                          </span>
                         ) : null
                       ) : (
                         m.content
