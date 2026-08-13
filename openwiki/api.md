@@ -6,7 +6,7 @@ This repository exposes a **FastAPI** server under the `/api/v1` prefix. The API
 
 * **Path Prefix** – All routes start with `/api/v1`.
 * **Response Models** – Pydantic models are used for request validation and response schemas (see the source files).
-* **Authentication** – Currently there is no auth layer; the UI runs locally and passes a `user_uuid` query/header where required.
+* **Authentication** – Auth routes are available (`/api/v1/auth/login`). The UI can obtain a JWT token via login; if `AUTH_ENABLED` is false, the auth layer is bypassed and `user_uuid` may be passed directly.
 * **Streaming** – The chat endpoint supports Server‑Sent Events (SSE) for token‑by‑token streaming.
 
 ---
@@ -46,7 +46,7 @@ This repository exposes a **FastAPI** server under the `/api/v1` prefix. The API
 | `POST` | `/stocks/memory/validate` | Validate a new analysis against historic patterns; returns calibrated confidence.
 | `POST` | `/stocks/memory/validate-horizons` | Horizon‑level validation of a new analysis.
 | `GET` | `/stocks/watchlist` | Retrieve the current user‑specific watchlist.
-| `GET` | `/stocks/heatmap` | Retrieve live heatmap data for major tickers (cached 5 min).
+| `GET` | `/stocks/heatmap` | Retrieve live heatmap data for major tickers (cached 5 min). Returns `source` (data origin) and `last_updated` timestamp.
 | `POST` | `/stocks/watchlist` | Add a ticker to the watchlist.
 | `DELETE` | `/stocks/watchlist` | Remove a ticker from the watchlist.
 

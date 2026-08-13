@@ -121,6 +121,24 @@ def get_user_by_uuid(uuid: str) -> dict | None:
         return fetchone_dict(cursor)
 
 
+def get_user_by_email(email: str) -> dict | None:
+    """로그인용 — email로 유저 조회(password_hash 포함). email은 lower 정규화 전제."""
+    with db_cursor() as (_, cursor):
+        cursor.execute("SELECT * FROM users WHERE email = %s", [email])
+        return fetchone_dict(cursor)
+
+
+def set_user_credentials(uuid: str, email: str, password_hash: str) -> bool:
+    """기존 유저에 로그인 자격(email/비번해시)을 부여/갱신. 성공 시 True."""
+    with db_cursor() as (_, cursor):
+        cursor.execute(
+            "UPDATE users SET email = %s, password_hash = %s, updated_at = CURRENT_TIMESTAMP "
+            "WHERE uuid = %s",
+            [email.strip().lower(), password_hash, uuid],
+        )
+        return cursor.rowcount > 0
+
+
 def list_users(limit: int = 50, offset: int = 0) -> list[dict]:
     """웹 콘솔 유저 선택용 요약 목록. uuid가 있는 사용자만 노출한다."""
     sql = """
