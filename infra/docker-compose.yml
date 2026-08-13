@@ -27,6 +27,25 @@ services:
       - neo4j_import:/var/lib/neo4j/import
       - neo4j_plugins:/plugins
 
+  backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: midas-backend
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      # 컨테이너 내부에서 DB/그래프 호스트는 compose 서비스명으로 접근한다(.env의 localhost를 덮어씀).
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      NEO4J_URL: bolt://neo4j:7687
+      RUN_BACKGROUND_JOBS: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - neo4j
+
 volumes:
   postgres_data:
   neo4j_data:
