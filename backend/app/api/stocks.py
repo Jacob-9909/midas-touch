@@ -541,7 +541,7 @@ def get_stock_heatmap(force_refresh: bool = False) -> dict:
             }
             for s in _HEATMAP_STOCKS
         ]
-        _HEATMAP_CACHE["last_updated"] = now
+        # last_updated는 0.0 유지 → 아래 TTL 체크가 즉시 라이브 갱신을 띄운다(예전엔 now로 찍어 5분 지연됐다).
         _HEATMAP_CACHE["source"] = "sample_initial"
 
     # 2. 캐시 만료 시 백그라운드 스레드로 비동기 갱신 (메인 스레드 블로킹 방지)
