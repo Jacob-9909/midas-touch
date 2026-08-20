@@ -1,125 +1,98 @@
 # Midas Touch
 
-자산 관리 및 투자 분석을 위한 AI 에이전트 기반 플랫폼입니다. LangGraph 기반 멀티턴 대화, pgvector/Neo4j GraphRAG, 주식 및 청약 데이터 분석, BGE-M3 파인튜닝 파이프라인을 제공합니다.
+> **AI 기반의 올인원 금융 & 자산 어시스턴트**  
+> 복잡한 세법, 주식 분석, 부동산 청약 정보를 AI 에이전트와 대화하며 직관적으로 확인하세요.
 
 ---
 
-## 시스템 흐름
+## 🏛️ 시스템 아키텍처 (Architecture)
 
+<p align="center">
+  <img src="architecture.svg" alt="Midas Touch System Architecture" width="100%" />
+</p>
+
+---
+
+## 📱 핵심 기능
+
+* 💬 **AI 금융 챗봇 (`/chat`)**  
+  * 주식 시세, 세법, 청약 공고, 최신 금융 뉴스를 통합 분석하여 실시간 스트리밍으로 답변합니다.
+  * 복잡한 질문도 필요한 도구들을 스스로 판단해 안전하고 객관적인 정보를 제공합니다.
+
+* 📈 **주식 분석 & 백테스트 (`/stocks`)**  
+  * RSI, MACD 등 주요 기술지표 자동 진단과 AI 분석 코멘트를 제공합니다.
+  * 과거 데이터 기반의 전략 백테스트로 수익률과 리스크를 시뮬레이션합니다.
+
+* 🏠 **부동산 청약 알리미 (`/cheongyak`)**  
+  * 공공데이터 기반 아파트, 오피스텔, 무순위(줍줍), 임대주택 공고를 실시간 조회합니다.
+  * 주택형별 경쟁률, 당첨 가점 커트라인, 특별공급 조건을 한눈에 비교합니다.
+
+* 🕸️ **세법 지식그래프 (`/graph`)**  
+  * 복잡한 세법과 절세 전략을 인터랙티브 2D 네트워크 그래프로 시각화합니다.
+  * AI가 어떤 법령과 근거를 참고했는지 원문과 함께 투명하게 확인합니다.
+
+* 📊 **스마트 대시보드 (`/dashboard`)**  
+  * KOSPI, S&P500, 주요국 기준금리 등 실시간 시장 지표를 모니터링합니다.
+  * 또래 투자자 그룹과의 포트폴리오 비교 및 자산 배분 차트를 제공합니다.
+
+---
+
+## ⚡ 빠른 시작 (Quick Start)
+
+### 1. 사전 준비
+* **Python 3.12+** (`uv` 설치 권장)
+* **Node.js 20+**
+* **Docker** (DB 컨테이너 구동용)
+
+### 2. 환경 설정
+```bash
+# 환경 변수 파일 생성
+cp .env.example .env
 ```
-[User Request] -> [FastAPI /api/v1] -> [LangGraph Intent Router]
-                                              │
-             ┌────────────────────────────────┴──────────────────────────────┐
-             ▼                                                               ▼
-    [PostgreSQL / pgvector / Neo4j]                                  [yfinance / 청약 API / 웹검색]
-    (유저 프로필, 세법, 지식그래프)                                     (주식 시세, 기술지표, 분양 공고)
-             │                                                               │
-             └────────────────────────────────┬──────────────────────────────┘
-                                              ▼
-                                   [Synthesize 작문]
-                                              │
-                                              ▼
-                                [Next.js 16 콘솔 / SSE 스트리밍]
+> `.env` 파일에 NVIDIA NIM, Tavily, 공공데이터 등의 API 키를 입력합니다.
+
+### 3. 앱 실행
+`dev.sh` 스크립트를 실행하면 필요한 DB 컨테이너와 백엔드/프론트엔드가 자동으로 실행됩니다.
+
+```bash
+# 로컬 개발 서버 실행 (Backend :8000 / Frontend :3000)
+./dev.sh
 ```
 
----
-
-## 주요 기능
-
-### 챗봇 (/chat)
-- LangGraph 기반 멀티턴 에이전트 및 PostgresSaver 세션 저장
-- Intent 판정 후 9개 툴 병렬 실행 및 SSE 토큰 스트리밍 응답
-
-### 주식 분석 및 백테스트 (/stocks)
-- yfinance 연동 기술지표 스냅샷(RSI, MACD, KDJ, BB, ATR) 및 진단 코멘트
-- 매매 전략 백테스트, 파라미터 그리드 서치, 과거 분석 이력(stock_analysis_memory) 검증
-
-### 청약 정보 (/cheongyak)
-- 공공데이터 API 기반 APT, 오피스텔, 무순위, 공공임대 공고 조회
-- 주택형별 경쟁률, 당첨 가점, 특별공급 현황 상세 조회 및 챗봇 연계
-
-### 지식그래프 및 GraphRAG (/graph, /query)
-- Neo4j 기반 세법 및 자산 관계 지식그래프 증분 구축
-- D3 Force 2D 시각화 및 근거 서브그래프/원문 출처 조회 API (/query)
-
-### 파인튜닝 파이프라인 (/finetune)
-- 금융 및 세법 문서 파싱, 질문 합성, BGE-M3 대조학습용 Triplet 데이터셋 생성
-- 비동기 subprocess 작업 실행 및 진행률/로그 확인
-
-### 대시보드 및 금리 리서치 (/dashboard, /)
-- 포트폴리오 자산배분 차트 및 또래 투자자 그룹 벤치마킹
-- 주요 시장 지표(KOSPI, S&P500, VIX 등) 및 미·일·한 기준금리 브리핑
+* **웹 콘솔 접속**: [http://localhost:3000](http://localhost:3000)
+* **API 문서 (Swagger)**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-## 기술 스택 및 개발 환경
+## 🛠️ 기술 스택
 
-- **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4
-- **Backend**: Python 3.12, FastAPI, Uvicorn, LangGraph, LangChain, Alembic
-- **Database**: PostgreSQL 16 (pgvector), Neo4j Graph DB
-- **LLM / Model**: NVIDIA NIM (openai/gpt-oss-120b, BAAI/bge-m3), Tavily, yfinance
-- **Package & Tooling**: uv (pyproject.toml 기반 패키지 관리), ruff (린터), pytest (단위/통합 테스트)
+* **Frontend**: Next.js 16 (React 19), Tailwind CSS, GSAP, D3.js
+* **Backend**: FastAPI, LangGraph, LangChain, PostgreSQL (pgvector), Neo4j
+* **AI & Data**: NVIDIA NIM (`gpt-oss-120b`, `bge-m3`), yfinance, 청약홈 공공데이터 API
+* **Tooling**: uv, Docker Compose, pytest, ruff
 
 ---
 
-## 디렉토리 구조
+## 📂 프로젝트 구조
 
 ```
 midas-touch/
-├── openwiki/         # 상세 위키 문서 모음
-├── backend/          # FastAPI REST API 및 에이전트 서비스
-│   └── app/
-│       ├── api/      # HTTP 라우터 (chat, stocks, cheongyak, graph, finetune 등)
-│       └── services/ # 주식 분석 엔진, 청약 클라이언트, 에이전트 노드/툴
-├── frontend/         # Next.js 16 프론트엔드 웹 콘솔
-├── pipelines/        # 데이터 수집, 파인튜닝, Neo4j 빌더 파이프라인
-├── shared/           # PostgreSQL/Neo4j 클라이언트, NIM Rate Limiter
-├── tests/            # 백엔드, 라우터, 단위/통합 테스트
-├── dev.sh            # 개발 환경 실행 스크립트 (Backend + Frontend)
-└── start.sh          # 프로덕션 빌드 및 실행 스크립트
+├── frontend/       # Next.js 웹 콘솔 UI
+├── backend/        # FastAPI API 및 LangGraph 에이전트 서비스
+├── pipelines/      # 데이터 수집, 임베딩, 지식그래프 빌더
+├── shared/         # 공통 DB 커넥터 및 유틸리티
+├── openwiki/       # 상세 아키텍처 및 도메인 문서 모음
+├── dev.sh          # 로컬 개발 통합 실행 스크립트
+└── start.sh        # 프로덕션 실행 스크립트
 ```
 
 ---
 
-## 실행 방법
+## 📖 상세 문서
 
-### 1. 의존성 설치 및 DB 마이그레이션
+시스템 아키텍처, 에이전트 설계, API 명세 등 자세한 내용은 [OpenWiki](openwiki/quickstart.md)를 참고하세요.
 
-`uv` 패키지 관리자를 사용해 개발 및 런처 환경을 동기화합니다.
-
-```bash
-uv sync
-(cd frontend && npm install)
-uv run alembic upgrade head
-```
-
-### 2. 앱 실행
-
-```bash
-# 개발 모드 (백엔드 :8000 / 프론트엔드 :3000)
-./dev.sh
-
-# 프로덕션 모드
-./start.sh
-```
-
-### 3. 코드 린팅 및 테스트
-
-```bash
-# 린팅 (ruff)
-uv run ruff check .
-
-# 테스트 (pytest)
-uv run pytest
-```
-
----
-
-## 참고 문서
-
-상세 기능 및 구조 설명은 [openwiki/](file:///Users/jacob/Develop/midas-touch/openwiki) 디렉토리를 참고하세요.
-
-- [Quickstart](file:///Users/jacob/Develop/midas-touch/openwiki/quickstart.md)
-- [Architecture](file:///Users/jacob/Develop/midas-touch/openwiki/architecture.md)
-- [Agents](file:///Users/jacob/Develop/midas-touch/openwiki/agents.md)
-- [API Reference](file:///Users/jacob/Develop/midas-touch/openwiki/api.md)
+* [OpenWiki Quickstart](openwiki/quickstart.md)
+* [시스템 아키텍처](openwiki/architecture.md)
+* [에이전트 구조](openwiki/agents.md)
+* [API 명세서](openwiki/api.md)
