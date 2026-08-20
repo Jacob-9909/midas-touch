@@ -15,6 +15,13 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
 const NODE_COLOR = "#c7a349";
 const NODE_HI = "#ffffff";
 
+// 엔티티 유형(group)별 색 — 다크 캔버스에서 읽히고 골드 브랜드와 충돌 않는 뮤트 팔레트.
+// 많은 유형 순으로 앞에서부터 배정한다.
+const GROUP_PALETTE = [
+  "#c7a349", "#5eb0b7", "#9b8cff", "#e08aa8",
+  "#7fb069", "#e0a458", "#6aa9e0", "#c98f6a",
+];
+
 export default function GraphView({
   data,
   highlight = [],
@@ -31,6 +38,17 @@ export default function GraphView({
     const m = new Map<string, GraphNode>();
     data.nodes.forEach((n) => m.set(n.id, n));
     return m;
+  }, [data]);
+
+  // 요약 인덱스용 집계: 총 엔티티/관계 수 + 엔티티 유형(group)별 개수(많은 순) + 유형별 색.
+  const summary = useMemo(() => {
+    const byGroup = new Map<string, number>();
+    for (const n of data.nodes) byGroup.set(n.group, (byGroup.get(n.group) ?? 0) + 1);
+    const groups = [...byGroup.entries()].sort((a, b) => b[1] - a[1]);
+    const colorByGroup = new Map<string, string>();
+    groups.forEach(([g], i) => colorByGroup.set(g, GROUP_PALETTE[i % GROUP_PALETTE.length]));
+    const max = groups.length ? groups[0][1] : 1;
+    return { total: data.nodes.length, links: data.links.length, groups, colorByGroup, max };
   }, [data]);
 
   useEffect(() => {
@@ -56,7 +74,9 @@ export default function GraphView({
           // 기본 렌더(커스텀 캔버스 X)라 정지 후 재페인트가 없어 가볍다.
           nodeRelSize={4}
           nodeColor={(n: NodeObject) =>
-            hi.has(String(n.id)) ? NODE_HI : NODE_COLOR
+            hi.has(String(n.id))
+              ? NODE_HI
+              : (summary.colorByGroup.get((n as { group?: string }).group ?? "") ?? NODE_COLOR)
           }
           nodeVal={(n: NodeObject) => (hi.has(String(n.id)) ? 3 : 1)}
           nodeLabel={(n: NodeObject) =>
@@ -71,6 +91,53 @@ export default function GraphView({
             setSelected(nodeById.get(String(n.id)) ?? null)
           }
         />
+
+        {/* 요약 인덱스 — 우상단 기본 표시. 노드를 클릭하면 아래 상세 패널이 이 자리를 대신한다. */}
+        {!selected && (
+          <div className="absolute right-3 top-3 w-60 rounded-lg border border-line bg-[var(--ink-1)]/90 p-3 text-xs shadow-lg backdrop-blur">
+            <div className="mb-1.5 flex items-baseline justify-between gap-2">
+              <span className="text-[10px] uppercase tracking-wider text-muted">그래프 요약</span>
+              <span className="font-mono-spec text-sm font-semibold text-accent">
+                {summary.total}
+                <span className="ml-1 text-[10px] font-normal text-muted">엔티티</span>
+              </span>
+            </div>
+            <p className="mb-2.5 border-b border-line/50 pb-2 text-[11px] text-muted">
+              관계 {summary.links}개 · 유형 {summary.groups.length}종
+            </p>
+            <div className="max-h-52 space-y-2 overflow-auto pr-0.5">
+              {summary.groups.map(([g, c]) => {
+                const color = summary.colorByGroup.get(g);
+                return (
+                  <div key={g} className="flex items-center gap-2">
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span
+                      className="w-14 shrink-0 truncate text-fg"
+                      title={g || "(미분류)"}
+                    >
+                      {g || "(미분류)"}
+                    </span>
+                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-line/30">
+                      <span
+                        className="block h-full rounded-full"
+                        style={{
+                          width: `${Math.max(6, (c / summary.max) * 100)}%`,
+                          backgroundColor: color,
+                        }}
+                      />
+                    </span>
+                    <span className="w-5 shrink-0 text-right font-mono-spec text-muted">
+                      {c}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {selected && (
           <div className="absolute right-3 top-3 max-h-[480px] w-64 overflow-auto rounded-lg border border-line bg-[var(--ink-1)]/95 p-3 text-xs shadow-lg backdrop-blur">
