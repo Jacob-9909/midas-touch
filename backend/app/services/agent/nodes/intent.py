@@ -143,9 +143,19 @@ def classify_intent(state: AgentState) -> dict:
         )
         tools = list(dict.fromkeys(result.tools))  # 중복 제거, 순서 유지
         asset_types = list(dict.fromkeys(result.asset_types))
-        ticker = (result.ticker or "").strip()
     except Exception:  # noqa: BLE001 - 분류 실패 시 키워드 폴백
         tools = _keyword_route(user_text)
+        if "stock_backtest" in tools or "stock_quick" in tools:
+            import re
+            m = re.search(r"\b([A-Za-z]{1,5}|\d{6}(?:\.KS|\.KQ)?)\b", user_text)
+            if m:
+                ticker = m.group(1).upper()
+        if "tax_and_market_lookup" in tools:
+            found_types = []
+            for at in ("주식", "채권", "부동산", "예금", "가상자산", "연금"):
+                if at in user_text:
+                    found_types.append(at)
+            asset_types = found_types
 
     # tool_context=None → 리듀서가 빈 리스트로 리셋(이전 턴 컨텍스트 제거)
     # tax_asset_types/ticker는 매 턴 새로 덮어써 이전 턴 값이 남지 않게 한다.
