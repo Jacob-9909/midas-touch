@@ -61,6 +61,7 @@ def db_cursor():
     """Context manager: 풀에서 커넥션을 빌려 (conn, cursor)를 yield하고, 자동 커밋/롤백 후 반납한다."""
     pool = _get_pool()
     conn = pool.getconn()
+    cursor = None
     try:
         cursor = conn.cursor()
         yield conn, cursor
@@ -69,6 +70,11 @@ def db_cursor():
         conn.rollback()
         raise
     finally:
+        if cursor is not None:
+            try:
+                cursor.close()
+            except Exception:  # noqa: BLE001
+                pass
         pool.putconn(conn)
 
 
