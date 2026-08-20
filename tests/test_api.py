@@ -49,22 +49,14 @@ class TestDashboardRoutes(unittest.TestCase):
         self.assertIn("tax_rules", r.json())
 
 
-class TestFinetuneRoutes(unittest.TestCase):
+class TestGraphUploadRoute(unittest.TestCase):
     def test_upload_rejects_bad_extension(self) -> None:
         files = {"file": ("malware.exe", io.BytesIO(b"x"), "application/octet-stream")}
-        r = client.post("/api/v1/finetune/upload", files=files)
+        r = client.post("/api/v1/graph/upload", files=files)
         self.assertEqual(r.status_code, 400)
 
-    def test_start_job_missing_file_404(self) -> None:
-        r = client.post("/api/v1/finetune/jobs", json={"filename": "__no_such_file__.pdf"})
-        self.assertEqual(r.status_code, 404)
-
-    def test_dataset_preview_missing_404(self) -> None:
-        r = client.get("/api/v1/finetune/datasets?sub_dir=__no_such_subdir__")
-        self.assertEqual(r.status_code, 404)
-
-    def test_job_not_found_404(self) -> None:
-        r = client.get("/api/v1/finetune/jobs/__no_such_job__")
+    def test_ingest_job_missing_file_404(self) -> None:
+        r = client.post("/api/v1/graph/ingest/jobs", json={"filename": "__no_such_file__.pdf"})
         self.assertEqual(r.status_code, 404)
 
 

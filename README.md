@@ -1,6 +1,6 @@
 # Midas Touch
 
-자산 관리 및 투자 분석을 위한 AI 에이전트 기반 플랫폼입니다. LangGraph 기반 멀티턴 대화, pgvector/Neo4j GraphRAG, 주식 및 청약 데이터 분석, BGE-M3 파인튜닝 파이프라인을 제공합니다.
+자산 관리 및 투자 분석을 위한 AI 에이전트 기반 플랫폼입니다. LangGraph 기반 멀티턴 대화, pgvector/Neo4j GraphRAG, 주식 및 청약 데이터 분석을 제공합니다.
 
 ---
 
@@ -42,10 +42,6 @@
 - Neo4j 기반 세법 및 자산 관계 지식그래프 증분 구축
 - D3 Force 2D 시각화 및 근거 서브그래프/원문 출처 조회 API (/query)
 
-### 파인튜닝 파이프라인 (/finetune)
-- 금융 및 세법 문서 파싱, 질문 합성, BGE-M3 대조학습용 Triplet 데이터셋 생성
-- 비동기 subprocess 작업 실행 및 진행률/로그 확인
-
 ### 대시보드 및 금리 리서치 (/dashboard, /)
 - 포트폴리오 자산배분 차트 및 또래 투자자 그룹 벤치마킹
 - 주요 시장 지표(KOSPI, S&P500, VIX 등) 및 미·일·한 기준금리 브리핑
@@ -69,10 +65,10 @@ midas-touch/
 ├── openwiki/         # 상세 위키 문서 모음
 ├── backend/          # FastAPI REST API 및 에이전트 서비스
 │   └── app/
-│       ├── api/      # HTTP 라우터 (chat, stocks, cheongyak, graph, finetune 등)
+│       ├── api/      # HTTP 라우터 (chat, stocks, cheongyak, graph 등)
 │       └── services/ # 주식 분석 엔진, 청약 클라이언트, 에이전트 노드/툴
 ├── frontend/         # Next.js 16 프론트엔드 웹 콘솔
-├── pipelines/        # 데이터 수집, 파인튜닝, Neo4j 빌더 파이프라인
+├── pipelines/        # 데이터 수집, 문서 파싱·임베딩, Neo4j 빌더 파이프라인
 ├── shared/           # PostgreSQL/Neo4j 클라이언트, NIM Rate Limiter
 ├── tests/            # 백엔드, 라우터, 단위/통합 테스트
 ├── dev.sh            # 개발 환경 실행 스크립트 (Backend + Frontend)

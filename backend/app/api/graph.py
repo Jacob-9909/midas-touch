@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from backend.app.services.jobs import PROJECT_ROOT, job_manager
@@ -19,6 +19,7 @@ from shared.database.neo4j_client import fetch_graph_snapshot
 router = APIRouter(prefix="/api/v1/graph", tags=["graph"])
 
 RAW_DIR = PROJECT_ROOT / "data" / "raw_documents"
+SUPPORTED_UPLOAD_SUFFIXES = {".pdf", ".txt", ".md", ".jsonl"}
 
 
 class BuildRequest(BaseModel):
@@ -33,6 +34,22 @@ class IngestRequest(BaseModel):
 def list_documents() -> dict:
     """현재 RAG(emb_passages)에 반영된 문서 목록 — 챗봇 지식베이스 패널용."""
     return {"documents": list_emb_sources()}
+
+
+@router.post("/upload")
+async def upload_document(file: UploadFile = File(...)) -> dict:
+    """금융 문서를 data/raw_documents/에 저장한다 (챗봇 지식베이스 패널의 파일 첨부용)."""
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in SUPPORTED_UPLOAD_SUFFIXES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"지원하지 않는 형식입니다: {suffix} (지원: {sorted(SUPPORTED_UPLOAD_SUFFIXES)})",
+        )
+    RAW_DIR.mkdir(parents=True, exist_ok=True)
+    dest = RAW_DIR / Path(file.filename).name
+    content = await file.read()
+    dest.write_bytes(content)
+    return {"filename": dest.name, "size": len(content)}
 
 
 @router.post("/ingest/jobs")

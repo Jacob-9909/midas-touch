@@ -38,7 +38,7 @@ _STAGE_RE = re.compile(r"\[(\d+)\s*/\s*(\d+)\]")
 @dataclass
 class Job:
     job_id: str
-    kind: str  # "finetune" | "graph_build"
+    kind: str  # "ingest" | "graph_build"
     cmd: list[str]
     status: str = "running"  # running | succeeded | failed
     progress: int = 0  # 0~100 (추정)

@@ -44,7 +44,7 @@ export default function KnowledgePanel() {
     setUploading(true);
     setIngestJobId(null);
     try {
-      const up = await apiUpload<{ filename: string }>("/api/v1/finetune/upload", file);
+      const up = await apiUpload<{ filename: string }>("/api/v1/graph/upload", file);
       const job = await ingestDocument(up.filename);
       setIngestJobId(job.job_id);
       setFile(null);

@@ -8,8 +8,6 @@
 from shared.database.repositories import (
     apply_schema,
     bulk_upsert_emb_passages,
-    bulk_upsert_emb_queries,
-    bulk_upsert_emb_triplets,
     bulk_upsert_market_snapshots,
     bulk_upsert_portfolios,
     bulk_upsert_users,
@@ -38,8 +36,6 @@ from shared.database.repositories import (
 __all__ = [
     "apply_schema",
     "bulk_upsert_emb_passages",
-    "bulk_upsert_emb_queries",
-    "bulk_upsert_emb_triplets",
     "bulk_upsert_market_snapshots",
     "bulk_upsert_portfolios",
     "bulk_upsert_users",
