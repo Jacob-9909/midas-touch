@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, ChatCircleText } from "@phosphor-icons/react";
+import Link from "next/link";
+import { X, ChatCircleText, ChartLineUp } from "@phosphor-icons/react";
 import {
   getCheongyakHousingTypes,
   getCheongyakCompetition,
@@ -32,7 +33,8 @@ interface DetailData {
   special: CheongyakSpecialSupply[];
 }
 
-const SHOW_SCORES_KINDS: CheongyakKind[] = ["apt", "remaining"];
+// 청약가점제(84점 만점)는 APT·무순위 일반공급에만 적용된다 — page.tsx의 가점 계산기도 이 기준을 쓴다.
+export const SHOW_SCORES_KINDS: CheongyakKind[] = ["apt", "remaining"];
 const SHOW_SPECIAL_KINDS: CheongyakKind[] = ["apt"];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -116,6 +118,14 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
       alive = false;
     };
   }, [item, kind]);
+
+  // 자금마련 시뮬레이터로 넘길 목표금액. lttot_top_amount는 만원 단위라 원 단위로 환산하고,
+  // 주택형이 여러 개면 가장 비싼 쪽(최악의 경우) 기준으로 보수적으로 잡는다.
+  const simulatorTarget = Math.max(
+    0,
+    ...(data?.housingTypes.map((h) => Number(h.lttot_top_amount) || 0) ?? [0]),
+  ) * 10_000;
+  const simulatorHref = simulatorTarget > 0 ? `/simulator?target=${simulatorTarget}` : "/simulator";
 
   return (
     <div
@@ -346,9 +356,15 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
               청약홈 공고문 보기 →
             </a>
           )}
+          <Link
+            href={simulatorHref}
+            className="ml-auto flex items-center gap-1.5 rounded-full border border-line px-3.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent"
+          >
+            <ChartLineUp size={15} /> 이 청약으로 자금계획 세우기
+          </Link>
           <button
             onClick={() => onConsult(item)}
-            className="btn-accent ml-auto flex items-center gap-1.5 px-4 py-2 text-sm"
+            className="btn-accent flex items-center gap-1.5 px-4 py-2 text-sm"
           >
             <ChatCircleText size={15} /> 이 청약 상담받기
           </button>

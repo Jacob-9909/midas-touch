@@ -26,7 +26,7 @@ import PopularCard from "@/components/bits/PopularCard";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
 import { Card, PageTitle, Skeleton } from "@/components/ui";
 import { useToast } from "@/lib/toast";
-import DetailModal from "./DetailModal";
+import DetailModal, { SHOW_SCORES_KINDS } from "./DetailModal";
 import KoreaMap from "./KoreaMap";
 import { PROVINCES, matchProvince } from "./korea-geo";
 
@@ -149,10 +149,28 @@ interface ScoreState {
 
 const DEFAULT_SCORE_STATE: ScoreState = { homelessYears: 3, dependents: 0, subscriptionYears: 5 };
 
-function MyScoreCard({ state, onChange }: { state: ScoreState; onChange: (s: ScoreState) => void }) {
+function MyScoreCard({
+  state,
+  onChange,
+  applicable,
+}: {
+  state: ScoreState;
+  onChange: (s: ScoreState) => void;
+  /** 청약가점제(84점제)는 APT·무순위 일반공급에만 적용됨 — 다른 탭에서는 계산기 대신 안내만. */
+  applicable: boolean;
+}) {
   const score = totalCheongyakScore(state);
   const inputClass =
     "w-full rounded-xl border border-line bg-[var(--ink-2)]/50 px-3 py-2 text-sm text-fg outline-none focus:border-accent font-mono-spec tabular-nums";
+
+  if (!applicable) {
+    return (
+      <Card className="text-xs text-muted">
+        이 유형에는 청약가점제(84점 만점)가 적용되지 않습니다 — APT·무순위 일반공급에서만 가점제를 씁니다.
+      </Card>
+    );
+  }
+
   return (
     <Card className="flex flex-col gap-4 sm:flex-row sm:items-end">
       <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
@@ -345,7 +363,7 @@ export default function CheongyakPage() {
         ]}
       />
 
-      <MyScoreCard state={scoreState} onChange={updateScoreState} />
+      <MyScoreCard state={scoreState} onChange={updateScoreState} applicable={SHOW_SCORES_KINDS.includes(kind)} />
 
       <div className="flex flex-wrap items-center gap-2 font-mono-spec text-xs bg-[#090d16]/80 p-1.5 rounded-full border border-line-50">
         {TABS.map((t) => (

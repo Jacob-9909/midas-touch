@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   LineChart,
@@ -50,6 +50,19 @@ export default function SimulatorPage() {
   const [rateA, setRateA] = useState(3.5);
   const [labelB, setLabelB] = useState("청년도약계좌 등 정책상품");
   const [rateB, setRateB] = useState(6.0);
+
+  // 청약 상세모달 "이 청약으로 계획 세우기"에서 넘어온 경우 목표금액을 그 공고 기준으로 채운다.
+  // useSearchParams는 Suspense 경계가 필요해 번거로우니, 이 페이지가 전부 클라이언트 전용인 점을
+  // 이용해 마운트 시 한 번 window.location에서 직접 읽는다.
+  useEffect(() => {
+    const target = Number(new URLSearchParams(window.location.search).get("target"));
+    if (target > 0) {
+      /* eslint-disable react-hooks/set-state-in-effect -- 마운트 시 URL 쿼리에서 초기값 복원(외부 상태 구독) */
+      setTargetMode("custom");
+      setCustomTarget(target);
+      /* eslint-enable react-hooks/set-state-in-effect */
+    }
+  }, []);
 
   const targetAmount = targetMode === "deposit" ? depositRequirement(region, area) : customTarget;
 
