@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Midas Touch Architecture",
+    "output": "midas-touch-architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "chat-flow",
+        "label": "AI Agent Conversation Flow",
+        "focus": ["user", "backend", "agent", "postgres", "nim"],
+        "note": "Multi-turn streaming chat from Next.js console to LangGraph orchestrator."
+      },
+      {
+        "id": "hybrid-rag",
+        "label": "Hybrid Graph & Vector Retrieval",
+        "focus": ["agent", "postgres", "neo4j"],
+        "note": "Dual retrieval across pgvector embeddings and Neo4j knowledge graph."
+      },
+      {
+        "id": "market-external",
+        "label": "Market & Public Data Feeds",
+        "focus": ["agent", "external", "backend"],
+        "note": "Live stock quotes, public housing notices, and Tavily web research."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "Web Console",
+      "sublabel": "Next.js 16 / React 19",
+      "pos": [40, 230],
+      "size": [140, 60]
+    },
+    {
+      "id": "backend",
+      "type": "backend",
+      "label": "FastAPI Gateway",
+      "sublabel": "REST & SSE Stream",
+      "pos": [240, 230],
+      "size": [140, 60]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "LangGraph Agent",
+      "sublabel": "Intent & 9 Tools",
+      "tag": "Orchestrator",
+      "pos": [440, 230],
+      "size": [150, 60]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL 16",
+      "sublabel": "pgvector & Sessions",
+      "pos": [440, 90],
+      "size": [150, 60]
+    },
+    {
+      "id": "neo4j",
+      "type": "database",
+      "label": "Neo4j Graph DB",
+      "sublabel": "Tax & Finance Graph",
+      "pos": [440, 370],
+      "size": [150, 60]
+    },
+    {
+      "id": "nim",
+      "type": "cloud",
+      "label": "NVIDIA NIM",
+      "sublabel": "LLM & BGE-M3",
+      "pos": [720, 140],
+      "size": [150, 60]
+    },
+    {
+      "id": "external",
+      "type": "external",
+      "label": "Market & Public Data",
+      "sublabel": "yfinance / 청약 / Web",
+      "pos": [720, 320],
+      "size": [150, 60]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Core Intelligence Platform",
+      "wraps": ["backend", "agent", "postgres", "neo4j"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "user-to-backend",
+      "from": "user",
+      "to": "backend",
+      "label": "HTTP / SSE",
+      "variant": "emphasis"
+    },
+    {
+      "id": "backend-to-agent",
+      "from": "backend",
+      "to": "agent",
+      "label": "State Graph",
+      "variant": "emphasis"
+    },
+    {
+      "id": "agent-to-pg",
+      "from": "agent",
+      "to": "postgres",
+      "label": "Vector & State",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelDy": -24
+    },
+    {
+      "id": "agent-to-neo4j",
+      "from": "agent",
+      "to": "neo4j",
+      "label": "GraphRAG",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "agent-to-nim",
+      "from": "agent",
+      "to": "nim",
+      "label": "Inference / Embed",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "agent-to-external",
+      "from": "agent",
+      "to": "external",
+      "label": "Live Feeds",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Interactive Client",
+      "items": [
+        "Next.js 16 App Router & Tailwind CSS v4",
+        "ReactBits animated UI with real-time SSE progress streaming"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Agent Orchestration",
+      "items": [
+        "FastAPI backend with LangGraph multi-turn state machine",
+        "Parallel 9-tool execution with objective information framing"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Hybrid Knowledge & Data",
+      "items": [
+        "pgvector semantic search & PostgresSaver checkpoints",
+        "Neo4j GraphRAG for Korean tax legislation & asset relations"
+      ]
+    }
+  ]
+}
