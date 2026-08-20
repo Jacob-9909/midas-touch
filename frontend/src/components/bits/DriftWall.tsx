@@ -300,6 +300,8 @@ const DriftWall = ({
   const renderTile = (item: DriftWallItem, id: string, colIndex: number) => {
     const inner = (
       <span className={innerClass}>
+        {/* 동적 소스 + 호버 애니메이션 타일. next/image 불필요, raw img 유지. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={item.image}
           alt={item.title ?? ''}

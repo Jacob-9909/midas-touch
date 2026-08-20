@@ -87,6 +87,8 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
   useEffect(() => {
     if (isMobile || !cursorRef.current) return;
 
+    // ref가 가리키는 객체는 마운트 동안 안정적이라 cleanup에서 쓰도록 캡처한다.
+    const activeStrength = activeStrengthRef.current;
     const originalCursor = document.body.style.cursor;
     if (hideDefaultCursor) {
       document.body.style.cursor = 'none';
@@ -346,7 +348,7 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
       document.body.style.cursor = originalCursor;
       isActiveRef.current = false;
       targetCornerPositionsRef.current = null;
-      activeStrengthRef.current.current = 0;
+      activeStrength.current = 0;
     };
   }, [
     targetSelector,

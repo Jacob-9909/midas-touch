@@ -4,7 +4,7 @@
    updateDisplacementMap은 모든 시각 prop에 의존하는 명령형 DOM 갱신 함수라
    deps에 넣으면 매 렌더 ResizeObserver가 재구독된다.
    svgSupported 탐지는 SSR에 navigator가 없어 마운트 후 setState가 불가피하다. */
-/* eslint-disable react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/exhaustive-deps */
 
 // React Bits / GlassSurface — SVG 변위 필터로 실제 굴절을 만드는 유리 표면. 이식.
 // 원본과 다른 점 2가지:

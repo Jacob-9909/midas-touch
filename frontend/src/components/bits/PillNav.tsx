@@ -269,6 +269,8 @@ const PillNav: React.FC<PillNavProps> = ({
               background: 'var(--base, #000)'
             }}
           >
+            {/* 동적 로고 소스 + gsap ref. raw img 유지. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logo} alt={logoAlt} ref={logoImgRef} className="w-full h-full object-cover block" />
           </Link>
         ) : (
@@ -286,6 +288,8 @@ const PillNav: React.FC<PillNavProps> = ({
               background: 'var(--base, #000)'
             }}
           >
+            {/* 동적 로고 소스 + gsap ref. raw img 유지. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logo} alt={logoAlt} ref={logoImgRef} className="w-full h-full object-cover block" />
           </a>
         )}
