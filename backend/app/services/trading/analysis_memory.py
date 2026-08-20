@@ -456,7 +456,16 @@ class AnalysisMemory:
 
             import yfinance as yf
 
-            from shared.database.repositories.connection import db_cursor
+            history_cache: dict[str, Any] = {}
+
+            def _get_history(sym: str, s_dt: str, e_dt: str):
+                key = f"{sym}:{s_dt}:{e_dt}"
+                if key not in history_cache:
+                    try:
+                        history_cache[key] = yf.Ticker(sym).history(start=s_dt, end=e_dt)
+                    except Exception:  # noqa: BLE001
+                        history_cache[key] = None
+                return history_cache[key]
 
             with db_cursor() as (_, cur):
                 cur.execute(
@@ -482,8 +491,8 @@ class AnalysisMemory:
                         # 주말·휴일로 target 봉이 밀릴 수 있어 앞뒤로 버퍼를 두고 받는다.
                         start = (created - timedelta(days=2)).strftime("%Y-%m-%d")
                         end = (target + timedelta(days=8)).strftime("%Y-%m-%d")
-                        hist = yf.Ticker(ticker).history(start=start, end=end)
-                        if hist.empty:
+                        hist = _get_history(ticker, start, end)
+                        if hist is None or hist.empty:
                             continue
                         dates = [d.date() for d in hist.index]
                         closes = [float(c) for c in hist["Close"].values]
@@ -527,6 +536,17 @@ class AnalysisMemory:
 
             from shared.database.repositories.connection import db_cursor
 
+            history_cache: dict[str, Any] = {}
+
+            def _get_history(sym: str, s_dt: str, e_dt: str):
+                key = f"{sym}:{s_dt}:{e_dt}"
+                if key not in history_cache:
+                    try:
+                        history_cache[key] = yf.Ticker(sym).history(start=s_dt, end=e_dt)
+                    except Exception:  # noqa: BLE001
+                        history_cache[key] = None
+                return history_cache[key]
+
             max_days = max(_HORIZON_DAYS.values())
             with db_cursor() as (_, cur):
                 # 적어도 24h 경과 + 1m(+버퍼) 이내 + 아직 4개 구간 다 안 채워진 분석만.
@@ -559,8 +579,8 @@ class AnalysisMemory:
 
                         start = (created - timedelta(days=2)).strftime("%Y-%m-%d")
                         end = (created + timedelta(days=max_days + 8)).strftime("%Y-%m-%d")
-                        hist = yf.Ticker(ticker).history(start=start, end=end)
-                        if hist.empty:
+                        hist = _get_history(ticker, start, end)
+                        if hist is None or hist.empty:
                             continue
                         dates = [d.date() for d in hist.index]
                         closes = [float(c) for c in hist["Close"].values]
