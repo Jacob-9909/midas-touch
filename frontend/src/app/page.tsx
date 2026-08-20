@@ -1158,7 +1158,7 @@ export default function HomePage() {
           color="var(--fg)"
           className="font-display"
         />
-        {/* GlareHover 3단 그리드를 스포트라이트 벤토로 승격 — 여정 3단계 + 부가 역량 */}
+        {/* 여정 3단계 + 부가 역량을 스포트라이트 벤토 한 판으로 */}
         <div className="flex justify-center">
           <MagicBento
             glowColor="212, 175, 96"
