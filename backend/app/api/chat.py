@@ -10,10 +10,11 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from backend.app.api.auth import current_uuid, resolve_user_uuid
 from backend.app.services.agent.graph import get_agent
 from backend.app.services.chat_service import ChatService
 from shared.database.repositories.checkpoints import delete_checkpoint_thread
@@ -40,9 +41,10 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest) -> ChatResponse:
+def chat(req: ChatRequest, auth_uuid: str | None = Depends(current_uuid)) -> ChatResponse:
+    uid = resolve_user_uuid(auth_uuid, req.user_uuid)
     try:
-        reply = _service().run(req.session_id, req.message, req.user_uuid)
+        reply = _service().run(req.session_id, req.message, uid)
         return ChatResponse(session_id=req.session_id, reply=reply)
     except HTTPException:
         raise
@@ -51,9 +53,10 @@ def chat(req: ChatRequest) -> ChatResponse:
 
 
 @router.post("/chat/stream")
-def chat_stream(req: ChatRequest) -> StreamingResponse:
+def chat_stream(req: ChatRequest, auth_uuid: str | None = Depends(current_uuid)) -> StreamingResponse:
     """멀티턴 채팅을 SSE로 스트리밍한다(synthesize 노드의 최종 답변 토큰만 흘린다)."""
-    stream = _service().stream(req.session_id, req.message, req.user_uuid)
+    uid = resolve_user_uuid(auth_uuid, req.user_uuid)
+    stream = _service().stream(req.session_id, req.message, uid)
     return StreamingResponse(
         stream,
         media_type="text/event-stream",
