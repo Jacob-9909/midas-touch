@@ -46,3 +46,6 @@ graphify-out/cache/
 
 # OS specific
 .DS_Store
+
+# Local ops scripts / daemon logs (not part of the repo)
+scripts/
