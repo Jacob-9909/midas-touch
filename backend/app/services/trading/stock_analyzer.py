@@ -445,14 +445,18 @@ class StockAnalyzer:
                     exit_reason = "signal"
 
             if s > 0 and exit_reason is not None:
-                c += s * px * (1 - fee)
-                pnl_pct = (px - entry_px) / entry_px if entry_px else 0.0
+                entry_px_net = entry_px * (1 + fee)
+                exit_px_net = px * (1 - fee)
+                pnl_pct = (exit_px_net - entry_px_net) / entry_px_net if entry_px_net else 0.0
+                pnl_amount = s * (exit_px_net - entry_px_net)
+                c += s * exit_px_net
                 trades.append({
                     "entry_date": entry_date,
                     "exit_date": str(idx[i])[:10],
                     "entry_price": round(entry_px, 4),
                     "exit_price": round(px, 4),
                     "pnl_pct": round(pnl_pct, 6),
+                    "pnl_amount": round(pnl_amount, 2),
                     "exit_reason": exit_reason,
                 })
                 s = 0
@@ -516,8 +520,9 @@ class StockAnalyzer:
         loss_ts = [t for t in trades if t["pnl_pct"] <= 0]
         win_rate = len(win_ts) / len(trades) if trades else 0.0
         total_win = sum(t["pnl_pct"] for t in win_ts)
-        total_loss = abs(sum(t["pnl_pct"] for t in loss_ts))
-        profit_factor = (total_win / total_loss) if total_loss > 0 else (float("inf") if total_win > 0 else 0.0)
+        total_win_amount = sum(t.get("pnl_amount", 0) for t in win_ts)
+        total_loss_amount = abs(sum(t.get("pnl_amount", 0) for t in loss_ts))
+        profit_factor = (total_win_amount / total_loss_amount) if total_loss_amount > 0 else (float("inf") if total_win_amount > 0 else 0.0)
         avg_win_pct = total_win / len(win_ts) if win_ts else 0.0
         avg_loss_pct = sum(t["pnl_pct"] for t in loss_ts) / len(loss_ts) if loss_ts else 0.0
         strat_rets = data["Portfolio_Value"].pct_change().dropna()

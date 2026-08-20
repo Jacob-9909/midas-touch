@@ -7,6 +7,7 @@ import { ToastProvider } from "@/lib/toast";
 import NavBar from "@/components/NavBar";
 import AmbientBackground from "@/components/AmbientBackground";
 import ClickSpark from "@/components/bits/ClickSpark";
+import TargetCursor from "@/components/bits/TargetCursor";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -35,6 +36,13 @@ export default function RootLayout({
             <UserProvider>
               {/* 전역 골드 앰비언트 — 앱 전체에서 유일한 WebGL 캔버스 */}
               <AmbientBackground />
+              {/* 코너 브래킷 커서 — .cursor-target 요소에 스냅. 데스크톱 전용(내부에서 터치 무시) */}
+              <TargetCursor
+                targetSelector=".cursor-target"
+                cursorColor="#d4af37"
+                cursorColorOnTarget="#e8c86b"
+                hideDefaultCursor={false}
+              />
               <ClickSpark sparkRadius={18} sparkCount={9} duration={480}>
                 <NavBar />
                 <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">

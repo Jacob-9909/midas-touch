@@ -28,6 +28,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 # 작업 메타/로그 영속화 디렉토리 (서버 재시작에도 이력 보존)
 JOBS_DIR = PROJECT_ROOT / "data" / "jobs"
 _MAX_PERSIST_LOGS = 500
+_MAX_IN_MEMORY_LOGS = 1000
+_MAX_JOBS = 100
 
 # 진행률 추정용 패턴
 #  - 임베딩 파이프라인:  "[2/4] ..." 형태의 단계 로그
@@ -121,6 +123,13 @@ class JobManager:
 
     def start(self, kind: str, cmd: list[str]) -> Job:
         """작업을 등록하고 백그라운드로 subprocess를 실행한다."""
+        # 최대 작업 수 초과 시 완료된 가장 오래된 작업부터 정리
+        if len(self._jobs) >= _MAX_JOBS:
+            completed = [j for j in self._jobs.values() if j.status in {"succeeded", "failed"}]
+            if completed:
+                oldest = min(completed, key=lambda j: j.created_at)
+                self._jobs.pop(oldest.job_id, None)
+
         job_id = uuid.uuid4().hex[:12]
         job = Job(job_id=job_id, kind=kind, cmd=cmd)
         self._jobs[job_id] = job
@@ -158,6 +167,8 @@ class JobManager:
             if not line:
                 continue
             job.logs.append(line)
+            if len(job.logs) > _MAX_IN_MEMORY_LOGS * 2:
+                job.logs = job.logs[-_MAX_IN_MEMORY_LOGS:]
             line_no += 1
             # 진행률 추정: "[n/total]" 단계 로그가 보이면 갱신
             m = _STAGE_RE.search(line)

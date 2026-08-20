@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -43,8 +43,13 @@ class ChatResponse(BaseModel):
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest, auth_uuid: str | None = Depends(current_uuid)) -> ChatResponse:
     uid = resolve_user_uuid(auth_uuid, req.user_uuid)
-    reply = _service().run(req.session_id, req.message, uid)
-    return ChatResponse(session_id=req.session_id, reply=reply)
+    try:
+        reply = _service().run(req.session_id, req.message, uid)
+        return ChatResponse(session_id=req.session_id, reply=reply)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"대화 처리 중 오류가 발생했습니다: {exc}")
 
 
 @router.post("/chat/stream")

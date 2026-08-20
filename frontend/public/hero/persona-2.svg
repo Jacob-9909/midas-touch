@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <radialGradient id="g3" cx="50%" cy="40%" r="75%">
+      <stop offset="0%" stop-color="#3a2436"/>
+      <stop offset="60%" stop-color="#0d1320"/>
+      <stop offset="100%" stop-color="#04060a"/>
+    </radialGradient>
+    <linearGradient id="sheen3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e8c86b" stop-opacity="0.35"/>
+      <stop offset="45%" stop-color="#d4af37" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#04060a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="#04060a"/>
+  <rect width="1200" height="800" fill="url(#g3)"/>
+  <circle cx="552" cy="593" r="254" fill="url(#g3)" opacity="0.16"/><circle cx="1078" cy="210" r="153" fill="url(#g3)" opacity="0.23"/><circle cx="1164" cy="1" r="122" fill="url(#g3)" opacity="0.24"/><circle cx="732" cy="159" r="191" fill="url(#g3)" opacity="0.19"/><circle cx="178" cy="539" r="295" fill="url(#g3)" opacity="0.12"/>
+  <rect width="1200" height="800" fill="url(#sheen3)"/>
+  <line x1="0" y1="11" x2="1200" y2="-29" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="68" x2="1200" y2="28" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="125" x2="1200" y2="85" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="182" x2="1200" y2="142" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="240" x2="1200" y2="200" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="297" x2="1200" y2="257" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="354" x2="1200" y2="314" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="411" x2="1200" y2="371" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="468" x2="1200" y2="428" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="525" x2="1200" y2="485" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="582" x2="1200" y2="542" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="640" x2="1200" y2="600" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="697" x2="1200" y2="657" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="754" x2="1200" y2="714" stroke="rgba(212,175,96,0.06)" stroke-width="1"/>
+  <text x="600" y="756" text-anchor="middle" font-family="monospace" font-size="26" letter-spacing="6" fill="rgba(241,244,249,0.55)">BALANCED · 균형형</text>
+</svg>

@@ -104,7 +104,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
 export async function streamChat(
   body: { session_id: string; user_uuid: string; message: string },
   onToken: (t: string) => void,
-  onStatus?: (msg: string) => void,
+  onStatus?: (msg: string) => void, // 도구 수집 등 대기 구간 진행상태(status 이벤트)
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/api/v1/chat/stream`, {
     method: "POST",
