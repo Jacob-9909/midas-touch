@@ -4,7 +4,8 @@
  * 고정 수치라 실시간 조회 없이 하드코딩함 — 시세·금리처럼 매일 변하는 값이 아님.
  *
  * 확인 방법·일자(2026-08-20): 청약Home 공식 계산기(applyhome.co.kr/ap/apg/selectAddpntCalculatorView.do)
- * 와 주택도시보증공사 안내(khug.or.kr/khmb/m/hg/lg/hglg000020.jsp)를 웹서치로 대조해 브라켓 재검증함.
+ * 와 주택도시보증공사 안내(khug.or.kr/khmb/m/hg/lg/hglg000019.jsp, hglg000020.jsp)를 웹서치로 대조해
+ * 브라켓·부양가족 인정요건 재검증함.
  * 법령 원문(law.go.kr)은 JS 렌더링이라 직접 파싱은 못 했고, 위 두 2차 출처 교차확인으로 대체.
  *
  * 순수 계산이라 판단/자문이 아니라 정보 제공. 무주택자를 전제로 한 계산이다(유주택자는 가점제
@@ -27,6 +28,14 @@ export function homelessPeriodScore(years: number): number {
 export function dependentsScore(dependents: number): number {
   return Math.min(35, 5 + 5 * Math.max(0, Math.floor(dependents)));
 }
+
+/** "부양가족 N명"의 N을 세는 기준. 무주택기간의 '만 30세 미만·미혼=0점'과 같은 종류의 함정이라
+ * 화면에 같이 띄운다 — 부모님 등본에 세대원으로 들어있는 미혼 사회초년생은 부모를 부양가족으로
+ * 넣을 수 없는데(세대주 요건 미충족), 그냥 "부양가족수"만 물으면 2를 넣고 10점을 과대평가한다. */
+export const DEPENDENTS_NOTE =
+  "부양가족 = 모집공고일 기준 본인 주민등록등본에 등재된 세대원(배우자·직계존속·미혼인 직계비속), 본인 제외. " +
+  "직계존속(부모)은 본인이 세대주로서 3년 이상 계속 부양해야 인정되고, 직계비속은 미혼 자녀만(만 30세 이상이면 1년 이상 등재). " +
+  "부모님 등본에 세대원으로 등재된 미혼 사회초년생은 대개 0명입니다.";
 
 /** 청약통장 가입기간(년) → 1~17점. 6개월 미만 1점, 6개월~1년 2점, 이후 1년마다 1점씩 가산, 15년 이상 만점. */
 export function subscriptionPeriodScore(years: number): number {

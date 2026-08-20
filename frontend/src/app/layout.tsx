@@ -17,8 +17,9 @@ const display = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Midas Touch · AI 자산관리 & 투자 에디토리얼 콘솔",
-  description: "금융 에이전트, 파인튜닝셋, 지식그래프 통합 웹 콘솔",
+  title: "Midas Touch · 청약·자금마련 AI 콘솔",
+  description:
+    "무주택 사회초년생을 위한 청약 상담·청약가점 계산·자금마련 타임라인 시뮬레이터. GraphRAG 근거 기반 정보 제공 서비스(투자·세무 자문 아님).",
 };
 
 export default function RootLayout({

@@ -3,7 +3,7 @@ jobs.py
 -------
 인메모리 비동기 작업(JobManager).
 
-긴 배치 파이프라인(임베딩 파인튜닝셋 생성 / 지식그래프 빌드)을 기존 CLI 모듈을
+긴 배치 파이프라인(문서 인입 / 지식그래프 빌드)을 기존 CLI 모듈을
 `asyncio.create_subprocess_exec`로 그대로 실행하고, stdout을 라인 버퍼에 적재한다.
 프론트엔드는 job_id로 상태/진행률/로그 tail을 폴링한다.
 

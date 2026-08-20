@@ -19,7 +19,12 @@ import {
 } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { seedChat } from "@/lib/chat-seed";
-import { MAX_SCORE, SCORE_SOURCE_NOTE, totalCheongyakScore } from "@/lib/cheongyak-score";
+import {
+  DEPENDENTS_NOTE,
+  MAX_SCORE,
+  SCORE_SOURCE_NOTE,
+  totalCheongyakScore,
+} from "@/lib/cheongyak-score";
 import OGHeroCard from "@/components/bits/OGHeroCard";
 import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 import PopularCard from "@/components/bits/PopularCard";
@@ -207,7 +212,7 @@ function MyScoreCard({
           />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs text-muted">부양가족수(명)</span>
+          <span className="text-xs text-muted">부양가족수(명, 본인 제외)</span>
           <input
             type="number"
             min={0}
@@ -239,6 +244,7 @@ function MyScoreCard({
         </div>
       </div>
       </div>
+      <p className="text-[10px] leading-relaxed text-muted/70">{DEPENDENTS_NOTE}</p>
       <p className="text-[10px] text-muted/70">{SCORE_SOURCE_NOTE}</p>
     </Card>
   );

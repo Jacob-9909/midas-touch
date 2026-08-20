@@ -187,7 +187,7 @@ app.add_middleware(
 
 # 멀티턴 에이전트 라우터 (LangGraph 기반 /api/v1/chat)
 app.include_router(chat_router)
-# 웹 콘솔 라우터 (유저/대시보드, 파인튜닝, 지식그래프, GraphRAG 단발 질의)
+# 웹 콘솔 라우터 (유저/대시보드, 지식그래프·문서 인입, GraphRAG 단발 질의)
 app.include_router(users_router)
 app.include_router(graph_router)
 app.include_router(query_router)

@@ -9,7 +9,6 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from pipelines.embedding.config import DEFAULT_CONFIG
 from pipelines.embedding.document_parser import DocumentParser, FinancialChunker
 
 
@@ -36,7 +35,7 @@ def test_financial_chunker():
 
 def test_document_parser_txt_md():
     """DocumentParser의 일반 TXT 및 Markdown 파싱 테스트."""
-    parser = DocumentParser(DEFAULT_CONFIG)
+    parser = DocumentParser()
     
     # 임시 디렉토리 내에 txt, md 테스트 파일 생성
     with tempfile.TemporaryDirectory() as tmp_dir:

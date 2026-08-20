@@ -7,8 +7,6 @@ import { useRouter } from "next/navigation";
 import {
   MagnifyingGlass,
   ArrowRight,
-  UsersThree,
-  ChartPie,
   ChatsCircle,
   ArrowsLeftRight,
   Percent,
@@ -49,21 +47,25 @@ import ScrollVelocity from "@/components/bits/ScrollVelocity";
 import GlareHover from "@/components/bits/GlareHover";
 
 // 단일 여정 3단계 — 랜딩 진입점에서 서비스의 한 문장을 행동으로 풀어준다.
+/** MVP 헤드라인 여정(무주택 사회초년생: 청약 상담 → 목표자금 → 자금마련). docs/mvp-scope.md 기준. */
 const JOURNEY = [
   {
-    icon: UsersThree,
-    title: "투자자 선택",
-    body: "아래에서 나와 조건이 비슷한 투자자 페르소나를 고릅니다.",
-  },
-  {
-    icon: ChartPie,
-    title: "또래 벤치마킹",
-    body: "대시보드에서 유사 투자자들의 권장 자산배분을 내 현황과 나란히 봅니다.",
-  },
-  {
     icon: ChatsCircle,
-    title: "근거로 상담",
-    body: "에이전트에게 물으면 세법·시장·또래 데이터를 근거로 답합니다.",
+    href: "/chat",
+    title: "청약 상담",
+    body: "내 조건에서 어떤 청약 유형·특별공급이 적용되는지, 세법·청약 조문 근거와 함께 정리해 줍니다.",
+  },
+  {
+    icon: Coins,
+    href: "/cheongyak",
+    title: "내 가점·목표자금 확인",
+    body: "실제 공고의 당첨가점과 내 청약가점(84점 기준)을 나란히 보고, 그 공고의 목표금액을 잡습니다.",
+  },
+  {
+    icon: ChartLineUp,
+    href: "/simulator",
+    title: "자금마련 타임라인",
+    body: "지금 저축 계획으로 목표까지 몇 개월인지, 상품을 바꾸면 얼마나 당겨지는지 그래프로 비교합니다.",
   },
 ] as const;
 
@@ -1039,9 +1041,9 @@ export default function HomePage() {
          Editorial Hero Header (OGHeroCard & Swiss Precision)
          ──────────────────────────────────────────────── */}
       <OGHeroCard
-        categoryTag="VOL. 2026 / EDITORIAL CONSOLE"
-        title="자기 전망을 채점하는 AI 자산관리 콘솔"
-        subtitle="주가 전망을 기록해 두고, 기간이 지나면 실제 주가와 대조해 스스로 적중률을 매깁니다. 성적이 낮은 구간에서는 다음 전망의 자신감을 스스로 낮춥니다. 유사 투자자 벤치마크와 세법·지식그래프 근거 상담도 같은 콘솔에서 이어집니다."
+        categoryTag="VOL. 2026 / 청년 자산형성 콘솔"
+        title="무주택 사회초년생을 위한 청약·자금마련 AI 콘솔"
+        subtitle="흩어진 청약 조건과 자금 계획을 한자리에서 정리합니다. 내 조건에 어떤 청약 유형이 적용되는지 세법·청약 조문 근거와 함께 설명하고, 실제 공고의 당첨가점과 내 가점을 나란히 놓고, 목표금액까지 몇 개월 걸리는지 시뮬레이션합니다. 판단을 대신하지 않고 근거를 정리해 보여주는 정보 제공 서비스이며, 투자·세무 자문이 아닙니다."
         badgeContent={
           <div className="hidden sm:block">
             <LiveSyncBadge state="live" label="AI-INTELLIGENCE" latencyMs={5} />
@@ -1057,20 +1059,59 @@ export default function HomePage() {
               href="/chat"
               className="rounded-full border border-accent/40 bg-accent/20 px-4 py-2 text-xs font-mono-spec text-accent hover:bg-accent/30 transition shadow-md"
             >
-              에이전트 상담 시작 →
+              청약 상담 시작 →
             </Link>
             <Link
-              href="/stocks"
+              href="/simulator"
               className="rounded-full border border-line bg-surface/60 px-4 py-2 text-xs font-mono-spec text-fg hover:border-accent/40 transition"
             >
-              주식분석 랩
+              자금마련 시뮬레이터
             </Link>
           </div>
         }
       />
 
       {/* ────────────────────────────────────────────────
-         AI 자기채점 캘리브레이션 — 이 제품의 첫 문장이라 최상단에 둔다.
+         Swiss 3-Step Journey Hairline Grid
+         ──────────────────────────────────────────────── */}
+      <section className="grid gap-px border border-line bg-line/30 sm:grid-cols-3">
+        {JOURNEY.map((s, i) => (
+          <Reveal key={s.title} index={i} className="h-full">
+            {/* 골드 광원이 카드를 사선으로 쓸고 지나간다 — 유리 패널로 읽히게 하는 장치 */}
+            <GlareHover
+              className="h-full"
+              glareColor="#f3e5ab"
+              glareOpacity={0.16}
+              glareAngle={-40}
+              glareSize={220}
+              transitionDuration={780}
+            >
+            <Link
+              href={s.href}
+              className="block h-full bg-[var(--ink-1)] p-6 transition hover:bg-[color-mix(in_srgb,var(--accent)_4%,var(--ink-1))]"
+            >
+              <div className="flex items-center justify-between border-b border-line/40 pb-3">
+                <span className="font-mono-spec text-[10px] font-semibold tracking-widest text-accent">
+                  STEP 0{i + 1}
+                </span>
+                <span className="text-muted">
+                  <s.icon size={18} weight="duotone" />
+                </span>
+              </div>
+              <h2 className="font-display mt-4 text-xl font-semibold text-fg">
+                {s.title}
+              </h2>
+              <p className="mt-2 text-xs leading-relaxed text-muted">{s.body}</p>
+            </Link>
+            </GlareHover>
+          </Reveal>
+        ))}
+      </section>
+
+      {/* ────────────────────────────────────────────────
+         AI 자기채점 캘리브레이션 — 헤드라인(청약·자금마련)이 아니라 엔진 쪽 보조 기능이라
+         3-Step 여정 아래로 내렸다. alpha 미입증(validate_calibration_moat.py, n=133)이라
+         "이 AI가 얼마나 맞았나를 숨기지 않고 보여준다" 이상으로 주장하지 않는다.
          ──────────────────────────────────────────────── */}
       <section className="animate-rise space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1083,9 +1124,10 @@ export default function HomePage() {
           </Link>
         </div>
         <p className="max-w-[76ch] text-xs leading-relaxed text-muted">
-          대부분의 AI는 확신에 찬 답만 내놓고 &ldquo;그거 맞긴 하냐&rdquo;에 답하지 못합니다. 이 콘솔은
-          24시간·3일·1주·1개월 전망을 전부 기록해 두고, 기간이 지나면 실제 주가와 대조해 적중 여부를 채웁니다.
-          그 성적이 다음 전망의 신뢰도를 깎는 근거로 되돌아갑니다.
+          청약 다음 단계로 투자를 볼 때 쓰는 보조 기능입니다. 대부분의 AI는 확신에 찬 답만 내놓고
+          &ldquo;그거 맞긴 하냐&rdquo;에 답하지 못하는데, 이 콘솔은 24시간·3일·1주·1개월 전망을 전부 기록해 두고
+          기간이 지나면 실제 주가와 대조해 적중 여부를 채웁니다. 적중률이 높다는 주장이 아니라, 틀린 기록까지
+          그대로 보여준다는 뜻입니다.
         </p>
 
         {/* 종목 스코프 — "내가 보는 종목에서 이 AI가 얼마나 맞았나"가 초개인화 연결고리다. */}
@@ -1114,40 +1156,6 @@ export default function HomePage() {
         </div>
 
         <MemoryStatsCard ticker={calTicker || undefined} showcase />
-      </section>
-
-      {/* ────────────────────────────────────────────────
-         Swiss 3-Step Journey Hairline Grid
-         ──────────────────────────────────────────────── */}
-      <section className="grid gap-px border border-line bg-line/30 sm:grid-cols-3">
-        {JOURNEY.map((s, i) => (
-          <Reveal key={s.title} index={i} className="h-full">
-            {/* 골드 광원이 카드를 사선으로 쓸고 지나간다 — 유리 패널로 읽히게 하는 장치 */}
-            <GlareHover
-              className="h-full"
-              glareColor="#f3e5ab"
-              glareOpacity={0.16}
-              glareAngle={-40}
-              glareSize={220}
-              transitionDuration={780}
-            >
-            <div className="h-full bg-[var(--ink-1)] p-6 transition hover:bg-[color-mix(in_srgb,var(--accent)_4%,var(--ink-1))]">
-              <div className="flex items-center justify-between border-b border-line/40 pb-3">
-                <span className="font-mono-spec text-[10px] font-semibold tracking-widest text-accent">
-                  PHASE 0{i + 1}
-                </span>
-                <span className="text-muted">
-                  <s.icon size={18} weight="duotone" />
-                </span>
-              </div>
-              <h2 className="font-display mt-4 text-xl font-semibold text-fg">
-                {s.title}
-              </h2>
-              <p className="mt-2 text-xs leading-relaxed text-muted">{s.body}</p>
-            </div>
-            </GlareHover>
-          </Reveal>
-        ))}
       </section>
 
       {/* ────────────────────────────────────────────────
