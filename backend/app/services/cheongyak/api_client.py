@@ -16,6 +16,18 @@ _BASE_CMPET = "https://api.odcloud.kr/api/ApplyhomeInfoCmpetRtSvc/v1"
 # ── Cache (TTL 1 hour) ──────────────────────────────────
 _cache: dict[str, tuple[float, Any]] = {}
 _CACHE_TTL = 3600
+_MAX_CACHE_ENTRIES = 500
+
+
+def _prune_cache(now: float) -> None:
+    """만료된 캐시 항목을 정리하고 최대 개수 초과 시 가장 오래된 항목을 삭제한다."""
+    expired = [k for k, (ts, _) in _cache.items() if now - ts >= _CACHE_TTL]
+    for k in expired:
+        _cache.pop(k, None)
+    if len(_cache) > _MAX_CACHE_ENTRIES:
+        oldest_keys = sorted(_cache.keys(), key=lambda k: _cache[k][0])[: len(_cache) - _MAX_CACHE_ENTRIES]
+        for k in oldest_keys:
+            _cache.pop(k, None)
 
 
 def _get_key() -> str:
@@ -33,9 +45,10 @@ def _get_key() -> str:
 
 
 def _call(endpoint: str, params: dict[str, Any], *, base: str = _BASE_DETAIL) -> dict:
-    """Call data.go.kr API with caching."""
+    """Call data.go.kr API with caching and cache eviction."""
     cache_key = f"{base}/{endpoint}:{sorted(params.items())}"
     now = time.time()
+    _prune_cache(now)
     if cache_key in _cache:
         ts, data = _cache[cache_key]
         if now - ts < _CACHE_TTL:
