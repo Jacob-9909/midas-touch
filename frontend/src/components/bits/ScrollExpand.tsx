@@ -236,6 +236,8 @@ const ScrollExpand: React.FC<ScrollExpandProps> = ({
         playsInline
       />
     ) : (
+      // mediaRef를 gsap로 변형하는 스크롤 확장용. next/image는 ref/변형과 충돌하므로 raw img 유지.
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         ref={mediaRef}
         className="absolute inset-0 w-full h-full object-cover origin-center select-none [will-change:transform]"

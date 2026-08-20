@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Flame, Star, TrendUp } from "@phosphor-icons/react";
+import { Flame, TrendUp } from "@phosphor-icons/react";
 import ShinyText from "./ShinyText";
 
 interface PopularCardProps {

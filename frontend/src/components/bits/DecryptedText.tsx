@@ -344,7 +344,6 @@ export default function DecryptedText({
 
   // text/animateOn이 바뀌면 스크램블 상태를 초기화한다.
   // 외부 입력에 맞춰 애니메이션 상태를 되감는 동기화라 effect가 맞다.
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (animateOn === 'click') {
       encryptInstantly();
@@ -355,7 +354,6 @@ export default function DecryptedText({
     setRevealedIndices(new Set());
     setDirection('forward');
   }, [animateOn, text, encryptInstantly]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const animateProps =
     animateOn === 'hover' || animateOn === 'inViewHover'

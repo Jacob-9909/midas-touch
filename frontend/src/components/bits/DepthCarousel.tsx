@@ -429,6 +429,8 @@ const DepthCarousel = ({
             aria-hidden={active !== i}
             onClick={() => onCardClick(i)}
           >
+            {/* 동적 소스 + object-cover 채움. next/image는 캐러셀 변형과 충돌하므로 raw img 유지. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               className="block h-full w-full select-none object-cover [pointer-events:none] [-webkit-user-drag:none]"
               src={item.image}
