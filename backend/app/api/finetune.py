@@ -7,6 +7,7 @@ JSONL triplet을 프리뷰한다. 파이프라인 로직 자체는 기존 CLI를
 
 from __future__ import annotations
 
+import asyncio
 import json
 import unicodedata
 from pathlib import Path
@@ -34,16 +35,17 @@ class StartJobRequest(BaseModel):
 @router.post("/upload")
 async def upload_document(file: UploadFile = File(...)) -> dict:
     """금융 문서를 data/raw_documents/에 저장한다."""
-    suffix = Path(file.filename or "").suffix.lower()
+    filename = Path(file.filename or "").name
+    suffix = Path(filename).suffix.lower()
     if suffix not in SUPPORTED_SUFFIXES:
         raise HTTPException(
             status_code=400,
             detail=f"지원하지 않는 형식입니다: {suffix} (지원: {sorted(SUPPORTED_SUFFIXES)})",
         )
-    RAW_DIR.mkdir(parents=True, exist_ok=True)
-    dest = RAW_DIR / Path(file.filename).name
+    await asyncio.to_thread(RAW_DIR.mkdir, parents=True, exist_ok=True)
+    dest = RAW_DIR / filename
     content = await file.read()
-    dest.write_bytes(content)
+    await asyncio.to_thread(dest.write_bytes, content)
     return {"filename": dest.name, "size": len(content), "sub_dir": _sub_dir_for(dest.name)}
 
 
@@ -120,7 +122,8 @@ def _count_lines(path: Path) -> int:
 @router.get("/datasets")
 def preview_dataset(sub_dir: str, limit: int = 20) -> dict:
     """생성된 train/eval triplet JSONL을 프리뷰한다 (query/positive/negative/margin)."""
-    base = PROJECT_ROOT / "data" / unicodedata.normalize("NFC", sub_dir) / "dataset"
+    safe_sub_dir = Path(unicodedata.normalize("NFC", sub_dir)).name
+    base = PROJECT_ROOT / "data" / safe_sub_dir / "dataset"
     train_path = base / "train_triplets.jsonl"
     eval_path = base / "eval_triplets.jsonl"
     if not train_path.exists() and not eval_path.exists():
@@ -129,7 +132,7 @@ def preview_dataset(sub_dir: str, limit: int = 20) -> dict:
             detail=f"아직 생성된 데이터셋이 없습니다: {base}",
         )
     return {
-        "sub_dir": sub_dir,
+        "sub_dir": safe_sub_dir,
         "train_count": _count_lines(train_path),
         "eval_count": _count_lines(eval_path),
         "train_preview": _read_jsonl_preview(train_path, limit),
