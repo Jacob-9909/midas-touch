@@ -1,11 +1,14 @@
-/** 청약가점제 점수 계산 (국토부 고시 기준, 84점 만점) — 순수 계산, 공식 표 그대로라
- * 판단/자문이 아니라 정보 제공. 무주택자를 전제로 한 계산이다(유주택자는 가점제 적용 자체가
- * 다르게 갈리므로 이 계산기 범위 밖).
+/** 청약가점제 점수 계산 — 주택공급에 관한 규칙 별표1 기준(84점 만점), 청약Home 공식 계산기
+ * (applyhome.co.kr) 및 주택도시보증공사 안내로 브라켓 재검증함. 순수 계산이라 판단/자문이
+ * 아니라 정보 제공. 무주택자를 전제로 한 계산이다(유주택자는 가점제 적용 자체가 다르게
+ * 갈리므로 이 계산기 범위 밖).
  */
 
 export const MAX_SCORE = 84;
 
-/** 무주택기간(년) → 0~32점. 1년 미만 2점, 이후 1년마다 2점씩 가산, 15년 이상 만점. */
+/** 무주택기간(년, 이미 카운트가 시작된 경우) → 2~32점. 1년 미만 2점, 이후 1년마다 2점씩
+ * 가산, 15년 이상 만점. 카운트 시작 여부 자체(만 30세 미만·미혼이면 0점)는 별도 처리 —
+ * totalCheongyakScore의 under30Unmarried 참고. */
 export function homelessPeriodScore(years: number): number {
   if (years < 0) return 0;
   return Math.min(32, 2 * (Math.floor(years) + 1));
@@ -27,11 +30,20 @@ export interface ScoreInput {
   homelessYears: number;
   dependents: number;
   subscriptionYears: number;
+  /** 무주택기간은 만 30세부터 계산한다(30세 이전 혼인 시 혼인신고일부터 — 그 경우는 이 플래그를
+   * false로 두고 혼인신고일 기준 연차를 homelessYears에 넣으면 됨). 30세 미만이면서 미혼이면
+   * 카운트가 아직 시작 안 해서 연차와 무관하게 0점 — 청약Home 공식 계산기로 확인한 규칙. */
+  under30Unmarried: boolean;
 }
 
-export function totalCheongyakScore({ homelessYears, dependents, subscriptionYears }: ScoreInput): number {
+export function totalCheongyakScore({
+  homelessYears,
+  dependents,
+  subscriptionYears,
+  under30Unmarried,
+}: ScoreInput): number {
   return (
-    homelessPeriodScore(homelessYears) +
+    (under30Unmarried ? 0 : homelessPeriodScore(homelessYears)) +
     dependentsScore(dependents) +
     subscriptionPeriodScore(subscriptionYears)
   );

@@ -145,9 +145,15 @@ interface ScoreState {
   homelessYears: number;
   dependents: number;
   subscriptionYears: number;
+  under30Unmarried: boolean;
 }
 
-const DEFAULT_SCORE_STATE: ScoreState = { homelessYears: 3, dependents: 0, subscriptionYears: 5 };
+const DEFAULT_SCORE_STATE: ScoreState = {
+  homelessYears: 3,
+  dependents: 0,
+  subscriptionYears: 5,
+  under30Unmarried: false,
+};
 
 function MyScoreCard({
   state,
@@ -172,7 +178,20 @@ function MyScoreCard({
   }
 
   return (
-    <Card className="flex flex-col gap-4 sm:flex-row sm:items-end">
+    <Card className="flex flex-col gap-3">
+      <label className="flex items-center gap-2 text-xs text-muted">
+        <input
+          type="checkbox"
+          className="h-3.5 w-3.5 accent-[var(--accent)]"
+          checked={state.under30Unmarried}
+          onChange={(e) => onChange({ ...state, under30Unmarried: e.target.checked })}
+        />
+        만 30세 미만이면서 미혼
+        <span className="text-[10px] text-muted/70">
+          (무주택기간은 만 30세부터 계산 — 30세 이전 혼인 시 혼인신고일부터. 해당하면 무주택기간 0점)
+        </span>
+      </label>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
       <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-xs text-muted">무주택기간(년)</span>
@@ -181,8 +200,9 @@ function MyScoreCard({
             min={0}
             max={30}
             step={0.5}
-            className={inputClass}
-            value={state.homelessYears}
+            disabled={state.under30Unmarried}
+            className={`${inputClass} disabled:opacity-40`}
+            value={state.under30Unmarried ? 0 : state.homelessYears}
             onChange={(e) => onChange({ ...state, homelessYears: Number(e.target.value) })}
           />
         </label>
@@ -218,6 +238,7 @@ function MyScoreCard({
           <span className="text-sm text-muted">/{MAX_SCORE}</span>
         </div>
       </div>
+      </div>
     </Card>
   );
 }
@@ -241,8 +262,9 @@ export default function CheongyakPage() {
     const raw = localStorage.getItem(SCORE_STORAGE_KEY);
     if (raw) {
       try {
+        // 예전 버전 localStorage엔 under30Unmarried 필드가 없을 수 있어 기본값과 병합.
         /* eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 저장된 가점 입력 복원 */
-        setScoreState(JSON.parse(raw));
+        setScoreState({ ...DEFAULT_SCORE_STATE, ...JSON.parse(raw) });
       } catch {
         /* 무시 — 기본값 유지 */
       }
