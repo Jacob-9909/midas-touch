@@ -6,7 +6,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    files: ["src/components/bits/**"],
+    files: ["src/components/bits/**/*.{js,jsx,ts,tsx}", "**/src/components/bits/**/*.{js,jsx,ts,tsx}"],
     rules: {
       "react-hooks/refs": "off",
       "react-hooks/set-state-in-effect": "off",
