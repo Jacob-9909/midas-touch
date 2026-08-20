@@ -19,7 +19,7 @@ import {
 } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { seedChat } from "@/lib/chat-seed";
-import { MAX_SCORE, totalCheongyakScore } from "@/lib/cheongyak-score";
+import { MAX_SCORE, SCORE_SOURCE_NOTE, totalCheongyakScore } from "@/lib/cheongyak-score";
 import OGHeroCard from "@/components/bits/OGHeroCard";
 import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 import PopularCard from "@/components/bits/PopularCard";
@@ -239,6 +239,7 @@ function MyScoreCard({
         </div>
       </div>
       </div>
+      <p className="text-[10px] text-muted/70">{SCORE_SOURCE_NOTE}</p>
     </Card>
   );
 }

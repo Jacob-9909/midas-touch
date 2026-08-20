@@ -17,6 +17,7 @@ import { Card, PageTitle, SectionLabel, fmtKRW, fmtKRWShort } from "@/components
 import { MoneyInput } from "@/components/MoneyInput";
 import {
   AREA_LABELS,
+  DEPOSIT_SOURCE_NOTE,
   REGION_LABELS,
   depositRequirement,
   simulateTimeline,
@@ -146,10 +147,13 @@ export default function SimulatorPage() {
                 목표: {fmtKRW(targetAmount)}
               </div>
               {targetMode === "deposit" && (
-                <p className="text-[11px] leading-relaxed text-muted">
-                  민영주택 청약예치금 기준(국토부 고시)입니다. 실제 계약금·중도금까지 고려하면 실질
-                  필요자금은 이보다 큽니다 — 정확한 분양가를 알고 있으면 &quot;직접 입력&quot;을 쓰세요.
-                </p>
+                <>
+                  <p className="text-[11px] leading-relaxed text-muted">
+                    민영주택 청약예치금 기준(국토부 고시)입니다. 실제 계약금·중도금까지 고려하면 실질
+                    필요자금은 이보다 큽니다 — 정확한 분양가를 알고 있으면 &quot;직접 입력&quot;을 쓰세요.
+                  </p>
+                  <p className="text-[10px] text-muted/70">{DEPOSIT_SOURCE_NOTE}</p>
+                </>
               )}
             </div>
           </Card>
