@@ -6,9 +6,7 @@ import { Play, UploadSimple } from "@phosphor-icons/react";
 import { apiGet, apiPost, apiUpload, type JobState } from "@/lib/api";
 import OGHeroCard from "@/components/bits/OGHeroCard";
 import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
-import PopularCard from "@/components/bits/PopularCard";
-import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
-import { Card, PageTitle } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import JobProgress from "@/components/JobProgress";
 
