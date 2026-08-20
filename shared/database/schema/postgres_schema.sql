@@ -301,10 +301,16 @@ CREATE TABLE emb_passages (
     text        TEXT            NOT NULL,
     source      TEXT            NOT NULL,
     metadata    JSONB           NULL,
+    embedding   VECTOR(1024)    NULL,   -- doc_rag 검색용 bge-m3 임베딩 (백필 전 NULL)
     created_at  TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IX_emb_passages_source ON emb_passages (source);
+
+CREATE INDEX idx_emb_passages_embedding_hnsw
+    ON emb_passages USING hnsw (embedding vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64)
+    WHERE embedding IS NOT NULL;
 
 
 -- ============================================================

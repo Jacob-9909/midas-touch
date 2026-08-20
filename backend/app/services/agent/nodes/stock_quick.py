@@ -10,7 +10,9 @@ intent가 추출한 ticker(state["ticker"])가 있으면 StockAnalyzer.quick_ana
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+from shared.utils.timez import now_kst
 
 from ..state import AgentState
 
@@ -22,16 +24,16 @@ def stock_quick_node(state: AgentState) -> dict:
     if not ticker:
         return {
             "tool_context": [
-                "[stock_quick 안내] 기술적 분석할 종목 티커(예: AAPL, 005930.KS)를 알려주시면 "
-                "RSI·MACD·KDJ·이동평균·볼린저 밴드 등 현재 지표를 분석해 드립니다."
+                ("[stock_quick 안내] 기술적 분석할 종목 티커(예: AAPL, 005930.KS)를 알려주시면 "
+                "RSI·MACD·KDJ·이동평균·볼린저 밴드 등 현재 지표를 분석해 드립니다.")
             ]
         }
 
     try:
         from backend.app.services.trading import StockAnalyzer
 
-        end = datetime.today().strftime("%Y-%m-%d")
-        start = (datetime.today() - timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+        end = now_kst().strftime("%Y-%m-%d")
+        start = (now_kst() - timedelta(days=_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
         analyzer = StockAnalyzer(ticker=ticker, start_date=start, end_date=end)
         analyzer.fetch_data()
         qa = analyzer.quick_analysis()
@@ -56,5 +58,5 @@ def stock_quick_node(state: AgentState) -> dict:
             "(현재 시점 스냅샷. 다중 시간축 전망·차트는 '주식분석'의 빠른 분석 탭 참고.)"
         )
         return {"tool_context": [summary]}
-    except Exception as exc:  # noqa: BLE001 - 외부 데이터/계산 실패는 컨텍스트로 흡수
+    except Exception as exc:
         return {"tool_context": [f"[stock_quick 실패·{ticker}] {exc}"]}

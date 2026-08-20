@@ -14,9 +14,9 @@ from __future__ import annotations
 import json
 import logging
 import random
-from dataclasses import dataclass, asdict
+from collections.abc import Iterator
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterator
 
 from pipelines.embedding.config import PipelineConfig
 from pipelines.embedding.hard_negative_miner import MiningResult
@@ -226,8 +226,7 @@ class DatasetIO:
         """Triplet 리스트를 JSONL 파일로 저장."""
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
-            for t in triplets:
-                f.write(json.dumps(t.to_dict(), ensure_ascii=False) + "\n")
+            f.writelines(json.dumps(t.to_dict(), ensure_ascii=False) + "\n" for t in triplets)
         logger.info("JSONL 저장 완료: %s (%d 행)", path, len(triplets))
 
     @staticmethod

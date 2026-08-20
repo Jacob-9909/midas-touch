@@ -1,16 +1,17 @@
 import asyncio
 import itertools
+import logging
 import os
 import re
 import sys
+
 import pandas as pd
-from datasets import load_dataset
+from dotenv import load_dotenv
 from huggingface_hub import HfApi
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 from tqdm import tqdm as sync_tqdm
 from tqdm.asyncio import tqdm
-from dotenv import load_dotenv
 
 # .env 파일 로드
 load_dotenv()
@@ -20,7 +21,7 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from shared.database.connector import bulk_upsert_users, bulk_upsert_portfolios
+from shared.database.connector import bulk_upsert_portfolios, bulk_upsert_users
 from shared.utils.api_key_rotator import APIKeyRotator
 from shared.utils.nim_rate_limit import reserve
 
@@ -405,8 +406,8 @@ async def main():
         repo_id = "Jacob-9909/midas-touch-finance"
         try:
             api.create_repo(repo_id=repo_id, repo_type="dataset", private=True, token=hf_token, exist_ok=True)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).debug("HF 레포 생성 스킵(이미 존재 가능): %s", exc)
         api.upload_file(
             path_or_fileobj=output_file,
             path_in_repo="augmented_personas.csv",

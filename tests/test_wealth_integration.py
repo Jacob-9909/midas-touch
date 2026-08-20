@@ -15,6 +15,8 @@ import unittest
 from datetime import date, timedelta
 from unittest import mock
 
+from shared.utils.timez import today_kst
+
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
@@ -318,7 +320,7 @@ class TestAnalysisMemory(unittest.TestCase):
         self.assertEqual(_accuracy_by_level([]), {})
 
     def test_calibrate_unknown_level_or_degrade(self) -> None:
-        from backend.app.services.trading.analysis_memory import AnalysisMemory, _LEVEL_RAW_PCT
+        from backend.app.services.trading.analysis_memory import _LEVEL_RAW_PCT, AnalysisMemory
 
         # 매핑 검증
         self.assertEqual(set(_LEVEL_RAW_PCT), {"high", "medium", "low"})
@@ -329,7 +331,6 @@ class TestAnalysisMemory(unittest.TestCase):
         self.assertIsNone(m.calibrate(None))
 
     def test_close_on_or_after(self) -> None:
-        from datetime import date
 
         from backend.app.services.trading.analysis_memory import _close_on_or_after
 
@@ -418,7 +419,7 @@ class TestCheongyakParsing(unittest.TestCase):
     def test_status_for(self) -> None:
         from backend.app.services.cheongyak.api_client import _status_for
 
-        today = date.today()
+        today = today_kst()
         future = (today + timedelta(days=5)).isoformat()
         past = (today - timedelta(days=5)).isoformat()
 

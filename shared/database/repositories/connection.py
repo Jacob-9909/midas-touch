@@ -12,8 +12,8 @@ from contextlib import contextmanager
 from typing import Any
 
 import psycopg2
-from psycopg2 import pool as _pg_pool
 from dotenv import load_dotenv
+from psycopg2 import pool as _pg_pool
 
 load_dotenv()
 
@@ -108,12 +108,17 @@ def apply_schema(schema_path: str | None = None) -> None:
     with open(schema_path, "r", encoding="utf-8") as f:
         sql = f.read()
 
-    with db_cursor() as (conn, cursor):
+    with db_cursor() as (_conn, cursor):
         cursor.execute(sql)
     print("Schema applied successfully!")
 
 
 __all__ = [
-    "_get_database_url", "get_connection", "db_cursor",
-    "fetchall_dicts", "fetchone_dict", "apply_schema", "Any",
+    "Any",
+    "_get_database_url",
+    "apply_schema",
+    "db_cursor",
+    "fetchall_dicts",
+    "fetchone_dict",
+    "get_connection",
 ]

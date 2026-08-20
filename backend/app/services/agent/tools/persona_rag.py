@@ -13,7 +13,7 @@ NOTE: 의뢰인 '본인'의 유형은 API 레이어가 주입하는 profile_summ
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from langchain_core.tools import tool
 
@@ -40,7 +40,7 @@ def persona_rag(query: str, top_k: int = 3) -> str:
     similar = search_similar_personas_db(query_vector, top_k=top_k)
 
     # 3. 구조화 프로필 동기화
-    twin_profiles: List[Dict[str, Any]] = []
+    twin_profiles: list[dict[str, Any]] = []
     for sp in similar:
         profile = get_user_by_uuid(sp.get("azure_user_uuid"))
         if profile:
@@ -50,9 +50,9 @@ def persona_rag(query: str, top_k: int = 3) -> str:
     return _format_twin_context(twin_profiles)
 
 
-def _format_twin_context(twin_profiles: List[Dict[str, Any]]) -> str:
+def _format_twin_context(twin_profiles: list[dict[str, Any]]) -> str:
     """검색된 트윈 페르소나를 LLM 프롬프트용 정제 텍스트 블록으로 포맷한다."""
-    lines: List[str] = ["### 유사 성향 투자자 페르소나 군집 (벤치마킹용, Users Database)"]
+    lines: list[str] = ["### 유사 성향 투자자 페르소나 군집 (벤치마킹용, Users Database)"]
     if not twin_profiles:
         lines.append(" - 매칭된 유사 페르소나가 없습니다.")
         return "\n".join(lines)

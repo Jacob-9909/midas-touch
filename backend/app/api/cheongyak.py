@@ -8,7 +8,7 @@ CHEONGYAK_API_KEY 미설정 시 RuntimeError → 500(명확한 안내 detail).
 from __future__ import annotations
 
 import asyncio
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -36,7 +36,7 @@ async def _run_list(fn: Callable[[int, int], list[dict]], days_back: int, days_f
         return await asyncio.to_thread(fn, days_back, days_forward)
     except RuntimeError as exc:  # 키 미설정
         raise HTTPException(status_code=500, detail=str(exc))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=502, detail=f"공공데이터 API 호출 실패: {exc}")
 
 
@@ -45,7 +45,7 @@ async def _run_detail(fn: Callable[[str, str], list[dict]], house_manage_no: str
         return await asyncio.to_thread(fn, house_manage_no, pblanc_no)
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=502, detail=f"공공데이터 API 호출 실패: {exc}")
 
 

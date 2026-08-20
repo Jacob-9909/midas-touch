@@ -40,6 +40,6 @@ def format_tavily_result(raw: Any, *, max_chars: int = 3500) -> str:
 def tavily_search_body(tool: Any, query: str) -> str:
     try:
         raw = tool.invoke({"query": query})
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return f"(Tavily 요청 실패: {exc})"
     return format_tavily_result(raw, max_chars=4000)

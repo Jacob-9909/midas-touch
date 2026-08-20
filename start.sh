@@ -73,9 +73,19 @@ run_frontend() {
   (cd "$ROOT/frontend" && PORT="$FRONTEND_PORT" npm run start)
 }
 
+# ── DB 컨테이너 보장 (도커) — 이미 실행 중이면 no-op(멱등) ────────
+# 서버는 떴는데 DB가 꺼져 있어 자동배치가 조용히 빈 채로 도는 함정 방지.
+ensure_db() {
+  command -v docker >/dev/null 2>&1 || { echo "⚠️  docker 없음 — DB 스킵(앱은 graceful degrade)"; return 0; }
+  docker start midas-postgres midas-neo4j >/dev/null 2>&1 \
+    && echo "🗄️  DB 컨테이너 확인(midas-postgres·midas-neo4j)" \
+    || echo "⚠️  DB 컨테이너 기동 실패 — 이름 확인 필요(docker ps -a)"
+}
+
 case "$MODE" in
   backend)
     command -v uv >/dev/null 2>&1 || { echo "❌ uv 미설치" >&2; exit 1; }
+    ensure_db
     run_backend
     ;;
   frontend)
@@ -91,6 +101,7 @@ case "$MODE" in
     echo " Midas Touch (production, reload=$RELOAD) — Ctrl+C 로 모두 종료"
     echo "────────────────────────────────────────────"
     trap 'echo; echo "🛑 종료 중…"; kill 0 2>/dev/null' INT TERM EXIT
+    ensure_db
     run_backend &
     run_frontend &
     wait

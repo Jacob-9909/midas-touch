@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import time
@@ -71,8 +72,8 @@ class Job:
             (JOBS_DIR / f"{self.job_id}.json").write_text(
                 json.dumps(data, ensure_ascii=False), encoding="utf-8"
             )
-        except Exception:  # noqa: BLE001 - 영속화 실패가 작업을 막지 않도록
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("작업 상태 영속화 실패: %s", exc)
 
 
 class JobManager:
@@ -107,7 +108,8 @@ class JobManager:
                     job.error = "서버 재시작으로 작업이 중단되었습니다."
                     job.finished_at = job.finished_at or time.time()
                 self._jobs[job.job_id] = job
-            except Exception:  # noqa: BLE001
+            except Exception as exc:
+                logging.getLogger(__name__).warning("영속화된 작업 로드 실패, 건너뜀: %s", exc)
                 continue
 
     def get(self, job_id: str) -> Job | None:
@@ -151,7 +153,7 @@ class JobManager:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             job.status = "failed"
             job.error = f"프로세스 시작 실패: {exc}"
             job.finished_at = time.time()

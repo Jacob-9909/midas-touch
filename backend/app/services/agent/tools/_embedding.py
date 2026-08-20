@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
-from typing import List
 
 from sentence_transformers import SentenceTransformer
 
@@ -32,7 +31,7 @@ def get_embedding_model() -> SentenceTransformer:
     return _model
 
 
-def embed(text: str) -> List[float]:
+def embed(text: str) -> list[float]:
     """단일 텍스트를 1024차원 bge-m3 벡터로 인코딩한다 (persona_embeddings 적재와 동일 방식)."""
     return get_embedding_model().encode(text).tolist()
 
@@ -48,19 +47,19 @@ def get_llamaindex_embedding():
     class _SharedBGEM3Embedding(BaseEmbedding):
         """모듈 전역 bge-m3 SentenceTransformer를 재사용하는 LlamaIndex 임베딩."""
 
-        def _get_query_embedding(self, query: str) -> List[float]:
+        def _get_query_embedding(self, query: str) -> list[float]:
             return embed(query)
 
-        def _get_text_embedding(self, text: str) -> List[float]:
+        def _get_text_embedding(self, text: str) -> list[float]:
             return embed(text)
 
-        def _get_text_embeddings(self, texts: List[str]) -> List[List[float]]:
+        def _get_text_embeddings(self, texts: list[str]) -> list[list[float]]:
             return get_embedding_model().encode(texts).tolist()
 
-        async def _aget_query_embedding(self, query: str) -> List[float]:
+        async def _aget_query_embedding(self, query: str) -> list[float]:
             return self._get_query_embedding(query)
 
-        async def _aget_text_embedding(self, text: str) -> List[float]:
+        async def _aget_text_embedding(self, text: str) -> list[float]:
             return self._get_text_embedding(text)
 
     return _SharedBGEM3Embedding(model_name=EMBEDDING_MODEL_NAME, embed_batch_size=16)

@@ -8,7 +8,10 @@ wealth_advisor의 ai_analysis(Google Gemini)를 midas의 NIM LLM(agent/llm.py:bu
 from __future__ import annotations
 
 import datetime
+import logging
 import os
+
+from shared.utils.timez import today_kst
 
 from ..agent.llm import build_chat_model
 
@@ -107,20 +110,25 @@ def generate_quick_report(
     indicators: dict,
     similar_patterns: list[dict] | None = None,
     level_accuracy: dict | None = None,
+    as_of: str | None = None,
 ) -> dict:
     """Multi-horizon outlook (24h/3d/1w/1m) from technical snapshot.
 
     QuantDinger fast_analysis style: one LLM call with structured JSON output.
     similar_patterns가 주어지면 '과거 유사 사례'를, level_accuracy가 주어지면 '자신감별 과거 적중률'을
     프롬프트에 컨텍스트로 주입해 LLM이 confidence를 현실적으로 내도록 유도한다.
+    as_of("YYYY-MM-DD")를 주면 과거 시점 재현 모드 — 시장 컨텍스트에 '오늘' 값이 새지 않게 한다.
     Returns dict with decision/confidence/outlook/key_reasons/risks.
     Fails gracefully: returns {"error": reason} without raising.
     """
     import json
 
-    fng_text = _fetch_fng()
-    vix_text = _fetch_vix()
-    profile_text = _fetch_profile(ticker)
+    # as_of 모드에서 오늘의 FNG·기업프로필(현재가·52주 레인지 포함)을 넣으면 그대로 룩어헤드다.
+    # 과거 값을 받을 경로가 없는 둘은 생략하고, 소급조회가 되는 VIX만 해당 시점 종가로 받는다.
+    # ponytail: FNG 과거 시계열이 필요하면 alternative.me API로 채워 넣을 수 있다.
+    fng_text = "[탐욕공포지수 데이터 없음]" if as_of else _fetch_fng()
+    vix_text = _fetch_vix(as_of)
+    profile_text = "기업 프로필 데이터 없음 (과거 시점 재현)" if as_of else _fetch_profile(ticker)
     memory_text = _format_similar_patterns(similar_patterns)
     accuracy_text = _format_level_accuracy(level_accuracy)
 
@@ -203,19 +211,23 @@ def _fetch_fng() -> str:
         return "[탐욕공포지수 데이터 없음]"
 
 
-def _fetch_vix() -> str:
+def _fetch_vix(as_of: str | None = None) -> str:
+    """VIX 종가. as_of("YYYY-MM-DD")를 주면 그 날짜까지의 마지막 종가만 본다(룩어헤드 차단)."""
     try:
         import yfinance as yf
 
         vix = yf.Ticker("^VIX")
-        today = datetime.date.today().strftime("%Y-%m-%d")
-        yesterday = (datetime.date.today() - datetime.timedelta(days=2)).strftime("%Y-%m-%d")
-        hist = vix.history(start=yesterday, end=today)
+        anchor = datetime.date.fromisoformat(as_of) if as_of else today_kst()
+        # yfinance의 end는 배타적 → anchor 당일 봉까지 포함하려면 +1일. 휴일 대비로 10일치를 받는다.
+        hist = vix.history(
+            start=(anchor - datetime.timedelta(days=10)).isoformat(),
+            end=(anchor + datetime.timedelta(days=1)).isoformat(),
+        )
         if not hist.empty:
             val = round(float(hist["Close"].iloc[-1]), 2)
             return f"[VIX 변동성지수] value: {val}"
-    except Exception:
-        pass
+    except Exception as exc:
+        logging.getLogger(__name__).warning("VIX 데이터 조회 실패: %s", exc)
     return "[VIX 데이터 없음]"
 
 
@@ -238,6 +250,6 @@ def _fetch_profile(ticker: str) -> str:
                 f"52-Week Range: {p.get('range', 'N/A')}\n"
                 f"Price: {p.get('price', 'N/A')}"
             )
-    except Exception:
-        pass
+    except Exception as exc:
+        logging.getLogger(__name__).warning("기업 프로필 조회 실패: %s", exc)
     return "기업 프로필 데이터 조회 실패"

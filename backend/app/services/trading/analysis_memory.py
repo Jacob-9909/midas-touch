@@ -16,7 +16,8 @@ quick_analysis()의 기술지표 스냅샷과 AI 전망(decision/outlook)을 Pos
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
+from datetime import datetime, timedelta
+from typing import Any
 
 _CREATE_SQL = """
 CREATE TABLE IF NOT EXISTS stock_analysis_memory (
@@ -149,7 +150,7 @@ def _accuracy_by_level(rows: list[tuple[str, bool]]) -> dict[str, dict]:
     return out
 
 
-def _close_on_or_after(dates: list, closes: list, target) -> Optional[float]:
+def _close_on_or_after(dates: list, closes: list, target) -> float | None:
     """target(날짜) 이상인 첫 봉의 종가. 주말·휴일이면 그 다음 거래일로 자동 이월.
 
     dates는 오름차순 가정. target 이후 봉이 아직 없으면(미래) None → 호출부가 다음 사이클로 미룸.
@@ -162,7 +163,7 @@ def _close_on_or_after(dates: list, closes: list, target) -> Optional[float]:
 
 
 def _judge_outcome(
-    decision: Optional[str],
+    decision: str | None,
     ret_pct: float,
     move_band: float = _BUY_SELL_BAND_PCT,
     hold_band: float = _HOLD_BAND_PCT,
@@ -217,7 +218,26 @@ def _feature_vector(indicators: dict) -> list[float]:
     ]
 
 
-def calibrated_level(pct: Optional[float]) -> Optional[str]:
+def _asof_window(as_of: datetime | None, days: int) -> tuple[list[str], list]:
+    """'해당 시점에 이미 결과가 공개돼 있던' 분석만 고르는 WHERE 조각 + 파라미터. 순수 함수.
+
+    as_of=None(실시간 경로)이면 기존과 동일하게 NOW() 기준 최근 days일.
+    as_of가 주어지면(과거 시점 재현·백필) 그 시점보다 최소 _VALIDATION_HORIZON_DAYS 이전 건만
+    남긴다. 채점 결과는 분석시점 +N일이 지나야 나오므로, 그보다 최근 건을 쓰면 '미래를 보고
+    자신감을 보정'하는 룩어헤드가 된다.
+    """
+    if as_of is None:
+        return ["created_at > NOW() - (%s || ' days')::interval"], [int(days)]
+    return (
+        [
+            "created_at > %s::timestamp - (%s || ' days')::interval",
+            "created_at < %s::timestamp - (%s || ' days')::interval",
+        ],
+        [as_of, int(days), as_of, _VALIDATION_HORIZON_DAYS],
+    )
+
+
+def calibrated_level(pct: float | None) -> str | None:
     """보정 적중률(%) → 자신감 레벨. None이면 None(보정 불가). 결정에 실제 반영하는 매핑."""
     if pct is None:
         return None
@@ -245,7 +265,7 @@ class AnalysisMemory:
                 cur.execute(_INDEX_SQL)
                 cur.execute(_CREATE_HORIZON_SQL)
             self._available = True
-        except Exception:  # noqa: BLE001 - DB 없거나 권한 없으면 메모리 기능만 비활성
+        except Exception:
             self._available = False
             return
 
@@ -260,12 +280,17 @@ class AnalysisMemory:
                     f"ADD COLUMN IF NOT EXISTS feature_vec vector({_FEATURE_DIM})"
                 )
             self._vec_available = True
-        except Exception:  # noqa: BLE001 - pgvector 미설치/권한 없음 → 폴백
+        except Exception:
             self._vec_available = False
 
     # ── 저장 ────────────────────────────────────────────
-    def _find_duplicate(self, ticker: str, indicators: dict) -> Optional[int]:
-        """같은 종목·같은 날 직전 분석과 거의 동일(≥_DEDUP_SIM_THRESHOLD)하면 그 id 반환(중복 방지)."""
+    def _find_duplicate(
+        self, ticker: str, indicators: dict, as_of: datetime | None = None
+    ) -> int | None:
+        """같은 종목·같은 날 직전 분석과 거의 동일(≥_DEDUP_SIM_THRESHOLD)하면 그 id 반환(중복 방지).
+
+        as_of를 주면 '오늘'이 아니라 그 날짜를 기준으로 본다(과거 시점 백필의 재실행 안전장치).
+        """
         try:
             from shared.database.repositories.connection import db_cursor
 
@@ -274,18 +299,19 @@ class AnalysisMemory:
                     """
                     SELECT id, indicators_snapshot
                     FROM stock_analysis_memory
-                    WHERE ticker = %s AND created_at::date = NOW()::date
+                    WHERE ticker = %s
+                      AND created_at::date = COALESCE(%s::timestamp, NOW()::timestamp)::date
                     ORDER BY created_at DESC
                     LIMIT 1
                     """,
-                    (ticker.upper(),),
+                    (ticker.upper(), as_of),
                 )
                 row = cur.fetchone()
             if not row:
                 return None
             sim = _similarity(indicators, _safe_json(row[1], {}))
             return int(row[0]) if sim >= _DEDUP_SIM_THRESHOLD else None
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
 
     def store(
@@ -293,19 +319,21 @@ class AnalysisMemory:
         ticker: str,
         indicators: dict,
         outlook: dict,
-        price: Optional[float] = None,
-    ) -> Optional[int]:
+        price: float | None = None,
+        created_at: datetime | None = None,
+    ) -> int | None:
         """분석 1건을 저장하고 id를 반환. 실패/미가용 시 None.
 
         같은 종목·같은 날 거의 동일한 스냅샷이면 새로 적재하지 않고 기존 id를 반환한다(메모리 오염 방지).
         pgvector 가용 시 교차종목 유사검색용 특징 벡터(feature_vec)도 함께 적재한다.
+        created_at을 주면 그 시각으로 백데이팅한다(과거 시점 백필). 없으면 기존대로 NOW().
         """
         if not self._available:
             return None
         try:
             from shared.database.repositories.connection import db_cursor
 
-            dup_id = self._find_duplicate(ticker, indicators)
+            dup_id = self._find_duplicate(ticker, indicators, as_of=created_at)
             if dup_id is not None:
                 return dup_id
 
@@ -327,8 +355,9 @@ class AnalysisMemory:
                 sql = """
                     INSERT INTO stock_analysis_memory
                         (ticker, decision, confidence, price_at_analysis, summary,
-                         indicators_snapshot, outlook, feature_vec)
-                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::vector)
+                         indicators_snapshot, outlook, feature_vec, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::vector,
+                            COALESCE(%s::timestamp, NOW()))
                     RETURNING id
                 """
                 params.append(_feature_vector(indicators))
@@ -336,29 +365,41 @@ class AnalysisMemory:
                 sql = """
                     INSERT INTO stock_analysis_memory
                         (ticker, decision, confidence, price_at_analysis, summary,
-                         indicators_snapshot, outlook)
-                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)
+                         indicators_snapshot, outlook, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb,
+                            COALESCE(%s::timestamp, NOW()))
                     RETURNING id
                 """
+            params.append(created_at)
 
             with db_cursor() as (_, cur):
                 cur.execute(sql, tuple(params))
                 row = cur.fetchone()
             return int(row[0]) if row else None
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
 
     # ── 유사 패턴 검색 ───────────────────────────────────
     def _fetch_candidates(
-        self, ticker: str, indicators: dict, limit: int, cross_ticker: bool
+        self,
+        ticker: str,
+        indicators: dict,
+        limit: int,
+        cross_ticker: bool,
+        as_of: datetime | None = None,
     ) -> list[tuple]:
-        """유사 후보 행을 가져온다. pgvector 가용 시 특징벡터 거리순(교차종목), 아니면 최근 동일종목."""
+        """유사 후보 행을 가져온다. pgvector 가용 시 특징벡터 거리순(교차종목), 아니면 최근 동일종목.
+
+        as_of를 주면 그 시점 이전에 기록된 분석만 후보로 삼는다(과거 시점 재현 시 룩어헤드 차단).
+        """
         from shared.database.repositories.connection import db_cursor
 
         cols = (
             "id, decision, confidence, price_at_analysis, summary, "
             "indicators_snapshot, created_at, was_correct, actual_return_pct, ticker"
         )
+        asof_sql = "" if as_of is None else "AND created_at < %s"
+        asof_p: list = [] if as_of is None else [as_of]
         with db_cursor() as (_, cur):
             if self._vec_available:
                 # 교차종목: feature_vec 코사인 거리순. cross_ticker=False면 동일종목으로 제한.
@@ -366,22 +407,28 @@ class AnalysisMemory:
                     f"""
                     SELECT {cols}
                     FROM stock_analysis_memory
-                    WHERE feature_vec IS NOT NULL AND (%s OR ticker = %s)
+                    WHERE feature_vec IS NOT NULL AND (%s OR ticker = %s) {asof_sql}
                     ORDER BY feature_vec <=> %s::vector
                     LIMIT %s
                     """,
-                    (bool(cross_ticker), ticker.upper(), _feature_vector(indicators), limit * 8),
+                    (
+                        bool(cross_ticker),
+                        ticker.upper(),
+                        *asof_p,
+                        _feature_vector(indicators),
+                        limit * 8,
+                    ),
                 )
             else:
                 cur.execute(
                     f"""
                     SELECT {cols}
                     FROM stock_analysis_memory
-                    WHERE ticker = %s
+                    WHERE ticker = %s {asof_sql}
                     ORDER BY created_at DESC
                     LIMIT %s
                     """,
-                    (ticker.upper(), limit * 8),
+                    (ticker.upper(), *asof_p, limit * 8),
                 )
             return cur.fetchall() or []
 
@@ -391,24 +438,43 @@ class AnalysisMemory:
         current_indicators: dict,
         limit: int = 3,
         cross_ticker: bool = True,
+        as_of: datetime | None = None,
     ) -> list[dict]:
         """현재 지표와 유사한 과거 분석을 검색.
 
         pgvector 가용 시 특징벡터 거리로 교차종목 후보를 뽑고(cross_ticker), 파이썬 가중유사도로 재점수화.
         축: RSI(±, 0.3)·MACD(0.3)·MA(0.25)·변동성(0.15). 검증 적중 +0.1, 같은 종목 +0.05. 없으면 빈 리스트.
+
+        as_of를 주면 그 시점 이후에 생긴 분석은 물론, '그 시점엔 아직 채점되지 않았을 결과'
+        (was_correct/actual_return_pct)까지 가려서 넘긴다 — 과거 재현 시 미래 정보 누출 차단.
         """
         if not self._available:
             return []
         try:
-            rows = self._fetch_candidates(ticker, current_indicators, limit, cross_ticker)
+            rows = self._fetch_candidates(
+                ticker, current_indicators, limit, cross_ticker, as_of=as_of
+            )
+            # 채점 결과가 as-of 시점에 공개돼 있었을 경계(분석시점 + 검증 지평).
+            known_by = (
+                None if as_of is None else as_of - timedelta(days=_VALIDATION_HORIZON_DAYS)
+            )
 
             scored: list[tuple[float, dict]] = []
             for r in rows:
+                created = r[6]
+                # SQL 필터가 빠져도 as-of 이후 분석은 컨텍스트에 넣지 않는다(이중 안전장치).
+                if as_of is not None and created is not None and created >= as_of:
+                    continue
                 ind = _safe_json(r[5], {})
                 sim = _similarity(current_indicators, ind)
                 if sim < _SIM_THRESHOLD:
                     continue
-                if r[7] is True:  # was_correct
+
+                correct, ret = r[7], r[8]
+                if known_by is not None and (created is None or created > known_by):
+                    correct, ret = None, None  # 그 시점엔 아직 결과를 알 수 없었다
+
+                if correct is True:
                     sim += _CORRECT_BONUS
                 if (r[9] or "").upper() == ticker.upper():  # 같은 종목 우대
                     sim += _SAME_TICKER_BONUS
@@ -421,9 +487,9 @@ class AnalysisMemory:
                         "confidence": r[2],
                         "price": float(r[3]) if r[3] is not None else None,
                         "summary": r[4],
-                        "created_at": r[6].isoformat() if r[6] else None,
-                        "was_correct": r[7],
-                        "actual_return_pct": float(r[8]) if r[8] is not None else None,
+                        "created_at": created.isoformat() if created else None,
+                        "was_correct": correct,
+                        "actual_return_pct": float(ret) if ret is not None else None,
                         "ticker": r[9],
                         "similarity": round(min(sim, 1.0), 3),
                     },
@@ -431,7 +497,7 @@ class AnalysisMemory:
 
             scored.sort(key=lambda x: -x[0])
             return [p[1] for p in scored[:limit]]
-        except Exception:  # noqa: BLE001
+        except Exception:
             return []
 
     # ── 결과 검증 (best-effort) ──────────────────────────
@@ -462,7 +528,7 @@ class AnalysisMemory:
                 key = f"{sym}:{s_dt}:{e_dt}"
                 if key not in history_cache:
                     try:
-                        history_cache[key] = yf.Ticker(sym).history(start=s_dt, end=e_dt)
+                        history_cache[key] = yf.Ticker(sym).history(start=s_dt, end=e_dt, auto_adjust=False)
                     except Exception:  # noqa: BLE001
                         history_cache[key] = None
                 return history_cache[key]
@@ -513,18 +579,21 @@ class AnalysisMemory:
                         )
                         stats["validated"] += 1
                         stats["correct" if ok else "incorrect"] += 1
-                    except Exception:  # noqa: BLE001 - 건별 실패 흡수
+                    except Exception:
                         stats["errors"] += 1
             return stats
-        except Exception:  # noqa: BLE001
+        except Exception:
             return stats
 
     # ── 다중 시간축 검증 ─────────────────────────────────
-    def validate_horizons(self, limit: int = 50) -> dict:
+    def validate_horizons(self, limit: int = 50, since_days: int | None = None) -> dict:
         """outlook의 24h/3d/1w/1m 전망을 각 구간 종가로 개별 채점해 자식 테이블에 적재한다.
 
         구간마다 경과 시점이 달라(24h=1일, 1m=30일) 점진적으로 채워진다. 분석 1건당 yfinance를 한 번만
         받아 모든 due 구간을 처리한다. 아직 도래 안 한 구간은 pending으로 남겨 다음 사이클에 재시도.
+
+        since_days는 '얼마나 오래된 분석까지 훑을지'(기본 1m+30일). 과거 시점 백필분을 채점하려면
+        백필 구간을 덮을 만큼 크게 준다.
         """
         stats = {"validated": 0, "correct": 0, "incorrect": 0, "pending": 0, "errors": 0}
         if not self._available:
@@ -542,12 +611,13 @@ class AnalysisMemory:
                 key = f"{sym}:{s_dt}:{e_dt}"
                 if key not in history_cache:
                     try:
-                        history_cache[key] = yf.Ticker(sym).history(start=s_dt, end=e_dt)
+                        history_cache[key] = yf.Ticker(sym).history(start=s_dt, end=e_dt, auto_adjust=False)
                     except Exception:  # noqa: BLE001
                         history_cache[key] = None
                 return history_cache[key]
 
             max_days = max(_HORIZON_DAYS.values())
+            since = max_days + 30 if since_days is None else int(since_days)
             with db_cursor() as (_, cur):
                 # 적어도 24h 경과 + 1m(+버퍼) 이내 + 아직 4개 구간 다 안 채워진 분석만.
                 cur.execute(
@@ -563,7 +633,7 @@ class AnalysisMemory:
                     ORDER BY a.created_at DESC
                     LIMIT %s
                     """,
-                    (max_days + 30, len(_HORIZON_DAYS), int(limit)),
+                    (since, len(_HORIZON_DAYS), int(limit)),
                 )
                 rows = cur.fetchall() or []
 
@@ -616,14 +686,14 @@ class AnalysisMemory:
                             )
                             stats["validated"] += 1
                             stats["correct" if ok else "incorrect"] += 1
-                    except Exception:  # noqa: BLE001 - 건별 실패 흡수
+                    except Exception:
                         stats["errors"] += 1
             return stats
-        except Exception:  # noqa: BLE001
+        except Exception:
             return stats
 
     # ── 통계 ────────────────────────────────────────────
-    def get_stats(self, ticker: Optional[str] = None, days: int = 90) -> dict:
+    def get_stats(self, ticker: str | None = None, days: int = 90) -> dict:
         """검증된 분석의 정확도·분포 통계. 미가용/없으면 0 통계."""
         empty = {"total": 0, "validated": 0, "accuracy_pct": 0.0, "avg_return_pct": 0.0}
         if not self._available:
@@ -662,10 +732,10 @@ class AnalysisMemory:
                 "accuracy_pct": round(correct / validated * 100, 2) if validated else 0.0,
                 "avg_return_pct": round(avg_ret, 2),
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             return empty
 
-    def get_horizon_stats(self, ticker: Optional[str] = None, days: int = 180) -> dict:
+    def get_horizon_stats(self, ticker: str | None = None, days: int = 180) -> dict:
         """다중 시간축(24h/3d/1w/1m)별 적중률·평균수익 통계. 미가용/없으면 빈 horizons."""
         empty = {"horizons": {}}
         if not self._available:
@@ -703,23 +773,29 @@ class AnalysisMemory:
                     "avg_return_pct": round(float(avg or 0), 2),
                 }
             return {"horizons": out}
-        except Exception:  # noqa: BLE001
+        except Exception:
             return empty
 
-    def get_level_accuracy(self, ticker: Optional[str] = None, days: int = 180) -> dict:
+    def get_level_accuracy(
+        self,
+        ticker: str | None = None,
+        days: int = 180,
+        as_of: datetime | None = None,
+    ) -> dict:
         """검증된 분석의 자신감 레벨별 적중률 {level:{accuracy,n}}. LLM 프롬프트 피드백용.
 
         ticker 한정 표본이 부족하면 전체로 폴백한다(레벨별 표본을 최대한 확보).
+        as_of를 주면 그 시점에 이미 채점이 끝나 있었을 분석만 센다(_asof_window 참조).
         """
         if not self._available:
             return {}
         try:
             from shared.database.repositories.connection import db_cursor
 
-            def _rows(scope_ticker: Optional[str]) -> list[tuple[str, bool]]:
-                where = ["validated_at IS NOT NULL", "was_correct IS NOT NULL",
-                         "created_at > NOW() - (%s || ' days')::interval"]
-                params: list[Any] = [int(days)]
+            def _rows(scope_ticker: str | None) -> list[tuple[str, bool]]:
+                win, wparams = _asof_window(as_of, days)
+                where = ["validated_at IS NOT NULL", "was_correct IS NOT NULL", *win]
+                params: list[Any] = [*wparams]
                 if scope_ticker:
                     where.append("ticker = %s")
                     params.append(scope_ticker.upper())
@@ -737,16 +813,16 @@ class AnalysisMemory:
             if ticker and sum(v["n"] for v in acc.values()) < _MIN_CALIB_SAMPLES:
                 acc = _accuracy_by_level(_rows(None))
             return acc
-        except Exception:  # noqa: BLE001
+        except Exception:
             return {}
 
     # ── 신뢰도 캘리브레이션 ──────────────────────────────
     def calibrate(
         self,
-        level: Optional[str],
-        ticker: Optional[str] = None,
+        level: str | None,
+        ticker: str | None = None,
         days: int = 180,
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """AI 자신감(level)을 같은 레벨 과거 적중률로 보정한다.
 
         반환: {level, raw_pct(AI 암묵 자신감), calibrated_pct(과거 실제 적중률), sample_size}.
@@ -759,7 +835,7 @@ class AnalysisMemory:
         try:
             from shared.database.repositories.connection import db_cursor
 
-            def _rows(scope_ticker: Optional[str]) -> list[tuple[str, bool]]:
+            def _rows(scope_ticker: str | None) -> list[tuple[str, bool]]:
                 where = ["validated_at IS NOT NULL", "was_correct IS NOT NULL", "confidence = %s",
                          "created_at > NOW() - (%s || ' days')::interval"]
                 params: list[Any] = [lvl, int(days)]
@@ -791,12 +867,12 @@ class AnalysisMemory:
                 "sample_size": acc["n"],
                 "scope": scope,
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
 
 
 # ── 싱글턴 ──────────────────────────────────────────────
-_instance: Optional[AnalysisMemory] = None
+_instance: AnalysisMemory | None = None
 
 
 def get_analysis_memory() -> AnalysisMemory:

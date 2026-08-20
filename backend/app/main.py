@@ -12,15 +12,16 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from shared.database.connector import get_connection
+
 from backend.app.api.chat import router as chat_router
-from backend.app.api.users import router as users_router
+from backend.app.api.cheongyak import router as cheongyak_router
 from backend.app.api.finetune import router as finetune_router
 from backend.app.api.graph import router as graph_router
 from backend.app.api.query import router as query_router
-from backend.app.api.stocks import router as stocks_router
-from backend.app.api.cheongyak import router as cheongyak_router
 from backend.app.api.research import router as research_router
+from backend.app.api.stocks import router as stocks_router
+from backend.app.api.users import router as users_router
+from shared.database.connector import get_connection
 
 # uvicorn은 자기 로거만 설정해서, 앱 로거의 INFO가 root(기본 WARNING)에서 잘린다.
 # 캐시 예열·일일 적재 로그를 기동 화면에서 바로 보려면 root 레벨을 열어줘야 한다.
@@ -59,7 +60,7 @@ async def _validation_loop() -> None:
         try:
             stats = await asyncio.to_thread(_run_validation)
             _log.info("analysis validation: %s", stats)
-        except Exception as exc:  # noqa: BLE001 - 검증 실패가 서버를 죽이면 안 됨
+        except Exception as exc:
             _log.warning("analysis validation failed: %s", exc)
         await asyncio.sleep(interval_s)
 
@@ -71,12 +72,13 @@ def _run_market_ingest() -> dict:
     (snapshot_date, data_type, sub_key)라 겹치는 날짜를 다시 넣어도 행이 늘지 않고,
     값이 같으면 내용도 그대로다. 휴장일·지연 정정 때문에 하루가 아니라 일주일을 겹쳐 받는다.
     """
-    from datetime import datetime, timedelta
+    from datetime import timedelta
 
     from pipelines.data_ingestion.fetch_market_data import MarketDataPipeline
     from shared.database.connector import bulk_upsert_market_snapshots
+    from shared.utils.timez import now_kst
 
-    end = datetime.now()
+    end = now_kst()
     start = end - timedelta(days=int(os.getenv("MARKET_INGEST_LOOKBACK_DAYS", "7")))
     rows = MarketDataPipeline().fetch_all(
         start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
@@ -103,7 +105,7 @@ async def _market_ingest_loop() -> None:
                 _log.info("market ingest: %s", await asyncio.to_thread(_run_market_ingest))
             else:
                 _log.info("market ingest skipped (최근 적재 이력이 간격 이내)")
-        except Exception as exc:  # noqa: BLE001 - 적재 실패가 서버를 죽이면 안 됨
+        except Exception as exc:
             _log.warning("market ingest failed: %s", exc)
         await asyncio.sleep(interval_s)
 
@@ -128,12 +130,23 @@ async def _warm_caches() -> None:
     """
     from backend.app.api.stocks import _do_update_heatmap
     from backend.app.api.users import _update_macro_cache
+    from backend.app.services.agent.tools._embedding import get_embedding_model
+    from backend.app.services.agent.tools.graph_rag import _get_retriever_bundle
 
-    for name, fn in (("macro", _update_macro_cache), ("heatmap", _do_update_heatmap)):
+    # 첫 GraphRAG 요청이 콜드 비용을 전부 뒤집어쓰면 데모가 멈춘 것처럼 보인다(실측 콜드 ~8분,
+    # 웜 11초). 무거운 쪽은 bge-m3 로드가 아니라 PropertyGraphIndex.from_existing이다.
+    # ponytail: 비용을 부팅 시점으로 옮기기만 한다. from_existing 자체를 빠르게 하려면
+    # 리트리버를 직접 Cypher로 짜야 하는데 그건 별개 작업이다.
+    for name, fn in (
+        ("embedding", get_embedding_model),
+        ("graph-retriever", _get_retriever_bundle),
+        ("macro", _update_macro_cache),
+        ("heatmap", _do_update_heatmap),
+    ):
         try:
             await asyncio.to_thread(fn)
             _log.info("cache warmed: %s", name)
-        except Exception as exc:  # noqa: BLE001 - 예열 실패가 서버를 죽이면 안 됨
+        except Exception as exc:
             _log.warning("cache warm failed (%s): %s", name, exc)
 
 

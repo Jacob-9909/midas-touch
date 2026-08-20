@@ -83,5 +83,5 @@ def graph_snapshot(limit: int = 200) -> dict:
     """Neo4j에서 (n)-[r]-(m) 관계를 끌어와 포스그래프용 nodes/links로 변환한다."""
     try:
         return fetch_graph_snapshot(limit=limit)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Neo4j 조회 실패: {exc}")

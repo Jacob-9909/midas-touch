@@ -5,7 +5,7 @@
 재노출하기만 한다. **새 코드는 repositories 하위 모듈에서 직접 임포트하라.**
 """
 
-from shared.database.repositories import (  # noqa: F401
+from shared.database.repositories import (
     apply_schema,
     bulk_upsert_emb_passages,
     bulk_upsert_emb_queries,
@@ -18,8 +18,8 @@ from shared.database.repositories import (  # noqa: F401
     delete_checkpoint_thread,
     get_all_tax_rules,
     get_connection,
-    get_latest_market_snapshots,
     get_last_ingest_time,
+    get_latest_market_snapshots,
     get_latest_market_value,
     get_market_history,
     get_portfolios_by_user_uuid,
@@ -28,6 +28,7 @@ from shared.database.repositories import (  # noqa: F401
     list_checkpoint_threads,
     list_emb_sources,
     list_users,
+    search_similar_passages_db,
     search_similar_personas_db,
     upsert_chat_session,
     upsert_market_snapshot,
@@ -47,8 +48,8 @@ __all__ = [
     "delete_checkpoint_thread",
     "get_all_tax_rules",
     "get_connection",
-    "get_latest_market_snapshots",
     "get_last_ingest_time",
+    "get_latest_market_snapshots",
     "get_latest_market_value",
     "get_market_history",
     "get_portfolios_by_user_uuid",
@@ -57,6 +58,7 @@ __all__ = [
     "list_checkpoint_threads",
     "list_emb_sources",
     "list_users",
+    "search_similar_passages_db",
     "search_similar_personas_db",
     "upsert_chat_session",
     "upsert_market_snapshot",

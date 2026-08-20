@@ -5,10 +5,12 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import timedelta
 from typing import Any
 
 import requests
+
+from shared.utils.timez import today_kst
 
 _BASE_DETAIL = "https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1"
 _BASE_CMPET = "https://api.odcloud.kr/api/ApplyhomeInfoCmpetRtSvc/v1"
@@ -99,7 +101,7 @@ class CheongyakSummary:
 
 def _status_for(row: dict) -> str:
     """Derive human-readable status from dates."""
-    today = date.today().isoformat()
+    today = today_kst().isoformat()
     rcept_start = row.get("RCEPT_BGNDE", "") or ""
     rcept_end = row.get("RCEPT_ENDDE", "") or ""
     special_end = row.get("SPSPLY_RCEPT_ENDDE", "") or ""
@@ -148,7 +150,7 @@ def _row_to_summary(row: dict) -> dict:
 
 def fetch_recent_apt(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     """Fetch APT 분양정보 for recent + upcoming announcements."""
-    today = date.today()
+    today = today_kst()
     start = (today - timedelta(days=days_back)).isoformat()
     end = (today + timedelta(days=days_forward)).isoformat()
 
@@ -170,7 +172,7 @@ def fetch_recent_apt(days_back: int = 60, days_forward: int = 60) -> list[dict]:
 
 def fetch_officetel(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     """Fetch 오피스텔/도시형/민간임대 분양정보."""
-    today = date.today()
+    today = today_kst()
     start = (today - timedelta(days=days_back)).isoformat()
     end = (today + timedelta(days=days_forward)).isoformat()
 
@@ -191,7 +193,7 @@ def fetch_officetel(days_back: int = 60, days_forward: int = 60) -> list[dict]:
 
 def fetch_remaining_apt(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     """Fetch APT 무순위/잔여세대 분양정보."""
-    today = date.today()
+    today = today_kst()
     start = (today - timedelta(days=days_back)).isoformat()
     end = (today + timedelta(days=days_forward)).isoformat()
 
@@ -212,7 +214,7 @@ def fetch_remaining_apt(days_back: int = 60, days_forward: int = 60) -> list[dic
 
 def fetch_opt_supply(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     """Fetch 임의공급 분양정보."""
-    today = date.today()
+    today = today_kst()
     start = (today - timedelta(days=days_back)).isoformat()
     end = (today + timedelta(days=days_forward)).isoformat()
 
@@ -233,7 +235,7 @@ def fetch_opt_supply(days_back: int = 60, days_forward: int = 60) -> list[dict]:
 
 def fetch_public_rent(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     """Fetch 공공지원 민간임대 분양정보."""
-    today = date.today()
+    today = today_kst()
     start = (today - timedelta(days=days_back)).isoformat()
     end = (today + timedelta(days=days_forward)).isoformat()
 

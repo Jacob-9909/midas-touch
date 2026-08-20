@@ -9,15 +9,15 @@ This script:
 4. Bulk upserts the persona texts and embeddings into target database persona_embeddings table.
 """
 
+import argparse
 import os
 import sys
-import argparse
-import pandas as pd
-from tqdm import tqdm
-from dotenv import load_dotenv
 
+import pandas as pd
 import psycopg2
+from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
+from tqdm import tqdm
 
 load_dotenv()
 

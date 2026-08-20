@@ -26,6 +26,7 @@ from openai import (
 
 from shared.utils.api_key_rotator import APIKeyRotator
 from shared.utils.nim_rate_limit import reserve
+from shared.utils.nim_stats import record_failure
 
 logger = logging.getLogger("agent.llm")
 
@@ -85,6 +86,7 @@ class NIMChatOpenAI(ChatOpenAI):
         return key
 
     def _on_error(self, key: str, exc: Exception) -> None:
+        record_failure("agent", exc)  # 실패 원인 계측(NIM 안정성 실측)
         # 429는 잠깐 비켜서면 풀리므로 짧게, 그 외 오류는 키 자체가 문제일 수 있어 길게 쉰다.
         cooldown = 30.0 if isinstance(exc, RateLimitError) else 300.0
         _get_rotator().mark_failed(key, duration=cooldown)
@@ -180,10 +182,7 @@ def build_chat_model(temperature: float = 0.7, max_tokens: int = 4000) -> NIMCha
         max_tokens=max_tokens,
         timeout=REQUEST_TIMEOUT,
         max_retries=0,  # 같은 키로 재시도해봐야 429는 그대로 — 위 루프가 키를 바꿔가며 재시도한다
-        # NIM의 qwen3-next-80b는 스트리밍이 사실상 동작하지 않는다. 순수 openai SDK로 재도
-        # 같은 답변을 delta 4개로만 쪼개 보내면서 비스트리밍보다 2.5배 느렸다
-        # (invoke 71.8초 vs stream 178.3초, 첫 토큰 144초). 점진 표시 이득이 없고 손해만
-        # 커서 끈다. LangGraph의 stream_mode="messages"는 그대로 동작하며, 완성된 메시지가
-        # 한 덩어리로 흐른다. 스트리밍이 멀쩡한 모델로 갈면 이 줄을 지우면 된다.
-        disable_streaming=True,
+        # 구 모델(qwen3-next-80b)은 스트리밍이 delta 4개로만 쪼개져 오면서 비스트리밍보다
+        # 2.5배 느려 disable_streaming=True로 껐었다. gpt-oss-120b로 교체 후 실측하니
+        # 정상 토큰 단위로 흐르므로(93청크/700토큰) 다시 켠다.
     )

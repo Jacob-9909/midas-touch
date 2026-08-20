@@ -38,7 +38,6 @@ class SparseBM25:
     형태소 분석기 없이 한국어 어절 단위로 텍스트를 토큰화하여 세법/금융 단어 매칭을 고속 수행합니다.
     """
     def __init__(self, corpus: list[str], k1: float = 1.5, b: float = 0.75) -> None:
-        import re
         import math
         from collections import Counter, defaultdict
 

@@ -13,11 +13,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from pathlib import Path
 import re
 import time
-from dataclasses import dataclass, field
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
+from pathlib import Path
 
 import httpx
 
@@ -90,7 +90,7 @@ class NIMClient:
         # 올라가는 추가 백오프 딜레이다(성공하면 다시 0으로 감쇠).
         self.base_delay = 0.0
 
-    async def __aenter__(self) -> "NIMClient":
+    async def __aenter__(self) -> NIMClient:
         self._client = httpx.AsyncClient(
             base_url=self._cfg.base_url,
             headers={
@@ -216,7 +216,7 @@ class QuerySynthesizer:
         self._prompts = config.prompts
         self._client: NIMClient | None = None
 
-    async def __aenter__(self) -> "QuerySynthesizer":
+    async def __aenter__(self) -> QuerySynthesizer:
         self._client = NIMClient(self._cfg)
         await self._client.__aenter__()
         return self
@@ -392,7 +392,7 @@ class QuerySynthesizer:
                 elapsed_sec=elapsed,
             )
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             elapsed = time.perf_counter() - start
             logger.exception(
                 "합성 실패 [%s]: %s (%.2fs)",

@@ -24,6 +24,10 @@ data/
 *.xlsx
 *.parquet
 
+# Runtime output / logs
+logs/
+output/
+
 # Python/uv
 .uv/
 .python-version

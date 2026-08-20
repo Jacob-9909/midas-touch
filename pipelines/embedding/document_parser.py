@@ -13,7 +13,6 @@ document_parser.py
 from __future__ import annotations
 
 import logging
-import os
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -86,8 +85,8 @@ class FinancialChunker:
         if self.use_token_mode and self.tokenizer is not None:
             try:
                 return len(self.tokenizer.encode(text, add_special_tokens=False))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("토크나이저 길이 계산 실패, 글자 수로 대체: %s", exc)
         return len(text)
 
     def split_text(self, text: str) -> list[str]:
@@ -148,25 +147,24 @@ class FinancialChunker:
             split_len = self._get_length(split)
             sep_len = self._get_length(separator) if current_chunk else 0
             # 현재 청크에 추가했을 때 넘치는지 확인
-            if current_length + split_len + sep_len > self.chunk_size:
-                if current_chunk:
-                    # 완성된 청크 저장
-                    chunks.append(separator.join(current_chunk))
-                    
-                    # 오버랩 보존을 위한 롤백 슬라이딩
-                    # 뒤에서부터 오버랩 사이즈 이하가 될 때까지 복구
-                    overlap_chunk: list[str] = []
-                    overlap_len = 0
-                    for prev_split in reversed(current_chunk):
-                        prev_len = self._get_length(prev_split)
-                        sep_overlap_len = self._get_length(separator) if overlap_chunk else 0
-                        if overlap_len + prev_len + sep_overlap_len <= self.chunk_overlap:
-                            overlap_chunk.insert(0, prev_split)
-                            overlap_len += prev_len + sep_overlap_len
-                        else:
-                            break
-                    current_chunk = overlap_chunk
-                    current_length = overlap_len
+            if current_length + split_len + sep_len > self.chunk_size and current_chunk:
+                # 완성된 청크 저장
+                chunks.append(separator.join(current_chunk))
+                
+                # 오버랩 보존을 위한 롤백 슬라이딩
+                # 뒤에서부터 오버랩 사이즈 이하가 될 때까지 복구
+                overlap_chunk: list[str] = []
+                overlap_len = 0
+                for prev_split in reversed(current_chunk):
+                    prev_len = self._get_length(prev_split)
+                    sep_overlap_len = self._get_length(separator) if overlap_chunk else 0
+                    if overlap_len + prev_len + sep_overlap_len <= self.chunk_overlap:
+                        overlap_chunk.insert(0, prev_split)
+                        overlap_len += prev_len + sep_overlap_len
+                    else:
+                        break
+                current_chunk = overlap_chunk
+                current_length = overlap_len
                 
             current_chunk.append(split)
             sep_len = self._get_length(separator) if len(current_chunk) > 1 else 0

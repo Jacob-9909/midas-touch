@@ -1,9 +1,9 @@
 import os
 from logging.config import fileConfig
 
-from sqlalchemy import create_engine, pool, text
 from alembic import context
 from dotenv import load_dotenv
+from sqlalchemy import create_engine, pool, text
 
 # Load env variables
 load_dotenv()
@@ -18,6 +18,7 @@ if config.config_file_name is not None:
 
 # Import models metadata
 from shared.database.models.postgres_models import PostgresBase
+
 target_metadata = PostgresBase.metadata
 
 

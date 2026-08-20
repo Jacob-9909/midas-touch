@@ -8,12 +8,12 @@ LlamaIndex + Neo4j 기반 지식 그래프 RAG (GraphRAG) 질의 추론 테스�
 - 사용자의 복잡한 세무 자연어 질문에 대해 그래프 관계 탐색 및 본문 합성을 조합한 최적 지식 답변 도출.
 """
 
+import logging
 import os
 import sys
-import logging
 import time
-import asyncio
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # 프로젝트 루트 경로 추가 (src 임포트 호환)
@@ -25,7 +25,7 @@ load_dotenv()
 from llama_index.core import Settings
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
-from llama_index.core.indices.property_graph import PropertyGraphIndex
+
 from shared.utils.nim_openai import NIMOpenAI
 
 # 로깅 설정
@@ -79,12 +79,7 @@ def run_graph_rag_query(query_text: str) -> None:
         database="neo4j",
     )
 
-    # 2. 기존 구축된 스토어로부터 인덱스 불러오기
-    index = PropertyGraphIndex.from_existing(
-        property_graph_store=graph_store
-    )
-
-    # 3. 1단계: 벡터 검색으로 연관 노드 및 본문 텍스트 청크 추출
+    # 2. 1단계: 벡터 검색으로 연관 노드 및 본문 텍스트 청크 추출
     logger.info("1단계: 질문과 유사한 핵심 지식 노드 검색 중...")
     from llama_index.core.indices.property_graph import VectorContextRetriever
     vector_retriever = VectorContextRetriever(

@@ -8,13 +8,16 @@ This module manages fetching historical and real-time data for:
 And formats them to match Azure SQL `market_snapshots` table schema.
 """
 
-import os
 import logging
+import os
 from datetime import datetime, timedelta
-import requests
+
 import pandas as pd
+import requests
 import yfinance as yf
 from dotenv import load_dotenv
+
+from shared.utils.timez import KST, now_kst
 
 load_dotenv()
 
@@ -32,9 +35,7 @@ def _is_valid_key(key_name: str) -> bool:
         return False
     if val.startswith("<") or val.endswith(">"):
         return False
-    if "API-키" in val or "stlouisfed" in val:
-        return False
-    return True
+    return not ("API-키" in val or "stlouisfed" in val)
 
 
 FRED_API_KEY = os.environ.get("FRED_API_KEY") if _is_valid_key("FRED_API_KEY") else None
@@ -261,7 +262,7 @@ def fetch_realtime_stock(symbol: str) -> dict:
         # Determine currency
         currency = info.get("currency")
         if not currency:
-            currency = "KRW" if (symbol.endswith(".KS") or symbol.endswith(".KQ")) else "USD"
+            currency = "KRW" if (symbol.endswith((".KS", ".KQ"))) else "USD"
             
         # Get current price
         price = info.get("currentPrice") or info.get("regularMarketPrice")
@@ -292,7 +293,7 @@ def fetch_realtime_stock(symbol: str) -> dict:
             "change": float(change),
             "change_percent": float(change_pct),
             "currency": currency,
-            "fetched_at": datetime.now().isoformat()
+            "fetched_at": now_kst().isoformat()
         }
     except Exception as e:
         logger.error(f"Error fetching real-time stock {symbol}: {e}")
@@ -304,15 +305,14 @@ def fetch_realtime_stock(symbol: str) -> dict:
             "change_percent": 0.0,
             "currency": "USD",
             "error": str(e),
-            "fetched_at": datetime.now().isoformat()
+            "fetched_at": now_kst().isoformat()
         }
 
 
 def main() -> None:
     import argparse
-    import sys
-    from datetime import datetime, timedelta
     from collections import Counter
+
     from shared.database.connector import bulk_upsert_market_snapshots
 
     parser = argparse.ArgumentParser(description="Midas Touch 시장 데이터 수집 및 PostgreSQL 적재 파이프라인")
@@ -338,14 +338,14 @@ def main() -> None:
     args = parser.parse_args()
 
     # Determine date range
-    today = datetime.now()
+    today = now_kst()
     if args.end:
-        end_dt = datetime.strptime(args.end, "%Y-%m-%d")
+        end_dt = datetime.strptime(args.end, "%Y-%m-%d").replace(tzinfo=KST)
     else:
         end_dt = today
 
     if args.start:
-        start_dt = datetime.strptime(args.start, "%Y-%m-%d")
+        start_dt = datetime.strptime(args.start, "%Y-%m-%d").replace(tzinfo=KST)
     else:
         if args.backfill:
             # 90 days of history for backfill

@@ -9,15 +9,15 @@ Neo4j 지식 그래프의 동적 엔티티 중복 정제(Entity Resolution) 및 
 4. 백그라운드 스케줄 데몬 기능 포함.
 """
 
+import argparse
+import asyncio
+import logging
 import os
 import sys
-import time
-import logging
-import asyncio
-import argparse
 from pathlib import Path
-from dotenv import load_dotenv
+
 import numpy as np
+from dotenv import load_dotenv
 
 # 프로젝트 루트 경로 추가
 project_root = Path(__file__).resolve().parent.parent.parent
@@ -25,9 +25,9 @@ sys.path.append(str(project_root))
 
 load_dotenv()
 
-from llama_index.core import Settings
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
+
 from shared.utils.nim_openai import NIMOpenAI
 
 NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
@@ -234,7 +234,7 @@ class EntityRefiner:
 
         try:
             # 1. 구 노드(delete_node)에서 나가는 모든 관계(Outgoing Relation)를 찾아 신 노드로 복사
-            out_cypher = f"""
+            out_cypher = """
             MATCH (del)-[r]->(neighbor)
             WHERE del.name = $name_del AND labels(del)[0] = $label AND labels(neighbor)[0] IS NOT NULL
             RETURN type(r) AS rel_type, properties(r) AS props, neighbor.name AS target_name, labels(neighbor)[0] AS target_label
@@ -264,7 +264,7 @@ class EntityRefiner:
                 })
 
             # 2. 구 노드로 들어오는 모든 관계(Incoming Relation)를 찾아 신 노드로 복사
-            in_cypher = f"""
+            in_cypher = """
             MATCH (neighbor)-[r]->(del)
             WHERE del.name = $name_del AND labels(del)[0] = $label AND labels(neighbor)[0] IS NOT NULL
             RETURN type(r) AS rel_type, properties(r) AS props, neighbor.name AS source_name, labels(neighbor)[0] AS source_label
@@ -294,7 +294,7 @@ class EntityRefiner:
                 })
 
             # 3. 구 노드 안전하게 DETACH DELETE 실행
-            delete_cypher = f"""
+            delete_cypher = """
             MATCH (del)
             WHERE del.name = $name_del AND labels(del)[0] = $label
             DETACH DELETE del
