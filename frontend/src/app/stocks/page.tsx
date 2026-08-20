@@ -51,7 +51,6 @@ import { useSelectedUser } from "@/lib/user-context";
 import { seedChat } from "@/lib/chat-seed";
 import MiniSparkline from "@/components/bits/MiniSparkline";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
-import InteractivePillBar from "@/components/bits/InteractivePillBar";
 import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 import {
   Card,

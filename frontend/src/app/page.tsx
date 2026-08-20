@@ -29,24 +29,27 @@ import {
 import { apiGet, type MarketSnapshot, type UserSummary } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { useToast } from "@/lib/toast";
-import { Reveal } from "@/components/Reveal";
 import OGHeroCard from "@/components/bits/OGHeroCard";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
 import MiniSparkline from "@/components/bits/MiniSparkline";
 import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 import {
-  Card,
-  PageTitle,
   SectionLabel,
   AnimatedNumber,
-  AnimatedKRWShort,
   Skeleton,
   fmtKRW,
   fmtKRWShort,
 } from "@/components/ui";
 import MemoryStatsCard from "@/app/stocks/MemoryStatsCard";
 import ScrollVelocity from "@/components/bits/ScrollVelocity";
-import GlareHover from "@/components/bits/GlareHover";
+import MagicBento from "@/components/bits/MagicBento";
+import FoldText from "@/components/bits/FoldText";
+import PillNav from "@/components/bits/PillNav";
+import HeroIntro from "@/components/sections/HeroIntro";
+import MarketFlapBoard from "@/components/sections/MarketFlapBoard";
+import PersonaCarousel from "@/components/sections/PersonaCarousel";
+import DriftSection from "@/components/sections/DriftSection";
+import PixelSwapCard from "@/components/sections/PixelSwapCard";
 
 // 단일 여정 3단계 — 랜딩 진입점에서 서비스의 한 문장을 행동으로 풀어준다.
 const JOURNEY = [
@@ -479,48 +482,6 @@ function CryptoChart({ ticker, name, color }: { ticker: string; name: string; co
   );
 }
 
-function MacroSparkline({
-  data,
-  color = "#e2b866",
-  height = 42,
-}: {
-  data: number[];
-  color?: string;
-  height?: number;
-}) {
-  if (!data || data.length < 2) return null;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const width = 260;
-
-  const points = data.map((val, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - ((val - min) / range) * (height - 10) - 5;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-
-  const pathD = `M ${points.join(" L ")}`;
-  const areaD = `M 0,${height} L ${points.join(" L ")} L ${width},${height} Z`;
-  const lastPoint = points[points.length - 1].split(",");
-
-  const gradId = `sparkgrad-${color.replace(/[^a-zA-Z0-9]/g, "")}`;
-
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full overflow-visible" style={{ height }}>
-      <defs>
-        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
-          <stop offset="100%" stopColor={color} stopOpacity="0.0" />
-        </linearGradient>
-      </defs>
-      <path d={areaD} fill={`url(#${gradId})`} />
-      <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={lastPoint[0]} cy={lastPoint[1]} r="3.5" fill={color} className="animate-pulse" />
-    </svg>
-  );
-}
-
 function getMacroTrendData(
   key: string,
   currentVal: number,
@@ -584,6 +545,27 @@ function getMacroTrendData(
     data: period === "1W" ? [val * 0.98, val * 0.99, val] : period === "1M" ? [val * 0.95, val * 0.97, val * 0.99, val] : [val * 0.90, val * 0.93, val * 0.96, val],
     color,
   };
+}
+
+// 신선도 배지: 백엔드가 주는 source를 라이브/DB/샘플로 정직하게 분류(하드코딩 "LIVE" 대체).
+type Fresh = { label: string; live: boolean; db: boolean; when?: string };
+
+function freshnessLabel(source?: string): Fresh {
+  const s = (source || "").toLowerCase();
+  if (s.includes("yfinance") || s.includes("live")) return { label: "LIVE", live: true, db: false };
+  if (s.includes("db") || s.includes("bok") || s.includes("official")) return { label: "DB", live: false, db: true };
+  return { label: "SAMPLE", live: false, db: false };
+}
+
+// 여러 스냅샷 종합: 하나라도 샘플이면 SAMPLE, 아니면 라이브 있으면 LIVE, 아니면 DB. 최신 날짜도 함께.
+function macroFreshness(market: MarketSnapshot[]): Fresh {
+  const srcs = market.map((m) => (m.source || "").toLowerCase());
+  const when = market.map((m) => m.snapshot_date).filter(Boolean).sort().at(-1);
+  if (srcs.some((s) => s.includes("stale") || s.includes("sample")))
+    return { label: "SAMPLE", live: false, db: false, when };
+  if (srcs.some((s) => s.includes("yfinance") || s.includes("live")))
+    return { label: "LIVE", live: true, db: false, when };
+  return { label: "DB", live: false, db: true, when };
 }
 
 const DEFAULT_MACRO_SNAPSHOTS: MarketSnapshot[] = [
@@ -718,6 +700,9 @@ export default function HomePage() {
   const [macroPeriod, setMacroPeriod] = useState<"1W" | "1M" | "6M">("1W");
   const [stockHeatmapData, setStockHeatmapData] = useState<StockHeatmapItem[]>(STOCK_HEATMAP_DATA);
   const [heatmapMeta, setHeatmapMeta] = useState<{ source?: string; last_updated?: string }>({});
+  // 신선도 배지 값(하드코딩 LIVE 대신 실제 source 기반). market/heatmapMeta는 작아 매 렌더 계산해도 무해.
+  const heatFresh = freshnessLabel(heatmapMeta.source);
+  const macroFresh = macroFreshness(market);
   const [marketHistoryMap, setMarketHistoryMap] = useState<Record<string, number[]>>({});
   // 캘리브레이션 스코프 — 빈 문자열이면 전체 종목.
   const [calTicker, setCalTicker] = useState("");
@@ -950,6 +935,20 @@ export default function HomePage() {
       .join("   ·   ");
   }, [market]);
 
+  // split-flap 보드용 — 증시/거시 값을 짧은 대문자 토큰으로. 실제 스냅샷을 반영한다.
+  const flapWords = useMemo(() => {
+    if (!market.length) return ["MARKET SYNC", "SIGNAL LIVE"];
+    const w = market
+      .slice(0, 8)
+      .map((m) => {
+        const v = Number(m.value);
+        const shown = Number.isFinite(v) ? Math.round(v).toLocaleString() : String(m.value);
+        const key = (m.sub_key || m.data_type).replace(/[^A-Za-z0-9]/g, "").slice(0, 8).toUpperCase();
+        return `${key} ${shown}`;
+      });
+    return w.length ? w : ["MARKET SYNC"];
+  }, [market]);
+
   const assetOptions = useMemo(
     () =>
       [...new Set(users.map((u) => u.preferred_asset).filter(Boolean))].sort() as string[],
@@ -1011,6 +1010,30 @@ export default function HomePage() {
 
   return (
     <div className="space-y-12">
+      {/* ────────────────────────────────────────────────
+         Cinematic Scroll-Expand Intro (ScrollExpand · RotatingText · SpecularButton)
+         ──────────────────────────────────────────────── */}
+      <HeroIntro />
+
+      {/* 인페이지 섹션 내비 — 골드 pill 이 활성 섹션으로 흐른다 */}
+      <div className="flex justify-center">
+        <PillNav
+          logo="/hero/persona-3.svg"
+          logoAlt="Midas"
+          items={[
+            { label: "Market", href: "#market" },
+            { label: "Stocks", href: "#stocks" },
+            { label: "Personas", href: "#personas" },
+          ]}
+          activeHref="#market"
+          baseColor="#d4af37"
+          pillColor="#04060a"
+          hoveredPillTextColor="#04060a"
+          pillTextColor="#f1f4f9"
+          initialLoadAnimation={false}
+        />
+      </div>
+
       {/* ────────────────────────────────────────────────
          Swiss Financial Editorial Top Ticker Bar
          ──────────────────────────────────────────────── */}
@@ -1117,47 +1140,59 @@ export default function HomePage() {
       </section>
 
       {/* ────────────────────────────────────────────────
-         Swiss 3-Step Journey Hairline Grid
+         Live Split-Flap Market Board (SplitFlapText · 증시 반영)
          ──────────────────────────────────────────────── */}
-      <section className="grid gap-px border border-line bg-line/30 sm:grid-cols-3">
-        {JOURNEY.map((s, i) => (
-          <Reveal key={s.title} index={i} className="h-full">
-            {/* 골드 광원이 카드를 사선으로 쓸고 지나간다 — 유리 패널로 읽히게 하는 장치 */}
-            <GlareHover
-              className="h-full"
-              glareColor="#f3e5ab"
-              glareOpacity={0.16}
-              glareAngle={-40}
-              glareSize={220}
-              transitionDuration={780}
-            >
-            <div className="h-full bg-[var(--ink-1)] p-6 transition hover:bg-[color-mix(in_srgb,var(--accent)_4%,var(--ink-1))]">
-              <div className="flex items-center justify-between border-b border-line/40 pb-3">
-                <span className="font-mono-spec text-[10px] font-semibold tracking-widest text-accent">
-                  PHASE 0{i + 1}
-                </span>
-                <span className="text-muted">
-                  <s.icon size={18} weight="duotone" />
-                </span>
-              </div>
-              <h2 className="font-display mt-4 text-xl font-semibold text-fg">
-                {s.title}
-              </h2>
-              <p className="mt-2 text-xs leading-relaxed text-muted">{s.body}</p>
-            </div>
-            </GlareHover>
-          </Reveal>
-        ))}
+      <MarketFlapBoard words={flapWords} />
+
+      {/* ────────────────────────────────────────────────
+         Capability Bento (MagicBento) + Fold-in Heading (FoldText)
+         ──────────────────────────────────────────────── */}
+      <section className="space-y-6">
+        <FoldText
+          text="근거로 답하는 콘솔"
+          splitBy="char"
+          hinge="top"
+          trigger="scroll"
+          fontSize="clamp(28px, 5vw, 52px)"
+          fontWeight={700}
+          color="var(--fg)"
+          className="font-display"
+        />
+        {/* GlareHover 3단 그리드를 스포트라이트 벤토로 승격 — 여정 3단계 + 부가 역량 */}
+        <div className="flex justify-center">
+          <MagicBento
+            glowColor="212, 175, 96"
+            spotlightRadius={340}
+            particleCount={10}
+            enableTilt={false}
+            clickEffect
+            enableMagnetism
+          />
+        </div>
+        {/* 접근성/폴백 — 벤토 카드 요지를 텍스트로도 남긴다 */}
+        <ol className="sr-only">
+          {JOURNEY.map((s) => (
+            <li key={s.title}>
+              {s.title}: {s.body}
+            </li>
+          ))}
+        </ol>
       </section>
 
       {/* ────────────────────────────────────────────────
          Swiss Financial Market Indicators (거시 시장 지표)
          ──────────────────────────────────────────────── */}
-      <section className="animate-rise space-y-4">
+      <section id="market" className="animate-rise space-y-4 scroll-mt-24">
         <div className="flex items-center justify-between">
           <SectionLabel>최신 거시 시장 지표 (Macro Indicators)</SectionLabel>
-          <span className="font-mono-spec text-[10px] uppercase text-muted">
-            LIVE SNAPSHOTS
+          <span className="inline-flex items-center gap-1.5 font-mono-spec text-[10px] uppercase text-muted">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                macroFresh.live ? "bg-emerald-400 animate-pulse" : macroFresh.db ? "bg-amber-400" : "bg-zinc-500"
+              }`}
+            />
+            {macroFresh.label}
+            {macroFresh.when && <span className="normal-case text-muted/70">· {macroFresh.when}</span>}
           </span>
         </div>
 
@@ -1284,7 +1319,7 @@ export default function HomePage() {
       {/* ────────────────────────────────────────────────
          FINVIZ REPRESENTATIVE STOCK HEATMAP (주요 대표 주식 히트맵 콘솔)
          ──────────────────────────────────────────────── */}
-      <section className="animate-rise space-y-4 pt-2">
+      <section id="stocks" className="animate-rise space-y-4 pt-2 scroll-mt-24">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SectionLabel>대표 주요 종목 FINVIZ 히트맵 (Stock Market Treemap)</SectionLabel>
           <span className="font-mono-spec text-[10px] text-accent uppercase tracking-widest">
@@ -1372,11 +1407,19 @@ export default function HomePage() {
           {/* Unified Board Top Bar */}
           <div className="flex items-center justify-between border-b border-line/50 pb-2 px-1 font-mono-spec">
             <div className="flex items-center gap-2 text-xs font-bold text-fg">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{marketFilter === "CRYPTO" ? "CRYPTO PRICE CHART · 3M CLOSE" : "FINVIZ STOCK HEATMAP · BATCH LIVE FEED"}</span>
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  heatFresh.live ? "bg-emerald-400 animate-pulse" : heatFresh.db ? "bg-amber-400" : "bg-zinc-500"
+                }`}
+              />
+              <span>
+                {marketFilter === "CRYPTO"
+                  ? "CRYPTO PRICE CHART · 3M CLOSE"
+                  : `FINVIZ STOCK HEATMAP · ${heatFresh.label} FEED`}
+              </span>
             </div>
             <div className="flex items-center gap-3 text-[10px] text-accent uppercase tracking-widest">
-              <span>SOURCE: {heatmapMeta.source || "LIVE BATCH (YFINANCE)"}</span>
+              <span>SOURCE: {heatmapMeta.source || "—"}</span>
               {heatmapMeta.last_updated && <span className="text-muted">UPDATED: {heatmapMeta.last_updated}</span>}
             </div>
           </div>
@@ -1579,6 +1622,23 @@ export default function HomePage() {
             })()}
           </div>
           )}
+        </div>
+      </section>
+
+      {/* ────────────────────────────────────────────────
+         Persona Depth Carousel (DepthCarousel) + Q→A Pixel Swap + Drift Wall
+         ──────────────────────────────────────────────── */}
+      <section id="personas" className="animate-rise space-y-6 pt-2 scroll-mt-24">
+        <div className="flex items-center justify-between">
+          <SectionLabel>투자 성향 페르소나 (Investor Personas)</SectionLabel>
+          <span className="font-mono-spec text-[10px] uppercase tracking-widest text-muted">
+            DRAG · AUTOPLAY
+          </span>
+        </div>
+        <PersonaCarousel />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <PixelSwapCard />
+          <DriftSection />
         </div>
       </section>
 

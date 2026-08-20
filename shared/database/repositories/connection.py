@@ -6,6 +6,7 @@ psycopg2.connect 하던 비용 제거). FastAPI는 sync 핸들러를 스레드�
 ThreadedConnectionPool이 적합하다. 풀 크기는 PG_POOL_MIN/PG_POOL_MAX(.env)로 조정한다.
 """
 
+import logging
 import os
 import threading
 from contextlib import contextmanager
@@ -16,6 +17,8 @@ from dotenv import load_dotenv
 from psycopg2 import pool as _pg_pool
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 _pool: _pg_pool.ThreadedConnectionPool | None = None
 _pool_lock = threading.Lock()
@@ -61,6 +64,7 @@ def db_cursor():
     """Context manager: 풀에서 커넥션을 빌려 (conn, cursor)를 yield하고, 자동 커밋/롤백 후 반납한다."""
     pool = _get_pool()
     conn = pool.getconn()
+    cursor = None
     try:
         cursor = conn.cursor()
         yield conn, cursor
@@ -69,6 +73,11 @@ def db_cursor():
         conn.rollback()
         raise
     finally:
+        if cursor is not None:
+            try:
+                cursor.close()
+            except Exception as e:
+                logger.debug("Failed to close cursor: %s", e)
         pool.putconn(conn)
 
 
