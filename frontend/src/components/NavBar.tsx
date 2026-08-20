@@ -18,15 +18,15 @@ import ElectricBorder from "@/components/bits/ElectricBorder";
 import GlassSurface from "@/components/bits/GlassSurface";
 import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 
-// 단일 여정을 앞세운다: "core" 핵심 여정(내 현황 → 또래 벤치마킹 → 상담 → 종목 확인)을
-// 먼저 두고, "engine" 부가·데모(청약·지식그래프·파인튜닝)는 구분선 뒤로 강등해 초점을 준다.
+// 헤드라인은 청약(챗봇 상담 + 목록조회 + 자금마련 시뮬레이터)이라 "core"로 앞세우고,
+// 나머지(대시보드·주식분석·지식그래프)는 부가 기능이라 "engine"으로 구분선 뒤에 강등한다.
 const LINKS = [
-  { href: "/", label: "대시보드", group: "core" },
   { href: "/chat", label: "에이전트 챗봇", group: "core" },
-  { href: "/stocks", label: "주식분석", group: "core" },
-  { href: "/cheongyak", label: "청약", group: "engine" },
+  { href: "/cheongyak", label: "청약", group: "core" },
+  { href: "/simulator", label: "자금마련 시뮬레이터", group: "core" },
+  { href: "/", label: "대시보드", group: "engine" },
+  { href: "/stocks", label: "주식분석", group: "engine" },
   { href: "/graph", label: "지식그래프", group: "engine" },
-  { href: "/finetune", label: "AI지식·학습", group: "engine" },
 ] as const;
 
 const SAMPLE_USERS = [

@@ -19,6 +19,8 @@ import { Skeleton } from "@/components/ui";
 interface DetailModalProps {
   item: CheongyakSummary;
   kind: CheongyakKind;
+  /** 청약 가점 계산기(page.tsx)에서 계산한 내 점수. 당첨 가점 테이블과 나란히 비교해서 보여준다. */
+  myScore: number;
   onClose: () => void;
   onConsult: (item: CheongyakSummary) => void;
 }
@@ -46,7 +48,17 @@ function EmptyHint({ text }: { text: string }) {
   return <p className="text-xs text-muted">{text}</p>;
 }
 
-export default function DetailModal({ item, kind, onClose, onConsult }: DetailModalProps) {
+// 표에 찍히는 숫자는 전부 이 클래스로 통일 — tabular-nums라 자릿수가 흔들리지 않고 읽기 편하다.
+const NUM_CLASS = "font-mono-spec tabular-nums";
+
+/** 1000단위 콤마. 원본이 빈 문자열/undefined면 표시할 값이 없다는 뜻으로 null. */
+function fmtNum(n: number | string | undefined): string | null {
+  const v = typeof n === "string" ? Number(n) : n;
+  if (v === undefined || v === null || Number.isNaN(v)) return null;
+  return v.toLocaleString("ko-KR");
+}
+
+export default function DetailModal({ item, kind, myScore, onClose, onConsult }: DetailModalProps) {
   const [data, setData] = useState<DetailData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -184,11 +196,11 @@ export default function DetailModal({ item, kind, onClose, onConsult }: DetailMo
                       {data.housingTypes.map((h, i) => (
                         <tr key={i} className="border-b border-line/50">
                           <td className="py-1.5 pr-3 font-medium">{h.house_ty || "-"}</td>
-                          <td className="py-1.5 pr-3 text-right">{h.supply_area || "-"}</td>
-                          <td className="py-1.5 pr-3 text-right">{h.general_count || 0}</td>
-                          <td className="py-1.5 pr-3 text-right">{h.special_count || 0}</td>
-                          <td className="py-1.5 text-right font-mono">
-                            {h.lttot_top_amount ? `${h.lttot_top_amount}만원` : "-"}
+                          <td className={`py-1.5 pr-3 text-right ${NUM_CLASS}`}>{h.supply_area || "-"}</td>
+                          <td className={`py-1.5 pr-3 text-right ${NUM_CLASS}`}>{fmtNum(h.general_count) ?? "-"}</td>
+                          <td className={`py-1.5 pr-3 text-right ${NUM_CLASS}`}>{fmtNum(h.special_count) ?? "-"}</td>
+                          <td className={`py-1.5 text-right ${NUM_CLASS}`}>
+                            {fmtNum(h.lttot_top_amount) ? `${fmtNum(h.lttot_top_amount)}만원` : "-"}
                           </td>
                         </tr>
                       ))}
@@ -222,10 +234,10 @@ export default function DetailModal({ item, kind, onClose, onConsult }: DetailMo
                           {data.competition.some((x) => x.region_name) && (
                             <td className="py-1.5 pr-3">{c.region_name || "-"}</td>
                           )}
-                          <td className="py-1.5 pr-3 text-right">{c.supply_count || 0}</td>
-                          <td className="py-1.5 pr-3 text-right">{c.applicants}</td>
-                          <td className="py-1.5 text-right font-mono font-medium text-accent">
-                            {c.competition_rate}:1
+                          <td className={`py-1.5 pr-3 text-right ${NUM_CLASS}`}>{fmtNum(c.supply_count) ?? "-"}</td>
+                          <td className={`py-1.5 pr-3 text-right ${NUM_CLASS}`}>{fmtNum(c.applicants) ?? c.applicants}</td>
+                          <td className={`py-1.5 text-right font-medium text-accent ${NUM_CLASS}`}>
+                            {fmtNum(c.competition_rate) ?? c.competition_rate}:1
                           </td>
                         </tr>
                       ))}
@@ -240,28 +252,49 @@ export default function DetailModal({ item, kind, onClose, onConsult }: DetailMo
                 {data.scores.length === 0 ? (
                   <EmptyHint text={emptyText("당첨 가점")} />
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-line text-muted">
-                          <th className="py-2 pr-3 text-left font-medium">주택형</th>
-                          <th className="py-2 pr-3 text-right font-medium">최저</th>
-                          <th className="py-2 pr-3 text-right font-medium">평균</th>
-                          <th className="py-2 text-right font-medium">최고</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.scores.map((s, i) => (
-                          <tr key={i} className="border-b border-line/50">
-                            <td className="py-1.5 pr-3 font-medium">{s.house_ty || "-"}</td>
-                            <td className="py-1.5 pr-3 text-right">{s.min_score || "-"}</td>
-                            <td className="py-1.5 pr-3 text-right font-medium">{s.avg_score || "-"}</td>
-                            <td className="py-1.5 text-right">{s.max_score || "-"}</td>
+                  <>
+                    <p className="mb-2 text-[11px] text-muted">
+                      내 청약 가점(계산기에서 입력한 값 기준) <span className="font-semibold text-accent">{myScore}점</span>과
+                      비교합니다. 과거 최저 당첨가점이며 이번 회차 결과를 보장하지 않습니다.
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-line text-muted">
+                            <th className="py-2 pr-3 text-left font-medium">주택형</th>
+                            <th className="py-2 pr-3 text-right font-medium">최저</th>
+                            <th className="py-2 pr-3 text-right font-medium">평균</th>
+                            <th className="py-2 pr-3 text-right font-medium">최고</th>
+                            <th className="py-2 text-right font-medium">내 점수 대비</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {data.scores.map((s, i) => {
+                            const min = Number(s.min_score);
+                            const hasMin = s.min_score !== "" && s.min_score != null && !Number.isNaN(min);
+                            const diff = hasMin ? myScore - min : null;
+                            return (
+                              <tr key={i} className="border-b border-line/50">
+                                <td className="py-1.5 pr-3 font-medium">{s.house_ty || "-"}</td>
+                                <td className={`py-1.5 pr-3 text-right ${NUM_CLASS}`}>{fmtNum(s.min_score) ?? "-"}</td>
+                                <td className={`py-1.5 pr-3 text-right font-medium ${NUM_CLASS}`}>{fmtNum(s.avg_score) ?? "-"}</td>
+                                <td className={`py-1.5 pr-3 text-right ${NUM_CLASS}`}>{fmtNum(s.max_score) ?? "-"}</td>
+                                <td className={`py-1.5 text-right ${NUM_CLASS}`}>
+                                  {diff === null ? (
+                                    "-"
+                                  ) : diff >= 0 ? (
+                                    <span className="text-[#58c8a0]">최저가점 이상 (+{diff})</span>
+                                  ) : (
+                                    <span className="text-[#e2a05b]">{Math.abs(diff)}점 부족</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </Section>
             )}
@@ -286,10 +319,10 @@ export default function DetailModal({ item, kind, onClose, onConsult }: DetailMo
                       {data.special.map((s, i) => (
                         <tr key={i} className="border-b border-line/50">
                           <td className="py-1.5 pr-3 font-medium">{s.house_ty || "-"}</td>
-                          <td className="py-1.5 pr-3 text-right">{s.multi_child || 0}</td>
-                          <td className="py-1.5 pr-3 text-right">{s.newlywed || 0}</td>
-                          <td className="py-1.5 pr-3 text-right">{s.first_life || 0}</td>
-                          <td className="py-1.5 text-right">{s.elderly_parent || 0}</td>
+                          <td className={`py-1.5 pr-3 text-right ${NUM_CLASS}`}>{fmtNum(s.multi_child) ?? "-"}</td>
+                          <td className={`py-1.5 pr-3 text-right ${NUM_CLASS}`}>{fmtNum(s.newlywed) ?? "-"}</td>
+                          <td className={`py-1.5 pr-3 text-right ${NUM_CLASS}`}>{fmtNum(s.first_life) ?? "-"}</td>
+                          <td className={`py-1.5 text-right ${NUM_CLASS}`}>{fmtNum(s.elderly_parent) ?? "-"}</td>
                         </tr>
                       ))}
                     </tbody>

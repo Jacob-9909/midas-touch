@@ -19,6 +19,7 @@ import {
 } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { seedChat } from "@/lib/chat-seed";
+import { MAX_SCORE, totalCheongyakScore } from "@/lib/cheongyak-score";
 import OGHeroCard from "@/components/bits/OGHeroCard";
 import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 import PopularCard from "@/components/bits/PopularCard";
@@ -136,6 +137,73 @@ function CheongyakCard({
   );
 }
 
+// 내 청약 가점 계산기 상태. 여러 공고 상세를 오가며 비교해야 하므로 localStorage에 영속해
+// 매번 다시 입력하지 않게 한다.
+const SCORE_STORAGE_KEY = "midas.cheongyak.myScore.v1";
+
+interface ScoreState {
+  homelessYears: number;
+  dependents: number;
+  subscriptionYears: number;
+}
+
+const DEFAULT_SCORE_STATE: ScoreState = { homelessYears: 3, dependents: 0, subscriptionYears: 5 };
+
+function MyScoreCard({ state, onChange }: { state: ScoreState; onChange: (s: ScoreState) => void }) {
+  const score = totalCheongyakScore(state);
+  const inputClass =
+    "w-full rounded-xl border border-line bg-[var(--ink-2)]/50 px-3 py-2 text-sm text-fg outline-none focus:border-accent font-mono-spec tabular-nums";
+  return (
+    <Card className="flex flex-col gap-4 sm:flex-row sm:items-end">
+      <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted">무주택기간(년)</span>
+          <input
+            type="number"
+            min={0}
+            max={30}
+            step={0.5}
+            className={inputClass}
+            value={state.homelessYears}
+            onChange={(e) => onChange({ ...state, homelessYears: Number(e.target.value) })}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted">부양가족수(명)</span>
+          <input
+            type="number"
+            min={0}
+            max={10}
+            step={1}
+            className={inputClass}
+            value={state.dependents}
+            onChange={(e) => onChange({ ...state, dependents: Number(e.target.value) })}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted">청약통장 가입기간(년)</span>
+          <input
+            type="number"
+            min={0}
+            max={30}
+            step={0.5}
+            className={inputClass}
+            value={state.subscriptionYears}
+            onChange={(e) => onChange({ ...state, subscriptionYears: Number(e.target.value) })}
+          />
+        </label>
+      </div>
+      <div className="shrink-0 rounded-xl border border-accent/30 bg-accent/10 px-4 py-2.5 text-center font-mono-spec">
+        <div className="text-[10px] uppercase tracking-wider text-accent/80">내 청약 가점</div>
+        <div className="font-mono-spec text-2xl font-bold tabular-nums text-accent">
+          {score}
+          <span className="text-sm text-muted">/{MAX_SCORE}</span>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function CheongyakPage() {
   const toast = useToast();
   const router = useRouter();
@@ -148,6 +216,26 @@ export default function CheongyakPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("전체");
   const [mapRegion, setMapRegion] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<CheongyakSummary | null>(null);
+  const [scoreState, setScoreState] = useState<ScoreState>(DEFAULT_SCORE_STATE);
+
+  // 마운트 1회 localStorage 복원(서버엔 localStorage 없어 lazy init 불가 → effect가 정답).
+  useEffect(() => {
+    const raw = localStorage.getItem(SCORE_STORAGE_KEY);
+    if (raw) {
+      try {
+        /* eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 저장된 가점 입력 복원 */
+        setScoreState(JSON.parse(raw));
+      } catch {
+        /* 무시 — 기본값 유지 */
+      }
+    }
+  }, []);
+
+  const updateScoreState = (s: ScoreState) => {
+    setScoreState(s);
+    localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(s));
+  };
+  const myScore = totalCheongyakScore(scoreState);
 
   // 선택 유저의 거주 지역(개인화).
   useEffect(() => {
@@ -256,6 +344,8 @@ export default function CheongyakPage() {
           { label: "접수 중 단지", value: items ? `${statusCounts["접수중"] ?? 0}개` : "-" },
         ]}
       />
+
+      <MyScoreCard state={scoreState} onChange={updateScoreState} />
 
       <div className="flex flex-wrap items-center gap-2 font-mono-spec text-xs bg-[#090d16]/80 p-1.5 rounded-full border border-line-50">
         {TABS.map((t) => (
@@ -408,6 +498,7 @@ export default function CheongyakPage() {
         <DetailModal
           item={detailItem}
           kind={kind}
+          myScore={myScore}
           onClose={() => setDetailItem(null)}
           onConsult={(it) => {
             setDetailItem(null);
