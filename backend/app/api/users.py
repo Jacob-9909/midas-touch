@@ -151,14 +151,17 @@ def get_market_snapshots(force_refresh: bool = False) -> dict:
     import time
 
     now = time.time()
-    if force_refresh or not _MACRO_CACHE["data"] or (now - _MACRO_CACHE["last_updated"] >= _MACRO_TTL):
-        if _MACRO_LOCK.acquire(blocking=False):
-            try:
-                if not _IS_UPDATING_MACRO:
-                    _IS_UPDATING_MACRO = True
-                    threading.Thread(target=_do_macro_thread, daemon=True).start()
-            finally:
-                _MACRO_LOCK.release()
+    if (
+        force_refresh
+        or not _MACRO_CACHE["data"]
+        or (now - _MACRO_CACHE["last_updated"] >= _MACRO_TTL)
+    ) and _MACRO_LOCK.acquire(blocking=False):
+        try:
+            if not _IS_UPDATING_MACRO:
+                _IS_UPDATING_MACRO = True
+                threading.Thread(target=_do_macro_thread, daemon=True).start()
+        finally:
+            _MACRO_LOCK.release()
 
     return {"snapshots": _MACRO_CACHE["data"] or DEFAULT_MACRO_SNAPSHOTS}
 

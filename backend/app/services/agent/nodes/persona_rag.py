@@ -16,5 +16,5 @@ def persona_rag_node(state: AgentState) -> dict:
             query = f"{summary}\n\n[현재 질문]\n{query}"
         result = persona_rag.invoke({"query": query})
         return {"tool_context": [f"[persona_rag 결과]\n{result}"]}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"tool_context": [f"[persona_rag 조회 실패] {exc}"]}

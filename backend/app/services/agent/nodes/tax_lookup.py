@@ -27,5 +27,5 @@ def tax_lookup_node(state: AgentState) -> dict:
             {"asset_types": asset_types, "include_market": include_market}
         )
         return {"tool_context": [f"[tax_and_market_lookup 결과]\n{result}"]}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"tool_context": [f"[tax_and_market_lookup 조회 실패] {exc}"]}

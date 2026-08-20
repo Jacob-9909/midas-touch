@@ -154,7 +154,7 @@ def classify_intent(state: AgentState) -> dict:
         tools = list(dict.fromkeys(result.tools))  # 중복 제거, 순서 유지
         asset_types = list(dict.fromkeys(result.asset_types))
         ticker = (result.ticker or "").strip()
-    except Exception:  # noqa: BLE001 - 분류 실패 시 키워드 폴백
+    except Exception:  # 분류 실패 시 키워드 폴백
         tools = _keyword_route(user_text)
         if "stock_backtest" in tools or "stock_quick" in tools:
             import re
