@@ -522,6 +522,8 @@ class AnalysisMemory:
 
             import yfinance as yf
 
+            from shared.database.repositories.connection import db_cursor
+
             history_cache: dict[str, Any] = {}
 
             def _get_history(sym: str, s_dt: str, e_dt: str):
@@ -529,7 +531,7 @@ class AnalysisMemory:
                 if key not in history_cache:
                     try:
                         history_cache[key] = yf.Ticker(sym).history(start=s_dt, end=e_dt, auto_adjust=False)
-                    except Exception:  # noqa: BLE001
+                    except Exception:
                         history_cache[key] = None
                 return history_cache[key]
 
@@ -612,7 +614,7 @@ class AnalysisMemory:
                 if key not in history_cache:
                     try:
                         history_cache[key] = yf.Ticker(sym).history(start=s_dt, end=e_dt, auto_adjust=False)
-                    except Exception:  # noqa: BLE001
+                    except Exception:
                         history_cache[key] = None
                 return history_cache[key]
 

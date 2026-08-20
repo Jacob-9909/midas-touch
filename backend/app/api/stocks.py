@@ -546,14 +546,15 @@ def get_stock_heatmap(force_refresh: bool = False) -> dict:
         _HEATMAP_CACHE["source"] = "sample_initial"
 
     # 2. 캐시 만료 시 백그라운드 스레드로 비동기 갱신 (메인 스레드 블로킹 방지)
-    if force_refresh or (now - _HEATMAP_CACHE["last_updated"] >= _CACHE_TTL_SECONDS):
-        if _HEATMAP_LOCK.acquire(blocking=False):
-            try:
-                if not _IS_UPDATING_HEATMAP:
-                    _IS_UPDATING_HEATMAP = True
-                    threading.Thread(target=_do_update_heatmap, daemon=True).start()
-            finally:
-                _HEATMAP_LOCK.release()
+    if (
+        force_refresh or (now - _HEATMAP_CACHE["last_updated"] >= _CACHE_TTL_SECONDS)
+    ) and _HEATMAP_LOCK.acquire(blocking=False):
+        try:
+            if not _IS_UPDATING_HEATMAP:
+                _IS_UPDATING_HEATMAP = True
+                threading.Thread(target=_do_update_heatmap, daemon=True).start()
+        finally:
+            _HEATMAP_LOCK.release()
 
     return {
         "stocks": _HEATMAP_CACHE["data"],
