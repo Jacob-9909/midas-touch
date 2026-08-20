@@ -29,7 +29,6 @@ import {
 import { apiGet, type MarketSnapshot, type UserSummary } from "@/lib/api";
 import { useSelectedUser } from "@/lib/user-context";
 import { useToast } from "@/lib/toast";
-import { Reveal } from "@/components/Reveal";
 import OGHeroCard from "@/components/bits/OGHeroCard";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
 import MiniSparkline from "@/components/bits/MiniSparkline";
@@ -46,7 +45,14 @@ import {
 } from "@/components/ui";
 import MemoryStatsCard from "@/app/stocks/MemoryStatsCard";
 import ScrollVelocity from "@/components/bits/ScrollVelocity";
-import GlareHover from "@/components/bits/GlareHover";
+import MagicBento from "@/components/bits/MagicBento";
+import FoldText from "@/components/bits/FoldText";
+import PillNav from "@/components/bits/PillNav";
+import HeroIntro from "@/components/sections/HeroIntro";
+import MarketFlapBoard from "@/components/sections/MarketFlapBoard";
+import PersonaCarousel from "@/components/sections/PersonaCarousel";
+import DriftSection from "@/components/sections/DriftSection";
+import PixelSwapCard from "@/components/sections/PixelSwapCard";
 
 // 단일 여정 3단계 — 랜딩 진입점에서 서비스의 한 문장을 행동으로 풀어준다.
 const JOURNEY = [
@@ -950,6 +956,20 @@ export default function HomePage() {
       .join("   ·   ");
   }, [market]);
 
+  // split-flap 보드용 — 증시/거시 값을 짧은 대문자 토큰으로. 실제 스냅샷을 반영한다.
+  const flapWords = useMemo(() => {
+    if (!market.length) return ["MARKET SYNC", "SIGNAL LIVE"];
+    const w = market
+      .slice(0, 8)
+      .map((m) => {
+        const v = Number(m.value);
+        const shown = Number.isFinite(v) ? Math.round(v).toLocaleString() : String(m.value);
+        const key = (m.sub_key || m.data_type).replace(/[^A-Za-z0-9]/g, "").slice(0, 8).toUpperCase();
+        return `${key} ${shown}`;
+      });
+    return w.length ? w : ["MARKET SYNC"];
+  }, [market]);
+
   const assetOptions = useMemo(
     () =>
       [...new Set(users.map((u) => u.preferred_asset).filter(Boolean))].sort() as string[],
@@ -1011,6 +1031,30 @@ export default function HomePage() {
 
   return (
     <div className="space-y-12">
+      {/* ────────────────────────────────────────────────
+         Cinematic Scroll-Expand Intro (ScrollExpand · RotatingText · SpecularButton)
+         ──────────────────────────────────────────────── */}
+      <HeroIntro />
+
+      {/* 인페이지 섹션 내비 — 골드 pill 이 활성 섹션으로 흐른다 */}
+      <div className="flex justify-center">
+        <PillNav
+          logo="/hero/persona-3.svg"
+          logoAlt="Midas"
+          items={[
+            { label: "Market", href: "#market" },
+            { label: "Stocks", href: "#stocks" },
+            { label: "Personas", href: "#personas" },
+          ]}
+          activeHref="#market"
+          baseColor="#d4af37"
+          pillColor="#04060a"
+          hoveredPillTextColor="#04060a"
+          pillTextColor="#f1f4f9"
+          initialLoadAnimation={false}
+        />
+      </div>
+
       {/* ────────────────────────────────────────────────
          Swiss Financial Editorial Top Ticker Bar
          ──────────────────────────────────────────────── */}
@@ -1117,43 +1161,49 @@ export default function HomePage() {
       </section>
 
       {/* ────────────────────────────────────────────────
-         Swiss 3-Step Journey Hairline Grid
+         Live Split-Flap Market Board (SplitFlapText · 증시 반영)
          ──────────────────────────────────────────────── */}
-      <section className="grid gap-px border border-line bg-line/30 sm:grid-cols-3">
-        {JOURNEY.map((s, i) => (
-          <Reveal key={s.title} index={i} className="h-full">
-            {/* 골드 광원이 카드를 사선으로 쓸고 지나간다 — 유리 패널로 읽히게 하는 장치 */}
-            <GlareHover
-              className="h-full"
-              glareColor="#f3e5ab"
-              glareOpacity={0.16}
-              glareAngle={-40}
-              glareSize={220}
-              transitionDuration={780}
-            >
-            <div className="h-full bg-[var(--ink-1)] p-6 transition hover:bg-[color-mix(in_srgb,var(--accent)_4%,var(--ink-1))]">
-              <div className="flex items-center justify-between border-b border-line/40 pb-3">
-                <span className="font-mono-spec text-[10px] font-semibold tracking-widest text-accent">
-                  PHASE 0{i + 1}
-                </span>
-                <span className="text-muted">
-                  <s.icon size={18} weight="duotone" />
-                </span>
-              </div>
-              <h2 className="font-display mt-4 text-xl font-semibold text-fg">
-                {s.title}
-              </h2>
-              <p className="mt-2 text-xs leading-relaxed text-muted">{s.body}</p>
-            </div>
-            </GlareHover>
-          </Reveal>
-        ))}
+      <MarketFlapBoard words={flapWords} />
+
+      {/* ────────────────────────────────────────────────
+         Capability Bento (MagicBento) + Fold-in Heading (FoldText)
+         ──────────────────────────────────────────────── */}
+      <section className="space-y-6">
+        <FoldText
+          text="근거로 답하는 콘솔"
+          splitBy="char"
+          hinge="top"
+          trigger="scroll"
+          fontSize="clamp(28px, 5vw, 52px)"
+          fontWeight={700}
+          color="var(--fg)"
+          className="font-display"
+        />
+        {/* GlareHover 3단 그리드를 스포트라이트 벤토로 승격 — 여정 3단계 + 부가 역량 */}
+        <div className="flex justify-center">
+          <MagicBento
+            glowColor="212, 175, 96"
+            spotlightRadius={340}
+            particleCount={10}
+            enableTilt={false}
+            clickEffect
+            enableMagnetism
+          />
+        </div>
+        {/* 접근성/폴백 — 벤토 카드 요지를 텍스트로도 남긴다 */}
+        <ol className="sr-only">
+          {JOURNEY.map((s) => (
+            <li key={s.title}>
+              {s.title}: {s.body}
+            </li>
+          ))}
+        </ol>
       </section>
 
       {/* ────────────────────────────────────────────────
          Swiss Financial Market Indicators (거시 시장 지표)
          ──────────────────────────────────────────────── */}
-      <section className="animate-rise space-y-4">
+      <section id="market" className="animate-rise space-y-4 scroll-mt-24">
         <div className="flex items-center justify-between">
           <SectionLabel>최신 거시 시장 지표 (Macro Indicators)</SectionLabel>
           <span className="font-mono-spec text-[10px] uppercase text-muted">
@@ -1284,7 +1334,7 @@ export default function HomePage() {
       {/* ────────────────────────────────────────────────
          FINVIZ REPRESENTATIVE STOCK HEATMAP (주요 대표 주식 히트맵 콘솔)
          ──────────────────────────────────────────────── */}
-      <section className="animate-rise space-y-4 pt-2">
+      <section id="stocks" className="animate-rise space-y-4 pt-2 scroll-mt-24">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SectionLabel>대표 주요 종목 FINVIZ 히트맵 (Stock Market Treemap)</SectionLabel>
           <span className="font-mono-spec text-[10px] text-accent uppercase tracking-widest">
@@ -1579,6 +1629,23 @@ export default function HomePage() {
             })()}
           </div>
           )}
+        </div>
+      </section>
+
+      {/* ────────────────────────────────────────────────
+         Persona Depth Carousel (DepthCarousel) + Q→A Pixel Swap + Drift Wall
+         ──────────────────────────────────────────────── */}
+      <section id="personas" className="animate-rise space-y-6 pt-2 scroll-mt-24">
+        <div className="flex items-center justify-between">
+          <SectionLabel>투자 성향 페르소나 (Investor Personas)</SectionLabel>
+          <span className="font-mono-spec text-[10px] uppercase tracking-widest text-muted">
+            DRAG · AUTOPLAY
+          </span>
+        </div>
+        <PersonaCarousel />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <PixelSwapCard />
+          <DriftSection />
         </div>
       </section>
 
