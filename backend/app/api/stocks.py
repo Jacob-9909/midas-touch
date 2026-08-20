@@ -54,9 +54,9 @@ class BacktestRequest(BaseModel):
     ticker: str = Field(min_length=1, max_length=20)
     strategy: str = "sma_crossover"
     period: Literal["1mo", "3mo", "6mo", "1y", "2y"] = "1y"
-    start_date: str | None = None  # YYYY-MM-DD; overrides period
-    end_date: str | None = None
-    initial_capital: int = 100_000_000
+    start_date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")  # YYYY-MM-DD; overrides period
+    end_date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    initial_capital: int = Field(default=100_000_000, gt=0)
     params: dict | None = None
 
 
@@ -70,9 +70,9 @@ class GridSearchRequest(BaseModel):
     ticker: str = Field(min_length=1, max_length=20)
     strategy: str = "sma_crossover"
     period: Literal["1mo", "3mo", "6mo", "1y", "2y"] = "1y"
-    start_date: str | None = None
-    end_date: str | None = None
-    initial_capital: int = 100_000_000
+    start_date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    end_date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    initial_capital: int = Field(default=100_000_000, gt=0)
 
 
 @router.get("/quick-analysis")
@@ -354,6 +354,7 @@ _CACHE_TTL_SECONDS = 300.0  # 5분 인메모리 캐시 (Rate limit 방지)
 import threading
 
 _IS_UPDATING_HEATMAP = False
+_HEATMAP_LOCK = threading.Lock()
 
 
 def _do_update_heatmap():
@@ -500,10 +501,14 @@ def get_stock_heatmap(force_refresh: bool = False) -> dict:
         _HEATMAP_CACHE["source"] = "sample_initial"
 
     # 2. 캐시 만료 시 백그라운드 스레드로 비동기 갱신 (메인 스레드 블로킹 방지)
-    if (force_refresh or (now - _HEATMAP_CACHE["last_updated"] >= _CACHE_TTL_SECONDS)) and not _IS_UPDATING_HEATMAP:
-        _IS_UPDATING_HEATMAP = True
-        t = threading.Thread(target=_do_update_heatmap, daemon=True)
-        t.start()
+    if force_refresh or (now - _HEATMAP_CACHE["last_updated"] >= _CACHE_TTL_SECONDS):
+        if _HEATMAP_LOCK.acquire(blocking=False):
+            try:
+                if not _IS_UPDATING_HEATMAP:
+                    _IS_UPDATING_HEATMAP = True
+                    threading.Thread(target=_do_update_heatmap, daemon=True).start()
+            finally:
+                _HEATMAP_LOCK.release()
 
     return {
         "stocks": _HEATMAP_CACHE["data"],
