@@ -522,7 +522,16 @@ class AnalysisMemory:
 
             import yfinance as yf
 
-            from shared.database.repositories.connection import db_cursor
+            history_cache: dict[str, Any] = {}
+
+            def _get_history(sym: str, s_dt: str, e_dt: str):
+                key = f"{sym}:{s_dt}:{e_dt}"
+                if key not in history_cache:
+                    try:
+                        history_cache[key] = yf.Ticker(sym).history(start=s_dt, end=e_dt, auto_adjust=False)
+                    except Exception:  # noqa: BLE001
+                        history_cache[key] = None
+                return history_cache[key]
 
             with db_cursor() as (_, cur):
                 cur.execute(
@@ -548,11 +557,8 @@ class AnalysisMemory:
                         # 주말·휴일로 target 봉이 밀릴 수 있어 앞뒤로 버퍼를 두고 받는다.
                         start = (created - timedelta(days=2)).strftime("%Y-%m-%d")
                         end = (target + timedelta(days=8)).strftime("%Y-%m-%d")
-                        # 진입가(price_at_analysis)는 StockAnalyzer.fetch_data의 auto_adjust=False
-                        # 종가다. 여기서 기본값(auto_adjust=True)으로 받으면 배당·분할 소급조정된
-                        # 종가와 비교하게 돼 수익률이 체계적으로 왜곡된다(KO 1년 기준 약 -4%).
-                        hist = yf.Ticker(ticker).history(start=start, end=end, auto_adjust=False)
-                        if hist.empty:
+                        hist = _get_history(ticker, start, end)
+                        if hist is None or hist.empty:
                             continue
                         dates = [d.date() for d in hist.index]
                         closes = [float(c) for c in hist["Close"].values]
@@ -599,6 +605,17 @@ class AnalysisMemory:
 
             from shared.database.repositories.connection import db_cursor
 
+            history_cache: dict[str, Any] = {}
+
+            def _get_history(sym: str, s_dt: str, e_dt: str):
+                key = f"{sym}:{s_dt}:{e_dt}"
+                if key not in history_cache:
+                    try:
+                        history_cache[key] = yf.Ticker(sym).history(start=s_dt, end=e_dt, auto_adjust=False)
+                    except Exception:  # noqa: BLE001
+                        history_cache[key] = None
+                return history_cache[key]
+
             max_days = max(_HORIZON_DAYS.values())
             since = max_days + 30 if since_days is None else int(since_days)
             with db_cursor() as (_, cur):
@@ -632,10 +649,8 @@ class AnalysisMemory:
 
                         start = (created - timedelta(days=2)).strftime("%Y-%m-%d")
                         end = (created + timedelta(days=max_days + 8)).strftime("%Y-%m-%d")
-                        # 진입가와 같은 기준(미조정 종가)으로 받아야 배당·분할 소급조정 때문에
-                        # 수익률이 체계적으로 밀리지 않는다. validate_recent와 동일한 이유.
-                        hist = yf.Ticker(ticker).history(start=start, end=end, auto_adjust=False)
-                        if hist.empty:
+                        hist = _get_history(ticker, start, end)
+                        if hist is None or hist.empty:
                             continue
                         dates = [d.date() for d in hist.index]
                         closes = [float(c) for c in hist["Close"].values]

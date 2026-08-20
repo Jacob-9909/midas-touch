@@ -19,10 +19,13 @@ def _needs_market(user_text: str, asset_types: list[str]) -> bool:
 
 
 def tax_lookup_node(state: AgentState) -> dict:
-    # intent가 자산 종류를 특정했으면 그 자산으로 세법 조회를 좁힌다(없으면 전체 조회).
-    asset_types = state.get("tax_asset_types") or []
-    include_market = _needs_market(latest_user_text(state), asset_types)
-    result = tax_and_market_lookup.invoke(
-        {"asset_types": asset_types, "include_market": include_market}
-    )
-    return {"tool_context": [f"[tax_and_market_lookup 결과]\n{result}"]}
+    try:
+        # intent가 자산 종류를 특정했으면 그 자산으로 세법 조회를 좁힌다(없으면 전체 조회).
+        asset_types = state.get("tax_asset_types") or []
+        include_market = _needs_market(latest_user_text(state), asset_types)
+        result = tax_and_market_lookup.invoke(
+            {"asset_types": asset_types, "include_market": include_market}
+        )
+        return {"tool_context": [f"[tax_and_market_lookup 결과]\n{result}"]}
+    except Exception as exc:  # noqa: BLE001
+        return {"tool_context": [f"[tax_and_market_lookup 조회 실패] {exc}"]}
