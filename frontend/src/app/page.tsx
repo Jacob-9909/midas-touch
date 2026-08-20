@@ -547,6 +547,27 @@ function getMacroTrendData(
   };
 }
 
+// 신선도 배지: 백엔드가 주는 source를 라이브/DB/샘플로 정직하게 분류(하드코딩 "LIVE" 대체).
+type Fresh = { label: string; live: boolean; db: boolean; when?: string };
+
+function freshnessLabel(source?: string): Fresh {
+  const s = (source || "").toLowerCase();
+  if (s.includes("yfinance") || s.includes("live")) return { label: "LIVE", live: true, db: false };
+  if (s.includes("db") || s.includes("bok") || s.includes("official")) return { label: "DB", live: false, db: true };
+  return { label: "SAMPLE", live: false, db: false };
+}
+
+// 여러 스냅샷 종합: 하나라도 샘플이면 SAMPLE, 아니면 라이브 있으면 LIVE, 아니면 DB. 최신 날짜도 함께.
+function macroFreshness(market: MarketSnapshot[]): Fresh {
+  const srcs = market.map((m) => (m.source || "").toLowerCase());
+  const when = market.map((m) => m.snapshot_date).filter(Boolean).sort().at(-1);
+  if (srcs.some((s) => s.includes("stale") || s.includes("sample")))
+    return { label: "SAMPLE", live: false, db: false, when };
+  if (srcs.some((s) => s.includes("yfinance") || s.includes("live")))
+    return { label: "LIVE", live: true, db: false, when };
+  return { label: "DB", live: false, db: true, when };
+}
+
 const DEFAULT_MACRO_SNAPSHOTS: MarketSnapshot[] = [
   { snapshot_date: "2026-05-23", data_type: "exchange_rate", sub_key: "USD/KRW", value: 1520.53, unit: "KRW", source: "yfinance_live" },
   { snapshot_date: "2026-05-22", data_type: "interest_rate", sub_key: "US_10Y_BOND", value: 4.56, unit: "%", source: "yfinance_live" },
@@ -679,6 +700,9 @@ export default function HomePage() {
   const [macroPeriod, setMacroPeriod] = useState<"1W" | "1M" | "6M">("1W");
   const [stockHeatmapData, setStockHeatmapData] = useState<StockHeatmapItem[]>(STOCK_HEATMAP_DATA);
   const [heatmapMeta, setHeatmapMeta] = useState<{ source?: string; last_updated?: string }>({});
+  // 신선도 배지 값(하드코딩 LIVE 대신 실제 source 기반). market/heatmapMeta는 작아 매 렌더 계산해도 무해.
+  const heatFresh = freshnessLabel(heatmapMeta.source);
+  const macroFresh = macroFreshness(market);
   const [marketHistoryMap, setMarketHistoryMap] = useState<Record<string, number[]>>({});
   // 캘리브레이션 스코프 — 빈 문자열이면 전체 종목.
   const [calTicker, setCalTicker] = useState("");
@@ -1161,8 +1185,14 @@ export default function HomePage() {
       <section id="market" className="animate-rise space-y-4 scroll-mt-24">
         <div className="flex items-center justify-between">
           <SectionLabel>최신 거시 시장 지표 (Macro Indicators)</SectionLabel>
-          <span className="font-mono-spec text-[10px] uppercase text-muted">
-            LIVE SNAPSHOTS
+          <span className="inline-flex items-center gap-1.5 font-mono-spec text-[10px] uppercase text-muted">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                macroFresh.live ? "bg-emerald-400 animate-pulse" : macroFresh.db ? "bg-amber-400" : "bg-zinc-500"
+              }`}
+            />
+            {macroFresh.label}
+            {macroFresh.when && <span className="normal-case text-muted/70">· {macroFresh.when}</span>}
           </span>
         </div>
 
@@ -1377,11 +1407,19 @@ export default function HomePage() {
           {/* Unified Board Top Bar */}
           <div className="flex items-center justify-between border-b border-line/50 pb-2 px-1 font-mono-spec">
             <div className="flex items-center gap-2 text-xs font-bold text-fg">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{marketFilter === "CRYPTO" ? "CRYPTO PRICE CHART · 3M CLOSE" : "FINVIZ STOCK HEATMAP · BATCH LIVE FEED"}</span>
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  heatFresh.live ? "bg-emerald-400 animate-pulse" : heatFresh.db ? "bg-amber-400" : "bg-zinc-500"
+                }`}
+              />
+              <span>
+                {marketFilter === "CRYPTO"
+                  ? "CRYPTO PRICE CHART · 3M CLOSE"
+                  : `FINVIZ STOCK HEATMAP · ${heatFresh.label} FEED`}
+              </span>
             </div>
             <div className="flex items-center gap-3 text-[10px] text-accent uppercase tracking-widest">
-              <span>SOURCE: {heatmapMeta.source || "LIVE BATCH (YFINANCE)"}</span>
+              <span>SOURCE: {heatmapMeta.source || "—"}</span>
               {heatmapMeta.last_updated && <span className="text-muted">UPDATED: {heatmapMeta.last_updated}</span>}
             </div>
           </div>
