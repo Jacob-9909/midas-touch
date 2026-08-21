@@ -160,35 +160,43 @@ class TestPassageCleanupHeuristic(unittest.TestCase):
 # ChatService — 프로필 포맷 / 404 / 제목 절삭
 # ---------------------------------------------------------------------------
 class TestChatService(unittest.TestCase):
-    def test_profile_context_formats_amounts(self) -> None:
+    """프로필 주입 규칙.
+
+    프로필은 사용자가 /me 에 입력한 요약 문자열이고, 서버엔 원본이 없다. 그래서
+    (1) 첫 턴에만 넣고 (2) 없으면 넣지 않는다 — 이 두 가지가 지켜지는지 본다.
+    """
+
+    @staticmethod
+    def _svc_with_state(existing_messages: list):
         import backend.app.services.chat_service as cs
 
-        prof = {
-            "age": 35, "sex": "남", "occupation": "개발자", "family_type": "1인", "housing_type": "전세",
-            "district": "강남", "total_amount": 100000000, "monthly_income": 5000000,
-            "monthly_investable": 2000000, "stock_amount": 50000000, "bond_amount": 10000000,
-            "deposit_amount": 30000000, "real_estate_amount": 10000000, "aggressiveness": 7,
-            "financial_literacy": 8, "preferred_asset": "주식", "specific_items": "삼성전자",
-            "target_return_percent": 10, "investable_period_months": 24,
-        }
-        ctx = cs._build_profile_context(prof)
-        self.assertIn("100,000,000", ctx)
-        self.assertIn("개발자", ctx)
+        class _FakeState:
+            values = {"messages": existing_messages}
 
-    def test_require_profile_raises_404(self) -> None:
-        from fastapi import HTTPException
-
-        import backend.app.services.chat_service as cs
+        class _FakeAgent:
+            def get_state(self, config):  # noqa: ARG002
+                return _FakeState()
 
         svc = object.__new__(cs.ChatService)  # __init__(에이전트 생성) 우회
-        orig = cs.get_user_by_uuid
-        cs.get_user_by_uuid = lambda u: None
-        try:
-            with self.assertRaises(HTTPException) as ctx:
-                svc._require_profile("nope")
-            self.assertEqual(ctx.exception.status_code, 404)
-        finally:
-            cs.get_user_by_uuid = orig
+        svc._agent = _FakeAgent()
+        return svc
+
+    def test_profile_injected_on_first_turn(self) -> None:
+        svc = self._svc_with_state([])
+        state_in, config = svc._prepare_inputs("s1", "안녕", "anon-key", "[의뢰인 정보] 가점 20점")
+        self.assertEqual(state_in["profile_summary"], "[의뢰인 정보] 가점 20점")
+        self.assertEqual(state_in["user_uuid"], "anon-key")
+        self.assertEqual(config["configurable"]["thread_id"], "s1")
+
+    def test_profile_not_reinjected_on_later_turns(self) -> None:
+        svc = self._svc_with_state([{"role": "user", "content": "이전 턴"}])
+        state_in, _ = svc._prepare_inputs("s1", "다음 질문", "anon-key", "[의뢰인 정보] 가점 20점")
+        self.assertNotIn("profile_summary", state_in)
+
+    def test_no_profile_is_allowed(self) -> None:
+        svc = self._svc_with_state([])
+        state_in, _ = svc._prepare_inputs("s2", "안녕", "anon-key", None)
+        self.assertNotIn("profile_summary", state_in)
 
     def test_title_trim(self) -> None:
         import backend.app.services.chat_service as cs

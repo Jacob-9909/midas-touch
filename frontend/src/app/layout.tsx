@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
-import { UserProvider } from "@/lib/user-context";
 import { ThemeProvider, themeInitScript } from "@/lib/theme";
 import { ToastProvider } from "@/lib/toast";
 import NavBar from "@/components/NavBar";
@@ -33,7 +32,6 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} ${display.variable} min-h-full`}>
         <ThemeProvider>
           <ToastProvider>
-            <UserProvider>
               {/* 전역 골드 앰비언트 — 앱 전체에서 유일한 WebGL 캔버스 */}
               <AmbientBackground />
               <ClickSpark sparkRadius={18} sparkCount={9} duration={480}>
@@ -53,7 +51,6 @@ export default function RootLayout({
                   </p>
                 </footer>
               </ClickSpark>
-            </UserProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>

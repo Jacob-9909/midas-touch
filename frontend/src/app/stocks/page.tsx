@@ -47,7 +47,7 @@ import {
   type OutlookHorizon,
   type UserDetail,
 } from "@/lib/api";
-import { useSelectedUser } from "@/lib/user-context";
+import { clientId } from "@/lib/my-profile";
 import { seedChat } from "@/lib/chat-seed";
 import MiniSparkline from "@/components/bits/MiniSparkline";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
@@ -330,11 +330,15 @@ function OutlookCard({
 export default function StocksPage() {
   const toast = useToast();
   const router = useRouter();
-  const { selected } = useSelectedUser();
+  // 로그인이 없으므로 관심종목은 이 브라우저의 익명 id 로 묶는다.
+  const [uid, setUid] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 브라우저 식별자 복원
+    setUid(clientId());
+  }, []);
 
   // Shared state
   const [ticker, setTicker] = useState("AAPL");
-  const [detail, setDetail] = useState<UserDetail | null>(null);
   const [activeTab, setActiveTab] = useState<"quick" | "backtest">("quick");
 
   // Quick analysis state
@@ -361,17 +365,6 @@ export default function StocksPage() {
       .catch((e) => toast(`전략 목록 로드 실패: ${errMsg(e)}`, "error"));
   }, [toast]);
 
-  useEffect(() => {
-    // 유저 미선택 시 보유종목 블록이 selected로 가드되므로 stale detail은 렌더되지 않음 → 동기 리셋 불필요.
-    if (!selected) return;
-    let alive = true;
-    apiGet<UserDetail>(`/api/v1/users/${selected.uuid}`)
-      .then((d) => alive && setDetail(d))
-      .catch(() => alive && setDetail(null));
-    return () => { alive = false; };
-  }, [selected]);
-
-  const tickers = useMemo(() => portfolioTickers(detail), [detail]);
   const currentStrategy = useMemo(
     () => strategies.find((s) => s.name === strategy),
     [strategies, strategy],
@@ -404,7 +397,6 @@ export default function StocksPage() {
       `RSI ${qa.rsi.value}(${qa.rsi.signal}) · MACD ${qa.macd.signal} · KDJ K=${qa.kdj.k}\n` +
       `AI 판단: ${dec} (${o.confidence} 신뢰도)\n요약: ${o.summary}\n\n` +
       `이 분석을 내 포트폴리오 및 위험성향 관점에서 평가하고 구체적 조언을 해줘.`;
-    if (!selected) toast("홈에서 유저를 선택하면 맞춤 상담이 됩니다.", "info");
     seedChat(router, text);
   };
 
@@ -485,7 +477,6 @@ export default function StocksPage() {
       `전략 수익률 ${pct(m.total_return)} · 매수후보유 ${pct(m.buy_hold_return)} · ` +
       `최대낙폭 ${pct(m.max_drawdown)} · 승률 ${pct(m.win_rate)} · 거래 ${result.trades.length}회.\n` +
       `이 결과를 내 포트폴리오와 위험성향 관점에서 평가하고, 조정안을 제안해줘.`;
-    if (!selected) toast("먼저 홈에서 유저를 선택하면 맞춤 상담이 됩니다.", "info");
     seedChat(router, text);
   };
 
@@ -530,35 +521,12 @@ export default function StocksPage() {
           </button>
         </div>
 
-        {/* 보유 종목 퀵픽 */}
-        {selected && tickers.length > 0 && (
-          <div className="mt-4">
-            <span className="text-xs text-muted">{selected.label}님 보유 종목</span>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {tickers.map((t) => (
-                <button
-                  key={t.ticker}
-                  onClick={() =>
-                    activeTab === "quick" ? runQuick(t.ticker) : run(t.ticker, strategy)
-                  }
-                  className="rounded-full border border-line px-3 py-1 text-xs text-muted transition hover:border-accent hover:text-accent"
-                >
-                  {t.name}{" "}
-                  <span className="font-mono text-[10px] opacity-70">{t.ticker}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        {!selected && (
-          <p className="mt-3 text-xs text-muted">
-            홈에서 유저를 선택하면 보유 종목이 퀵픽으로 표시되고, 분석 결과를 맞춤 상담으로 연결할 수 있습니다.
-          </p>
-        )}
+        {/* 페르소나 "보유 종목 퀵픽"은 제거했다 — 남의 포트폴리오였다.
+            직접 담는 관심종목(아래 WatchlistCard)이 그 자리를 대신한다. */}
       </Card>
 
       <WatchlistCard
-        userUuid={selected?.uuid}
+        userUuid={uid}
         currentTicker={ticker}
         onPick={(t) => (activeTab === "quick" ? runQuick(t) : run(t, strategy))}
       />

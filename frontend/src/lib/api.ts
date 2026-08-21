@@ -66,7 +66,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
 
 /** /api/v1/chat/stream SSE를 읽어 토큰을 onToken으로 흘린다. */
 export async function streamChat(
-  body: { session_id: string; user_uuid: string; message: string },
+  body: { session_id: string; user_uuid: string; message: string; profile?: string },
   onToken: (t: string) => void,
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/api/v1/chat/stream`, {

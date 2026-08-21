@@ -71,12 +71,29 @@ class TestChatRoutes(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json().get("messages"), [])
 
-    def test_chat_unknown_user_404(self) -> None:
+    def test_chat_accepts_optional_profile(self) -> None:
+        """user_uuid 는 이제 회원 DB 키가 아니라 브라우저 익명 키다.
+
+        예전엔 모르는 uuid 면 404 였지만, 로그인·회원DB가 없어진 지금은 신원 조회 자체를
+        하지 않는다. 프로필은 클라이언트가 보낸 요약을 그대로 쓰고, 없으면 없는 대로 답한다.
+        """
         r = client.post(
             "/api/v1/chat",
-            json={"session_id": "t-404", "message": "안녕", "user_uuid": "nope-0000"},
+            json={
+                "session_id": "t-profile",
+                "message": "안녕",
+                "user_uuid": "anon-browser-key",
+                "profile": "[의뢰인 정보] 서울 거주 / 무주택 / 가점 20점",
+            },
         )
-        self.assertEqual(r.status_code, 404)
+        self.assertNotEqual(r.status_code, 404)
+
+    def test_chat_profile_is_optional(self) -> None:
+        r = client.post(
+            "/api/v1/chat",
+            json={"session_id": "t-noprofile", "message": "안녕", "user_uuid": "anon-browser-key"},
+        )
+        self.assertNotEqual(r.status_code, 422)
 
 
 class TestGraphRoutes(unittest.TestCase):

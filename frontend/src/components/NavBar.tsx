@@ -5,48 +5,34 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   ShieldChevron,
-  UserCircle,
   Moon,
   Sun,
   List,
   X,
 } from "@phosphor-icons/react";
-import { useSelectedUser } from "@/lib/user-context";
 import { useTheme } from "@/lib/theme";
 import ShinyText from "@/components/bits/ShinyText";
-import ElectricBorder from "@/components/bits/ElectricBorder";
 import GlassSurface from "@/components/bits/GlassSurface";
 import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 
-// 헤드라인은 청약(챗봇 상담 + 목록조회 + 자금마련 시뮬레이터)이라 "core"로 앞세우고,
-// 나머지(대시보드·주식분석·지식그래프)는 부가 기능이라 "engine"으로 구분선 뒤에 강등한다.
+// 헤드라인은 청약(상담 + 목록조회 + 시뮬레이터 + 내 정보)이라 "core"로 앞세우고,
+// 나머지(주식분석·지식그래프)는 부가 기능이라 "engine"으로 구분선 뒤에 강등한다.
 const LINKS = [
   { href: "/chat", label: "에이전트 챗봇", group: "core" },
   { href: "/cheongyak", label: "청약", group: "core" },
   { href: "/simulator", label: "자금마련 시뮬레이터", group: "core" },
+  { href: "/me", label: "내 정보", group: "core" },
   // "/" 는 대시보드가 아니라 랜딩이 됐고(거시지표·히트맵·페르소나표 제거),
   // 좌측 Midas Touch 로고가 이미 "/" 로 가므로 중복 항목을 뺐다.
   { href: "/stocks", label: "주식분석", group: "engine" },
   { href: "/graph", label: "지식그래프", group: "engine" },
 ] as const;
 
-// 타겟(무주택 사회초년생)을 앞에 둔다 — 첫 방문자는 SAMPLE_USERS[0]이 자동 선택되므로
-// 이 순서가 곧 첫인상이다. 뒤쪽 중장년 페르소나는 비교용으로 남겨둠.
-const SAMPLE_USERS = [
-  { uuid: "e7926df30b8f48c09b33684f3075f60f", label: "26세 공공행정 · 자산 4,000만", district: "서울-강남구" },
-  { uuid: "ad6840dd2cb44f7f93cfd6773245bd66", label: "25세 관리비서 · 자산 3,500만", district: "서울-성동구" },
-  { uuid: "97bc5ac1083c4e569c60e6a5ab8424ee", label: "26세 영업관리 · 자산 7,500만", district: "서울-마포구" },
-  { uuid: "e5734a8087fc4421a82aa9edd2732e89", label: "31세 인사관리 · 자산 4,000만", district: "서울-동대문구" },
-  { uuid: "5c1f632516b34e56a89b3672e11456cc", label: "44세 연구원 · 자산 1.2억", district: "경기-용인시" },
-  { uuid: "1fa921721df6420aaa9aad5b42591563", label: "44세 개발자 · 자산 3.5억", district: "경기-김포시" },
-];
 
 export default function NavBar() {
   const pathname = usePathname();
-  const { selected, setSelected } = useSelectedUser();
   const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -109,69 +95,15 @@ export default function NavBar() {
           ))}
         </div>
 
-        {/* 페르소나 라벨 길이가 가변이라, 줄어드는 쪽은 항상 이 그룹이어야 한다.
+        {/* 줄어드는 쪽은 항상 이 그룹이어야 한다
             (min-w-0 없이는 flex가 로고·링크까지 압축해 글자가 두 줄로 깨진다) */}
         <div className="relative ml-auto flex min-w-0 items-center gap-2.5">
           {/* 최근 디자인 라이브 상태 뱃지 */}
           <div className="hidden sm:block">
             <LiveSyncBadge state="live" label="FIN-STREAM" latencyMs={12} lastUpdated="방금 전" />
           </div>
-          {/* 페르소나 유저 퀵 스위처 */}
-          {/* truncate가 실제로 걸리려면 축소 사슬 전체에 min-w-0이 있어야 한다.
-              하나라도 빠지면 콘텐츠 폭이 하한이 되어 우측 아이콘 버튼이 잘려 나간다. */}
-          <div className="relative min-w-0">
-            <button
-              onClick={() => setUserDropdownOpen((v) => !v)}
-              className="flex min-w-0 max-w-full items-center gap-1.5 whitespace-nowrap rounded-full border border-line/60 px-3 py-1 text-xs text-accent hover:border-accent/60 transition bg-surface/40 font-mono-spec shadow-sm"
-            >
-              <UserCircle weight="fill" size={15} className="shrink-0" />
-              <span className="min-w-0 max-w-[150px] truncate font-medium">
-                {selected ? selected.label : "유저 선택"}
-              </span>
-              <span className="ml-0.5 shrink-0 text-[10px] text-muted">▼</span>
-            </button>
-
-            {userDropdownOpen && (
-              <div
-                onMouseLeave={() => setUserDropdownOpen(false)}
-                className="absolute right-0 mt-2 w-64 rounded-lg border border-line/80 bg-[#0c1220] p-1.5 shadow-2xl z-50 animate-rise font-mono-spec text-xs space-y-1"
-              >
-                <div className="px-2 py-1 text-[10px] uppercase font-bold text-accent tracking-wider border-b border-line/40">
-                  ★ 페르소나 유저 전환 (Persona Switcher)
-                </div>
-                {SAMPLE_USERS.map((u) => {
-                  const isCurrent = selected?.uuid === u.uuid;
-                  const row = (
-                    <button
-                      onClick={() => {
-                        setSelected({ uuid: u.uuid, label: u.label });
-                        setUserDropdownOpen(false);
-                      }}
-                      className={`w-full text-left p-2 rounded-md transition flex flex-col ${
-                        isCurrent
-                          ? "bg-accent/20 text-accent font-semibold"
-                          : "hover:bg-surface/80 text-fg"
-                      }`}
-                    >
-                      <span className="truncate">{u.label}</span>
-                      <span className="text-[10px] text-muted font-normal">{u.district}</span>
-                    </button>
-                  );
-
-                  // 지금 보고 있는 페르소나에만 전류 테두리를 준다. 장식이 아니라 상태 표시이고,
-                  // 드롭다운이 열렸을 때만 마운트되므로 rAF 루프도 그때만 돈다.
-                  return isCurrent ? (
-                    <ElectricBorder key={u.uuid} borderRadius={6} speed={0.8} chaos={0.1}>
-                      {row}
-                    </ElectricBorder>
-                  ) : (
-                    <div key={u.uuid}>{row}</div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
+          {/* 페르소나 퀵 스위처는 제거했다 — 남의 프로필을 뒤집어쓰는 구조라
+              자기 청약 자격을 볼 수 없었다. 이제 사용자가 /me 에 직접 입력한다. */}
           {/* 테마 토글 */}
           <button
             onClick={toggle}

@@ -10,26 +10,20 @@ import {
   ChatCircleText,
   MagnifyingGlassPlus,
 } from "@phosphor-icons/react";
-import {
-  apiGet,
-  listCheongyak,
-  type CheongyakKind,
-  type CheongyakSummary,
-  type UserDetail,
-} from "@/lib/api";
-import { useSelectedUser } from "@/lib/user-context";
+import { listCheongyak, type CheongyakKind, type CheongyakSummary } from "@/lib/api";
+import Link from "next/link";
 import { seedChat } from "@/lib/chat-seed";
+import { MAX_SCORE, totalCheongyakScore } from "@/lib/cheongyak-score";
 import {
-  DEPENDENTS_NOTE,
-  MAX_SCORE,
-  SCORE_SOURCE_NOTE,
-  totalCheongyakScore,
-} from "@/lib/cheongyak-score";
+  DEFAULT_PROFILE,
+  firstPriorityChecks,
+  loadProfile,
+  type MyProfile,
+} from "@/lib/my-profile";
 import OGHeroCard from "@/components/bits/OGHeroCard";
 import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
-import PopularCard from "@/components/bits/PopularCard";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
-import { Card, PageTitle, Skeleton } from "@/components/ui";
+import { Card, Skeleton } from "@/components/ui";
 import { useToast } from "@/lib/toast";
 import DetailModal, { SHOW_SCORES_KINDS } from "./DetailModal";
 import KoreaMap from "./KoreaMap";
@@ -142,37 +136,18 @@ function CheongyakCard({
   );
 }
 
-// 내 청약 가점 계산기 상태. 여러 공고 상세를 오가며 비교해야 하므로 localStorage에 영속해
-// 매번 다시 입력하지 않게 한다.
-const SCORE_STORAGE_KEY = "midas.cheongyak.myScore.v1";
-
-interface ScoreState {
-  homelessYears: number;
-  dependents: number;
-  subscriptionYears: number;
-  under30Unmarried: boolean;
-}
-
-const DEFAULT_SCORE_STATE: ScoreState = {
-  homelessYears: 3,
-  dependents: 0,
-  subscriptionYears: 5,
-  under30Unmarried: false,
-};
-
+// 내 청약 가점 요약. 입력 폼은 /me 한 곳에만 두고(중복 방지), 여기선 결과와
+// 1순위 충족 여부만 보여주고 수정은 /me 로 보낸다.
 function MyScoreCard({
-  state,
-  onChange,
+  profile,
   applicable,
 }: {
-  state: ScoreState;
-  onChange: (s: ScoreState) => void;
+  profile: MyProfile;
   /** 청약가점제(84점제)는 APT·무순위 일반공급에만 적용됨 — 다른 탭에서는 계산기 대신 안내만. */
   applicable: boolean;
 }) {
-  const score = totalCheongyakScore(state);
-  const inputClass =
-    "w-full rounded-xl border border-line bg-[var(--ink-2)]/50 px-3 py-2 text-sm text-fg outline-none focus:border-accent font-mono-spec tabular-nums";
+  const score = totalCheongyakScore(profile);
+  const unmet = firstPriorityChecks(profile).filter((c) => !c.ok);
 
   if (!applicable) {
     return (
@@ -183,69 +158,38 @@ function MyScoreCard({
   }
 
   return (
-    <Card className="flex flex-col gap-3">
-      <label className="flex items-center gap-2 text-xs text-muted">
-        <input
-          type="checkbox"
-          className="h-3.5 w-3.5 accent-[var(--accent)]"
-          checked={state.under30Unmarried}
-          onChange={(e) => onChange({ ...state, under30Unmarried: e.target.checked })}
-        />
-        만 30세 미만이면서 미혼
-        <span className="text-[10px] text-muted/70">
-          (무주택기간은 만 30세부터 계산 — 30세 이전 혼인 시 혼인신고일부터. 해당하면 무주택기간 0점)
-        </span>
-      </label>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-      <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs text-muted">무주택기간(년)</span>
-          <input
-            type="number"
-            min={0}
-            max={30}
-            step={0.5}
-            disabled={state.under30Unmarried}
-            className={`${inputClass} disabled:opacity-40`}
-            value={state.under30Unmarried ? 0 : state.homelessYears}
-            onChange={(e) => onChange({ ...state, homelessYears: Number(e.target.value) })}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs text-muted">부양가족수(명, 본인 제외)</span>
-          <input
-            type="number"
-            min={0}
-            max={10}
-            step={1}
-            className={inputClass}
-            value={state.dependents}
-            onChange={(e) => onChange({ ...state, dependents: Number(e.target.value) })}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs text-muted">청약통장 가입기간(년)</span>
-          <input
-            type="number"
-            min={0}
-            max={30}
-            step={0.5}
-            className={inputClass}
-            value={state.subscriptionYears}
-            onChange={(e) => onChange({ ...state, subscriptionYears: Number(e.target.value) })}
-          />
-        </label>
-      </div>
+    <Card className="flex flex-wrap items-center gap-x-6 gap-y-3">
       <div className="shrink-0 rounded-xl border border-accent/30 bg-accent/10 px-4 py-2.5 text-center font-mono-spec">
         <div className="text-[10px] uppercase tracking-wider text-accent/80">내 청약 가점</div>
-        <div className="font-mono-spec text-2xl font-bold tabular-nums text-accent">
+        <div className="text-2xl font-bold tabular-nums text-accent">
           {score}
           <span className="text-sm text-muted">/{MAX_SCORE}</span>
         </div>
       </div>
+
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="font-mono-spec text-[11px] tabular-nums text-muted">
+          무주택 {profile.under30Unmarried ? "0년(만 30세 미만·미혼)" : `${profile.homelessYears}년`}
+          {" · "}부양가족 {profile.dependents}명{" · "}통장 {profile.subscriptionYears}년
+        </div>
+        <div className="text-xs">
+          <span className="text-muted">민영주택 1순위: </span>
+          {unmet.length === 0 ? (
+            <span className="text-emerald-400">입력값 기준 요건 충족</span>
+          ) : (
+            <span className="text-amber-400">
+              {unmet.map((c) => c.label).join(", ")} 미달
+            </span>
+          )}
+        </div>
       </div>
-      <p className="text-[10px] leading-relaxed text-muted/70">{DEPENDENTS_NOTE}</p>
-      <p className="text-[10px] text-muted/70">{SCORE_SOURCE_NOTE}</p>
+
+      <Link
+        href="/me"
+        className="shrink-0 rounded-xl border border-line px-3 py-2 text-xs text-muted transition hover:border-accent hover:text-accent"
+      >
+        내 정보 수정 →
+      </Link>
     </Card>
   );
 }
@@ -253,58 +197,25 @@ function MyScoreCard({
 export default function CheongyakPage() {
   const toast = useToast();
   const router = useRouter();
-  const { selected } = useSelectedUser();
   const [kind, setKind] = useState<CheongyakKind>("apt");
   const [items, setItems] = useState<CheongyakSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [district, setDistrict] = useState<string | null>(null);
   const [onlyMyRegion, setOnlyMyRegion] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("전체");
   const [mapRegion, setMapRegion] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<CheongyakSummary | null>(null);
-  const [scoreState, setScoreState] = useState<ScoreState>(DEFAULT_SCORE_STATE);
+  const [profile, setProfile] = useState<MyProfile>(DEFAULT_PROFILE);
 
   // 마운트 1회 localStorage 복원(서버엔 localStorage 없어 lazy init 불가 → effect가 정답).
+  // 거주 지역도 여기서 나온다 — 예전엔 페르소나 API를 왕복해서 가져왔지만
+  // 이제 사용자가 /me 에서 직접 입력한 값이라 네트워크가 필요 없다.
   useEffect(() => {
-    const raw = localStorage.getItem(SCORE_STORAGE_KEY);
-    if (raw) {
-      try {
-        // 예전 버전 localStorage엔 under30Unmarried 필드가 없을 수 있어 기본값과 병합.
-        /* eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 저장된 가점 입력 복원 */
-        setScoreState({ ...DEFAULT_SCORE_STATE, ...JSON.parse(raw) });
-      } catch {
-        /* 무시 — 기본값 유지 */
-      }
-    }
+    /* eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 저장된 내 정보 복원 */
+    setProfile(loadProfile());
   }, []);
 
-  const updateScoreState = (s: ScoreState) => {
-    setScoreState(s);
-    localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(s));
-  };
-  const myScore = totalCheongyakScore(scoreState);
-
-  // 선택 유저의 거주 지역(개인화).
-  useEffect(() => {
-    if (!selected) {
-      /* eslint-disable react-hooks/set-state-in-effect -- 유저 해제 시 지역 개인화 상태 초기화 */
-      setDistrict(null);
-      setOnlyMyRegion(false);
-      /* eslint-enable react-hooks/set-state-in-effect */
-      return;
-    }
-    let alive = true;
-    apiGet<UserDetail>(`/api/v1/users/${selected.uuid}`)
-      .then((d) => {
-        if (!alive) return;
-        const dist = (d.profile?.district as string) || null;
-        setDistrict(dist);
-      })
-      .catch(() => alive && setDistrict(null));
-    return () => {
-      alive = false;
-    };
-  }, [selected]);
+  const myScore = totalCheongyakScore(profile);
+  const district = profile.sido;
 
   useEffect(() => {
     let alive = true;
@@ -375,7 +286,7 @@ export default function CheongyakPage() {
       `[청약 상담] ${item.house_nm} (${item.region || "지역미상"}, ${item.house_secd_nm || "유형미상"})\n` +
       `총 ${item.total_supply}세대 · 접수 ${item.reception_start || "-"}~${item.reception_end || "-"} · 상태 ${item.status}.\n` +
       `내 자격·자금 상황에서 이 청약이 적합한지, 준비할 점은 무엇인지 알려줘.`;
-    if (!selected) toast("먼저 홈에서 유저를 선택하면 맞춤 상담이 됩니다.", "info");
+    // 내 정보는 /me 에 저장돼 있고 챗봇이 첫 턴에 자동으로 읽어가므로 여기서 안내할 게 없다.
     seedChat(router, text);
   };
 
@@ -392,7 +303,7 @@ export default function CheongyakPage() {
         ]}
       />
 
-      <MyScoreCard state={scoreState} onChange={updateScoreState} applicable={SHOW_SCORES_KINDS.includes(kind)} />
+      <MyScoreCard profile={profile} applicable={SHOW_SCORES_KINDS.includes(kind)} />
 
       <div className="flex flex-wrap items-center gap-2 font-mono-spec text-xs bg-[#090d16]/80 p-1.5 rounded-full border border-line-50">
         {TABS.map((t) => (

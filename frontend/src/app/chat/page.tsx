@@ -10,7 +10,8 @@ import {
   streamChat,
   type ChatSessionMeta,
 } from "@/lib/api";
-import { useSelectedUser } from "@/lib/user-context";
+import { clientId, loadProfile, profileSummary } from "@/lib/my-profile";
+import { totalCheongyakScore } from "@/lib/cheongyak-score";
 import { useToast } from "@/lib/toast";
 import { consumeChatSeed } from "@/lib/chat-seed";
 import { Card, PageTitle, Spinner } from "@/components/ui";
@@ -23,7 +24,9 @@ interface Msg {
 }
 
 export default function ChatPage() {
-  const { selected, setSelected } = useSelectedUser();
+  // 로그인이 없으므로 세션은 이 브라우저의 익명 id 로 묶고, "누구인가"는
+  // /me 에 직접 입력한 내 정보를 첫 턴에 요약해 보내는 것으로 대신한다.
+  const [uid, setUid] = useState<string | null>(null);
   const toast = useToast();
   const [sessions, setSessions] = useState<ChatSessionMeta[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -37,9 +40,14 @@ export default function ChatPage() {
   const initedFor = useRef<string | null>(null);
   const seedRef = useRef<string | null>(null);
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 브라우저 식별자 복원
+    setUid(clientId());
+  }, []);
+
   const refreshSessions = useCallback(async () => {
     try {
-      const qs = selected ? `?user_uuid=${encodeURIComponent(selected.uuid)}` : "";
+      const qs = uid ? `?user_uuid=${encodeURIComponent(uid)}` : "";
       const res = await apiGet<{ sessions: ChatSessionMeta[] }>(
         `/api/v1/chat/sessions${qs}`,
       );
@@ -47,25 +55,24 @@ export default function ChatPage() {
     } catch {
       /* 사이드바 로드 실패는 조용히 무시 */
     }
-  }, [selected]);
+  }, [uid]);
 
   const startNewChat = useCallback(() => {
-    if (!selected) return;
-    setCurrentId(`${selected.uuid}-${Date.now()}`);
+    if (!uid) return;
+    setCurrentId(`${uid}-${Date.now()}`);
     setMessages([]);
-  }, [selected]);
+  }, [uid]);
 
-  // 선택 유저가 바뀌면 세션 목록 갱신 + 새 대화 준비 (유저당 1회)
   useEffect(() => {
-    if (!selected) return;
-    /* eslint-disable react-hooks/set-state-in-effect -- 유저 변경 시 세션 목록 동기화 + 새 대화 준비(외부 동기) */
+    if (!uid) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- 식별자 준비 시 세션 목록 동기화 + 새 대화 준비(외부 동기) */
     void refreshSessions();
-    if (initedFor.current !== selected.uuid) {
-      initedFor.current = selected.uuid;
+    if (initedFor.current !== uid) {
+      initedFor.current = uid;
       startNewChat();
     }
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [selected, refreshSessions, startNewChat]);
+  }, [uid, refreshSessions, startNewChat]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -78,19 +85,15 @@ export default function ChatPage() {
 
   // 챗 준비(유저 선택 + 세션 생성)되면 seed를 입력창에 프리필 + 포커스.
   useEffect(() => {
-    if (seedRef.current && selected && currentId) {
+    if (seedRef.current && uid && currentId) {
       setInput(seedRef.current);
       seedRef.current = null;
       requestAnimationFrame(() => inputRef.current?.focus());
     }
-  }, [selected, currentId]);
+  }, [uid, currentId]);
 
   const openSession = async (s: ChatSessionMeta) => {
     setCurrentId(s.session_id);
-    if (s.user_uuid && s.user_uuid !== selected?.uuid) {
-      setSelected({ uuid: s.user_uuid, label: `유저 ${s.user_uuid.slice(0, 6)}` });
-      initedFor.current = s.user_uuid; // 새 대화 자동생성 방지
-    }
     setLoadingHistory(true);
     try {
       const res = await apiGet<{ messages: Msg[] }>(
@@ -120,14 +123,24 @@ export default function ChatPage() {
   };
 
   const send = async () => {
-    if (!input.trim() || !selected || !currentId || busy) return;
+    if (!input.trim() || !uid || !currentId || busy) return;
     const text = input.trim();
     setInput("");
     setMessages((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
     setBusy(true);
     try {
       await streamChat(
-        { session_id: currentId, user_uuid: selected.uuid, message: text },
+        {
+          session_id: currentId,
+          user_uuid: uid,
+          message: text,
+          // /me 에 입력해 둔 내 정보를 요약해 동봉한다. 백엔드는 첫 턴에만 시스템 프롬프트로
+          // 합치고 저장하지 않는다 — 원시 입력값(자산 금액 등)은 보내지 않는다.
+          profile: (() => {
+            const me = loadProfile();
+            return profileSummary(me, totalCheongyakScore(me));
+          })(),
+        },
         (tok) =>
           setMessages((m) => {
             const next = [...m];
@@ -179,7 +192,7 @@ export default function ChatPage() {
             <>
               <button
                 onClick={startNewChat}
-                disabled={!selected}
+                disabled={!uid}
                 className="btn-accent mb-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm"
               >
                 <Plus weight="bold" size={16} />새 대화
@@ -226,18 +239,7 @@ export default function ChatPage() {
 
         {/* 대화 영역 */}
         <div className="min-w-0 flex-1">
-          {!selected ? (
-            <Card className="text-center">
-              <p className="text-fg">먼저 대화할 유저를 선택하세요.</p>
-              <Link
-                href="/"
-                className="btn-accent mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-sm"
-              >
-                유저 선택하러 가기
-                <ArrowRight weight="bold" size={15} />
-              </Link>
-            </Card>
-          ) : !currentId ? (
+          {!currentId ? (
             <Card className="text-center text-muted">
               왼쪽에서 대화를 선택하거나 <b className="text-accent">+ 새 대화</b>를 시작하세요.
             </Card>

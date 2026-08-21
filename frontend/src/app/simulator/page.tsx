@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { Card, PageTitle, SectionLabel, fmtKRW, fmtKRWShort } from "@/components/ui";
 import { MoneyInput } from "@/components/MoneyInput";
+import { loadProfile } from "@/lib/my-profile";
 import {
   AREA_LABELS,
   DEPOSIT_SOURCE_NOTE,
@@ -56,13 +57,19 @@ export default function SimulatorPage() {
   // useSearchParams는 Suspense 경계가 필요해 번거로우니, 이 페이지가 전부 클라이언트 전용인 점을
   // 이용해 마운트 시 한 번 window.location에서 직접 읽는다.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- 마운트 시 외부 상태(URL 쿼리·localStorage) 복원 */
+    // /me 에 입력해 둔 자금 상황을 초기값으로 깐다. 여기서 값을 바꿔도 프로필은 안 건드린다
+    // (시뮬레이터는 "만약에" 를 굴려보는 곳이라, 굴려본 값이 내 정보를 덮으면 안 된다).
+    const me = loadProfile();
+    setCurrentAssets(me.currentAssets);
+    setMonthlySaving(me.monthlySaving);
+
     const target = Number(new URLSearchParams(window.location.search).get("target"));
     if (target > 0) {
-      /* eslint-disable react-hooks/set-state-in-effect -- 마운트 시 URL 쿼리에서 초기값 복원(외부 상태 구독) */
       setTargetMode("custom");
       setCustomTarget(target);
-      /* eslint-enable react-hooks/set-state-in-effect */
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   const targetAmount = targetMode === "deposit" ? depositRequirement(region, area) : customTarget;
