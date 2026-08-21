@@ -24,7 +24,8 @@ const LINKS = [
   { href: "/chat", label: "에이전트 챗봇", group: "core" },
   { href: "/cheongyak", label: "청약", group: "core" },
   { href: "/simulator", label: "자금마련 시뮬레이터", group: "core" },
-  { href: "/", label: "대시보드", group: "engine" },
+  // "/" 는 대시보드가 아니라 랜딩이 됐고(거시지표·히트맵·페르소나표 제거),
+  // 좌측 Midas Touch 로고가 이미 "/" 로 가므로 중복 항목을 뺐다.
   { href: "/stocks", label: "주식분석", group: "engine" },
   { href: "/graph", label: "지식그래프", group: "engine" },
 ] as const;
