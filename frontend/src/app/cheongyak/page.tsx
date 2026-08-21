@@ -24,6 +24,7 @@ import OGHeroCard from "@/components/bits/OGHeroCard";
 import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
 import { Card, Skeleton } from "@/components/ui";
+import ProfileNudge from "@/components/ProfileNudge";
 import { useToast } from "@/lib/toast";
 import DetailModal, { SHOW_SCORES_KINDS } from "./DetailModal";
 import KoreaMap from "./KoreaMap";
@@ -303,6 +304,7 @@ export default function CheongyakPage() {
         ]}
       />
 
+      <ProfileNudge />
       <MyScoreCard profile={profile} applicable={SHOW_SCORES_KINDS.includes(kind)} />
 
       <div className="flex flex-wrap items-center gap-2 font-mono-spec text-xs bg-[#090d16]/80 p-1.5 rounded-full border border-line-50">

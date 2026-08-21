@@ -3,6 +3,7 @@ import { ChatsCircle, Coins, ChartLineUp } from "@phosphor-icons/react/dist/ssr"
 import { Reveal } from "@/components/Reveal";
 import OGHeroCard from "@/components/bits/OGHeroCard";
 import GlareHover from "@/components/bits/GlareHover";
+import ProfileNudge from "@/components/ProfileNudge";
 
 /** 랜딩(`/`)은 헤드라인 여정으로 보내는 관문만 한다.
  *
@@ -61,6 +62,8 @@ export default function HomePage() {
           </div>
         }
       />
+
+      <ProfileNudge />
 
       <section className="grid gap-px border border-line bg-line/30 sm:grid-cols-3">
         {JOURNEY.map((s, i) => (

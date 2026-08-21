@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import BlurText from "@/components/bits/BlurText";
 import DecryptedText from "@/components/bits/DecryptedText";
 import CountUp from "@/components/bits/CountUp";
@@ -7,18 +7,24 @@ export function Card({
   children,
   className = "",
   variant = "editorial",
+  ...rest
 }: {
   children: ReactNode;
   className?: string;
   variant?: "editorial" | "glass" | "subtle" | "interactive";
-}) {
+  // 나머지 div 속성은 그대로 통과시킨다(가이드 투어의 data-tour 앵커 등).
+} & Omit<ComponentPropsWithoutRef<"div">, "className" | "children">) {
   const variantStyles = {
     editorial: "glass border-line-50 shadow-soft",
     glass: "glass border-line/60 shadow-md",
     subtle: "bg-surface/30 border border-line/40 rounded-xl",
     interactive: "glass border-line-50 lift cursor-pointer",
   };
-  return <div className={`${variantStyles[variant]} p-5 sm:p-6 ${className}`}>{children}</div>;
+  return (
+    <div className={`${variantStyles[variant]} p-5 sm:p-6 ${className}`} {...rest}>
+      {children}
+    </div>
+  );
 }
 
 export function PageTitle({

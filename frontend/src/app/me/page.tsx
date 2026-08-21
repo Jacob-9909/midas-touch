@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, PageTitle, SectionLabel } from "@/components/ui";
+import GuideTour, { type TourStep } from "@/components/GuideTour";
 import { MoneyInput } from "@/components/MoneyInput";
 import {
   DEFAULT_PROFILE,
@@ -28,6 +29,36 @@ import {
   totalCheongyakScore,
 } from "@/lib/cheongyak-score";
 
+/** 처음 온 사람에게 "무엇을 왜 넣어야 하는지"를 순서대로 짚어준다.
+ * 화면 구조가 바뀌면 target(data-tour)도 같이 고쳐야 한다. */
+const TOUR: TourStep[] = [
+  {
+    target: "score",
+    title: "먼저 청약 가점 3요소를 넣으세요",
+    body: "무주택기간·부양가족수·청약통장 가입기간 세 가지가 84점 만점 가점의 전부입니다. 만 30세 미만이면서 미혼이면 체크만 하세요 — 무주택기간 산정이 아직 시작되지 않아 자동으로 0점 처리됩니다.",
+  },
+  {
+    target: "priority",
+    title: "1순위 자격 항목을 채우세요",
+    body: "거주 지역과 청약통장 납입 총액이 핵심입니다. 지역과 전용면적에 따라 필요한 예치금이 달라집니다. 규제지역 여부는 공고문에서 확인해 체크하세요 — 정부 고시로 수시로 바뀌어 앱이 자동 판단하지 않습니다.",
+  },
+  {
+    target: "money",
+    title: "자금 상황을 넣으세요",
+    body: "현재 자산과 월 저축 가능액은 자금마련 시뮬레이터의 초기값이 됩니다. 시뮬레이터에서 숫자를 바꿔 봐도 여기 저장된 값은 그대로 유지됩니다.",
+  },
+  {
+    target: "result",
+    title: "입력하는 즉시 대조 결과가 나옵니다",
+    body: "가점 합계와 민영주택 1순위 요건 충족 여부가 항목별로 표시됩니다. 기준과 내 값을 나란히 보여주므로 무엇이 얼마나 모자란지 바로 알 수 있습니다.",
+  },
+  {
+    target: "next",
+    title: "이 정보가 나머지 화면에서 그대로 쓰입니다",
+    body: "공고 목록에서는 내 가점과 당첨가점을 비교하고, 공고를 열면 그 공고 기준으로 1순위 요건을 다시 대조합니다. 챗봇에게 물어보면 이 조건을 반영해 답합니다. 입력값은 이 브라우저에만 저장됩니다.",
+  },
+];
+
 const input =
   "w-full rounded-xl border border-line bg-[var(--ink-2)]/50 px-3 py-2 text-sm text-fg outline-none focus:border-accent font-mono-spec tabular-nums";
 const field = "flex flex-col gap-1.5";
@@ -35,6 +66,7 @@ const labelText = "text-xs text-muted";
 
 export default function MyProfilePage() {
   const [p, setP] = useState<MyProfile>(DEFAULT_PROFILE);
+  const [tourOpen, setTourOpen] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
     // 마운트 1회 localStorage 복원. 서버엔 localStorage 없어 lazy init 불가 → effect가 정답.
@@ -55,16 +87,31 @@ export default function MyProfilePage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 space-y-6">
-      <PageTitle
-        title="내 정보"
-        eyebrow="My Profile"
-        subtitle="청약 심사에 실제로 들어가는 항목만 받습니다. 입력값은 이 브라우저에만 저장되며 서버로 전송되지 않습니다. 여기 넣은 값이 청약 가점·1순위 자격 안내·자금 시뮬레이터·상담 챗봇에 그대로 쓰입니다."
+      <GuideTour
+        steps={TOUR}
+        storageKey="midas.tour.me.v1"
+        open={tourOpen}
+        onClose={() => setTourOpen(undefined)}
       />
+
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageTitle
+          title="내 정보"
+          eyebrow="My Profile"
+          subtitle="청약 심사에 실제로 들어가는 항목만 받습니다. 입력값은 이 브라우저에만 저장되며 서버로 전송되지 않습니다. 여기 넣은 값이 청약 가점·1순위 자격 안내·자금 시뮬레이터·상담 챗봇에 그대로 쓰입니다."
+        />
+        <button
+          onClick={() => setTourOpen(true)}
+          className="shrink-0 rounded-xl border border-line px-3 py-2 text-xs text-muted transition hover:border-accent hover:text-accent"
+        >
+          입력 가이드 다시 보기
+        </button>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,380px)]">
         <div className="space-y-6">
           {/* ── 가점 3요소 ── */}
-          <Card className="space-y-4">
+          <Card className="space-y-4" data-tour="score">
             <SectionLabel>청약 가점 (84점 만점)</SectionLabel>
 
             <label className="flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -114,7 +161,7 @@ export default function MyProfilePage() {
           </Card>
 
           {/* ── 1순위 자격 ── */}
-          <Card className="space-y-4">
+          <Card className="space-y-4" data-tour="priority">
             <SectionLabel>1순위 자격 (민영주택 일반공급)</SectionLabel>
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -191,7 +238,7 @@ export default function MyProfilePage() {
           </Card>
 
           {/* ── 자금 ── */}
-          <Card className="space-y-4">
+          <Card className="space-y-4" data-tour="money">
             <SectionLabel>자금 상황</SectionLabel>
             <div className="grid gap-3 sm:grid-cols-3">
               <label className={field}>
@@ -214,7 +261,7 @@ export default function MyProfilePage() {
         </div>
 
         {/* ── 결과 요약 (sticky) ── */}
-        <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
+        <div className="space-y-6 lg:sticky lg:top-6 lg:self-start" data-tour="result">
           <Card className="space-y-3">
             <SectionLabel>내 청약 가점</SectionLabel>
             <div className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-center font-mono-spec">
@@ -261,7 +308,7 @@ export default function MyProfilePage() {
             <p className="text-[10px] leading-relaxed text-muted/70">{FIRST_PRIORITY_SOURCE_NOTE}</p>
           </Card>
 
-          <Card className="space-y-2">
+          <Card className="space-y-2" data-tour="next">
             <SectionLabel>이 정보로 이어서</SectionLabel>
             {[
               ["/cheongyak", "내 가점으로 공고 보기"],

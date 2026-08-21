@@ -112,6 +112,13 @@ export function loadProfile(): MyProfile {
   return DEFAULT_PROFILE;
 }
 
+/** 사용자가 /me 에서 한 번이라도 저장했는지. 아직이면 기본값이 보이고 있을 뿐이라,
+ * 다른 화면에서 "내 정보부터 채우세요"로 유도해야 한다. */
+export function hasSavedProfile(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(STORAGE_KEY) !== null || localStorage.getItem(LEGACY_SCORE_KEY) !== null;
+}
+
 export function saveProfile(p: MyProfile): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(p));

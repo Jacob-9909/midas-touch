@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { Card, PageTitle, SectionLabel, fmtKRW, fmtKRWShort } from "@/components/ui";
 import { MoneyInput } from "@/components/MoneyInput";
+import ProfileNudge from "@/components/ProfileNudge";
 import { loadProfile } from "@/lib/my-profile";
 import {
   AREA_LABELS,
@@ -94,6 +95,8 @@ export default function SimulatorPage() {
         eyebrow="Fund Timeline"
         subtitle="청약 목표금액까지 지금 저축 계획으로 얼마나 걸리는지, 상품을 바꾸면 얼마나 당겨지는지 시뮬레이션합니다. 정보 제공 목적의 시뮬레이션이며 투자·저축 자문이 아닙니다."
       />
+
+      <ProfileNudge />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
         <div className="space-y-6">
