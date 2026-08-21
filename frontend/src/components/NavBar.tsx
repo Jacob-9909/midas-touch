@@ -29,11 +29,14 @@ const LINKS = [
   { href: "/graph", label: "지식그래프", group: "engine" },
 ] as const;
 
+// 타겟(무주택 사회초년생)을 앞에 둔다 — 첫 방문자는 SAMPLE_USERS[0]이 자동 선택되므로
+// 이 순서가 곧 첫인상이다. 뒤쪽 중장년 페르소나는 비교용으로 남겨둠.
 const SAMPLE_USERS = [
+  { uuid: "e7926df30b8f48c09b33684f3075f60f", label: "26세 공공행정 · 자산 4,000만", district: "서울-강남구" },
+  { uuid: "ad6840dd2cb44f7f93cfd6773245bd66", label: "25세 관리비서 · 자산 3,500만", district: "서울-성동구" },
+  { uuid: "97bc5ac1083c4e569c60e6a5ab8424ee", label: "26세 영업관리 · 자산 7,500만", district: "서울-마포구" },
+  { uuid: "e5734a8087fc4421a82aa9edd2732e89", label: "31세 인사관리 · 자산 4,000만", district: "서울-동대문구" },
   { uuid: "5c1f632516b34e56a89b3672e11456cc", label: "44세 연구원 · 자산 1.2억", district: "경기-용인시" },
-  { uuid: "319b99b4172b48ab98ebaa7dba449ac6", label: "63세 제조원 · 자산 1.2억", district: "경북-구미시" },
-  { uuid: "19ebbdd30b6c4aabbdc2424dfee02b1a", label: "40세 조리사 · 자산 7,000만", district: "서울-서대문구" },
-  { uuid: "c1df90a15fe34fc4929e4e9318026512", label: "43세 회계원 · 자산 7,500만", district: "세종-세종시" },
   { uuid: "1fa921721df6420aaa9aad5b42591563", label: "44세 개발자 · 자산 3.5억", district: "경기-김포시" },
 ];
 
