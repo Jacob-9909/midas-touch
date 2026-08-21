@@ -4,7 +4,8 @@
 import assert from "node:assert";
 import {
   DEFAULT_PROFILE, firstPriorityChecks, requiredSubscriptionMonths,
-  regionOf, isCapitalArea, profileSummary, type MyProfile,
+  regionOf, isCapitalArea, profileSummary, areaTierOf, parseExclusiveArea,
+  type MyProfile, type ListingContext,
 } from "./my-profile";
 
 const P = (o: Partial<MyProfile>): MyProfile => ({ ...DEFAULT_PROFILE, ...o });
@@ -73,6 +74,41 @@ assert.ok(s3.includes("산정이 시작되지 않아"), s3);
 // 창작 금지 지시가 빠지면 안 된다
 assert.ok(s2.includes("청년 가점"), s2);
 assert.ok(s2.includes("만들어내지 말 것"), s2);
+
+// ── 공고 기준 재판정 ──
+// 공공데이터 주택형 코드 → 전용면적
+assert.equal(parseExclusiveArea("084.9800A"), 84.98);
+assert.equal(parseExclusiveArea("059.9700"), 59.97);
+assert.equal(parseExclusiveArea(""), null);
+
+// 전용면적 → 예치금 면적구간 (경계 포함)
+assert.equal(areaTierOf(84.98), "85");
+assert.equal(areaTierOf(85), "85");
+assert.equal(areaTierOf(85.01), "102");
+assert.equal(areaTierOf(102), "102");
+assert.equal(areaTierOf(135), "135");
+assert.equal(areaTierOf(135.01), "all");
+
+// 핵심: 같은 프로필이라도 보고 있는 공고가 다르면 판정이 달라져야 한다.
+// (이 분기가 없으면 A공고를 보든 B공고를 보든 같은 답이 나온다 = 원래 있던 버그)
+const me = P({ sido: "서울", targetArea: "85", subscriptionDeposit: 3_000_000, subscriptionYears: 1 });
+const okOf = (p: MyProfile, label: string, ctx?: ListingContext) =>
+  firstPriorityChecks(p, ctx).find((c) => c.label === label)!.ok;
+
+// 내 프로필 기준(서울 85㎡)은 300만원이면 충족
+assert.equal(okOf(me, "예치금"), true);
+// 같은 사람이 서울 102㎡ 공고를 보면 600만원 기준이라 미달
+assert.equal(okOf(me, "예치금", { sido: "서울", area: "102" }), false);
+// 경기 85㎡ 공고는 200만원 기준이라 충족
+assert.equal(okOf(me, "예치금", { sido: "경기", area: "85" }), true);
+// 통장 기간도 공고 지역을 따른다: 서울(수도권 12개월)은 12개월이면 충족,
+// 같은 사람이 부산(수도권 외 6개월) 공고를 보면 역시 충족
+assert.equal(okOf(me, "청약통장 가입기간", { sido: "서울", area: "85" }), true);
+assert.equal(okOf(me, "청약통장 가입기간", { sido: "부산", area: "85" }), true);
+// 6개월만 보유했다면 수도권 공고는 미달, 수도권 외 공고는 충족
+const half = P({ subscriptionYears: 0.5 });
+assert.equal(okOf(half, "청약통장 가입기간", { sido: "서울", area: "85" }), false);
+assert.equal(okOf(half, "청약통장 가입기간", { sido: "부산", area: "85" }), true);
 
 console.log("✅ 1순위 판정 로직 전 케이스 통과");
 console.log("\n--- 기본 프로필 요약 샘플 ---\n" + s2);

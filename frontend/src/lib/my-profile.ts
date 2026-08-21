@@ -164,26 +164,56 @@ export interface Check {
   regulatedOnly?: boolean;
 }
 
+/** 특정 공고 기준으로 대조할 때 쓰는 컨텍스트.
+ *
+ * 요건은 "내 프로필"이 아니라 "그 공고"에서 나온다 — 예치금은 공고 지역×전용면적,
+ * 통장 가입기간은 공고 지역(수도권 여부)이 정한다. 이걸 넘기지 않으면 사용자가 /me 에
+ * 적어 둔 관심 지역·면적으로 계산하므로, 실제로 보고 있는 공고와 다른 답이 나올 수 있다. */
+export interface ListingContext {
+  sido: Sido;
+  area: AreaTier;
+}
+
+/** 전용면적(㎡) → 예치금 표의 면적 구간. */
+export function areaTierOf(exclusiveArea: number): AreaTier {
+  if (exclusiveArea <= 85) return "85";
+  if (exclusiveArea <= 102) return "102";
+  if (exclusiveArea <= 135) return "135";
+  return "all";
+}
+
+/** 공공데이터의 주택형 코드에서 전용면적을 뽑는다.
+ * 예: "084.9800A" → 84.98, "059.9700" → 59.97. 타입 구분용 알파벳 접미사가 붙는다. */
+export function parseExclusiveArea(houseTy: string): number | null {
+  const n = Number.parseFloat(String(houseTy).replace(/[^0-9.]/g, ""));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 /** 민영주택 일반공급 1순위 요건을 항목별로 판정한다.
- * 예측이 아니라 입력값과 법령 기준의 대조 결과만 돌려준다. */
-export function firstPriorityChecks(p: MyProfile): Check[] {
-  const needMonths = requiredSubscriptionMonths(p.sido, p.regulatedArea);
+ * 예측이 아니라 입력값과 법령 기준의 대조 결과만 돌려준다.
+ *
+ * `listing`을 주면 그 공고의 지역·전용면적으로 요건을 다시 잡는다(공고별 판정).
+ * 규제지역 여부는 공공데이터에 없어 공고를 알아도 사용자 입력을 그대로 쓴다. */
+export function firstPriorityChecks(p: MyProfile, listing?: ListingContext): Check[] {
+  const sido = listing?.sido ?? p.sido;
+  const area = listing?.area ?? p.targetArea;
+  const needMonths = requiredSubscriptionMonths(sido, p.regulatedArea);
   const haveMonths = Math.floor(p.subscriptionYears * 12);
-  const needDeposit = depositRequirement(regionOf(p.sido), p.targetArea);
+  const needDeposit = depositRequirement(regionOf(sido), area);
 
   const checks: Check[] = [
     {
       label: "청약통장 가입기간",
       ok: haveMonths >= needMonths,
       detail: `기준 ${needMonths}개월 이상` +
-        (p.regulatedArea ? "(규제지역)" : isCapitalArea(p.sido) ? "(수도권)" : "(수도권 외)") +
+        (p.regulatedArea ? "(규제지역)" : isCapitalArea(sido) ? "(수도권)" : "(수도권 외)") +
         `, 내 보유 ${haveMonths}개월`,
     },
     {
       label: "예치금",
       ok: p.subscriptionDeposit >= needDeposit,
       detail: `기준 ${needDeposit.toLocaleString("ko-KR")}원 이상` +
-        `(${p.sido}·${AREA_TEXT[p.targetArea]}), 내 납입액 ${p.subscriptionDeposit.toLocaleString("ko-KR")}원`,
+        `(${sido}·${AREA_TEXT[area]}), 내 납입액 ${p.subscriptionDeposit.toLocaleString("ko-KR")}원`,
     },
     {
       label: "무주택 여부",
@@ -205,7 +235,8 @@ export function firstPriorityChecks(p: MyProfile): Check[] {
       {
         label: "해당 지역 거주기간",
         ok: p.residenceYears >= 2,
-        detail: `기준 2년 이상, 내 거주기간 ${p.sido} ${p.residenceYears}년`,
+        detail: `기준 2년 이상, 내 거주기간 ${p.sido} ${p.residenceYears}년` +
+          (listing && listing.sido !== p.sido ? ` — 공고는 ${listing.sido}` : ""),
         regulatedOnly: true,
       },
       {

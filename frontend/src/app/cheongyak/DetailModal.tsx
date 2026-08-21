@@ -16,6 +16,18 @@ import {
   type CheongyakSpecialSupply,
 } from "@/lib/api";
 import { Skeleton } from "@/components/ui";
+import {
+  DEFAULT_PROFILE,
+  FIRST_PRIORITY_SOURCE_NOTE,
+  SIDO,
+  areaTierOf,
+  firstPriorityChecks,
+  loadProfile,
+  parseExclusiveArea,
+  type MyProfile,
+  type Sido,
+} from "@/lib/my-profile";
+import { AREA_LABELS } from "@/lib/simulate";
 
 interface DetailModalProps {
   item: CheongyakSummary;
@@ -36,6 +48,113 @@ interface DetailData {
 // 청약가점제(84점 만점)는 APT·무순위 일반공급에만 적용된다 — page.tsx의 가점 계산기도 이 기준을 쓴다.
 export const SHOW_SCORES_KINDS: CheongyakKind[] = ["apt", "remaining"];
 const SHOW_SPECIAL_KINDS: CheongyakKind[] = ["apt"];
+
+/** 이 공고에 실제로 적용되는 1순위 요건으로 다시 대조한다.
+ *
+ * /me 의 판정은 사용자가 적어 둔 "관심 지역·면적" 기준이라, 실제로 보고 있는 공고와
+ * 다를 수 있다(서울 85㎡ 기준으로 충족이어도 그 공고가 102㎡면 예치금이 두 배다).
+ * 주택형마다 면적이 달라 예치금 기준이 갈리므로 면적 구간별로 나눠 보여준다. */
+function ListingEligibility({
+  profile,
+  sido,
+  housingTypes,
+}: {
+  profile: MyProfile;
+  sido: Sido | null;
+  housingTypes: CheongyakHousingType[];
+}) {
+  if (!sido) return null;
+
+  // 공고에 들어있는 전용면적 구간들(중복 제거). 파싱 실패한 주택형은 건너뛴다.
+  const tiers = [
+    ...new Set(
+      housingTypes
+        .map((h) => parseExclusiveArea(h.house_ty))
+        .filter((a): a is number => a !== null)
+        .map(areaTierOf),
+    ),
+  ];
+  if (tiers.length === 0) return null;
+
+  // 면적과 무관한 항목(통장 기간·무주택·규제지역 요건)은 첫 구간 기준으로 한 번만 보여준다.
+  const base = firstPriorityChecks(profile, { sido, area: tiers[0] });
+  const shared = base.filter((c) => c.label !== "예치금");
+  const depositRows = tiers.map((area) => ({
+    area,
+    check: firstPriorityChecks(profile, { sido, area }).find((c) => c.label === "예치금")!,
+  }));
+  // 예치금은 면적 구간마다 기준이 달라 "일부만 충족"이 정상적인 상태다.
+  // 헤더가 "충족"이라고 말하면서 아래에 ✕ 가 보이면 모순이므로, 구간별로 정확히 말한다.
+  const sharedUnmet = shared.filter((c) => !c.ok);
+  const okTiers = depositRows.filter((r) => r.check.ok).map((r) => r.area);
+  const ngTiers = depositRows.filter((r) => !r.check.ok).map((r) => r.area);
+  const allOk = sharedUnmet.length === 0 && ngTiers.length === 0;
+  const noneOk = sharedUnmet.length > 0 || okTiers.length === 0;
+
+  const headline = (() => {
+    if (allOk) return `내 정보 기준으로 이 공고(${sido})의 1순위 요건을 충족합니다`;
+    if (sharedUnmet.length > 0)
+      return `${sharedUnmet.map((c) => c.label).join(", ")} 미달 — 이 공고는 1순위 요건을 채우지 못합니다`;
+    if (okTiers.length === 0)
+      return `예치금이 모든 주택형 기준에 미달합니다 (${ngTiers.map((a) => AREA_LABELS[a]).join(", ")})`;
+    return (
+      `${okTiers.map((a) => AREA_LABELS[a]).join(", ")}는 요건 충족, ` +
+      `${ngTiers.map((a) => AREA_LABELS[a]).join(", ")}는 예치금 미달`
+    );
+  })();
+
+  return (
+    <Section title="이 공고 기준 1순위 요건">
+      <div
+        className={`mb-3 rounded-xl border px-3 py-2 text-xs ${
+          allOk
+            ? "border-[#58c8a0]/30 bg-[#58c8a0]/10 text-[#58c8a0]"
+            : noneOk
+              ? "border-[#e2a05b]/30 bg-[#e2a05b]/10 text-[#e2a05b]"
+              : "border-line bg-[var(--ink-2)]/50 text-fg"
+        }`}
+      >
+        {headline}
+      </div>
+
+      <ul className="space-y-2">
+        {shared.map((c) => (
+          <li key={c.label} className="flex gap-2 text-xs">
+            <span className={c.ok ? "text-[#58c8a0]" : "text-[#e2a05b]"}>{c.ok ? "✓" : "✕"}</span>
+            <span className="min-w-0">
+              <span className="text-fg">{c.label}</span>
+              {c.regulatedOnly && <span className="ml-1 text-[10px] text-muted/70">(규제지역)</span>}
+              <span className="block font-mono-spec tabular-nums text-[11px] leading-relaxed text-muted">
+                {c.detail}
+              </span>
+            </span>
+          </li>
+        ))}
+        {depositRows.map(({ area, check }) => (
+          <li key={area} className="flex gap-2 text-xs">
+            <span className={check.ok ? "text-[#58c8a0]" : "text-[#e2a05b]"}>
+              {check.ok ? "✓" : "✕"}
+            </span>
+            <span className="min-w-0">
+              <span className="text-fg">예치금</span>{" "}
+              <span className="text-[10px] text-muted/70">· {AREA_LABELS[area]}</span>
+              <span className="block font-mono-spec tabular-nums text-[11px] leading-relaxed text-muted">
+                {check.detail}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-3 text-[10px] leading-relaxed text-muted/70">
+        규제지역 여부는 공공데이터에 없어 「내 정보」에 체크한 값(
+        {profile.regulatedArea ? "규제지역" : "비규제지역"})으로 계산했습니다. 공고문에서 확인하세요.
+        {" "}
+        {FIRST_PRIORITY_SOURCE_NOTE}
+      </p>
+    </Section>
+  );
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -61,6 +180,15 @@ function fmtNum(n: number | string | undefined): string | null {
 }
 
 export default function DetailModal({ item, kind, myScore, onClose, onConsult }: DetailModalProps) {
+  const [profile, setProfile] = useState<MyProfile>(DEFAULT_PROFILE);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 저장된 내 정보 복원
+    setProfile(loadProfile());
+  }, []);
+  // 공고의 region 은 이미 시/도 단축명("서울","경기")이라 그대로 매칭된다.
+  const listingSido = (SIDO as readonly string[]).includes(item.region)
+    ? (item.region as Sido)
+    : null;
   const [data, setData] = useState<DetailData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -187,6 +315,14 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
 
         {data && (
           <>
+            {SHOW_SCORES_KINDS.includes(kind) && (
+              <ListingEligibility
+                profile={profile}
+                sido={listingSido}
+                housingTypes={data.housingTypes}
+              />
+            )}
+
             <Section title="주택형별 공급">
               {data.housingTypes.length === 0 ? (
                 <EmptyHint text="주택형 정보가 없습니다." />
