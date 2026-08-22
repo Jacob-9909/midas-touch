@@ -6,6 +6,7 @@ import { ThemeProvider, themeInitScript } from "@/lib/theme";
 import { ToastProvider } from "@/lib/toast";
 import NavBar from "@/components/NavBar";
 import SiteFooter from "@/components/SiteFooter";
+import { UserProvider } from "@/lib/user-context";
 
 // 문서 §Typography: 본문·버튼·캡션은 Inter 400/600. 디스플레이도 Aeonik Pro 대체로
 // Inter 를 쓰되(문서가 지정한 대체 경로) 500 weight + 음수 자간으로 조인다.
@@ -34,15 +35,17 @@ export default function RootLayout({
       <body className={`${inter.variable} ${geistMono.variable} min-h-full`}>
         <ThemeProvider>
           <ToastProvider>
-            <NavBar />
-            {/* 컨테이너는 각 페이지가 소유한다 — 히어로 밴드가 전체폭으로 깔려야 하기 때문. */}
-            <main>
-              {children}
-            </main>
-            {/* 법적 고지 — 세무사법(조세 자문 독점)·자본시장법(무등록 투자자문) 대비.
-                페이지마다 복붙하지 않고 레이아웃에서 한 번만 깔아 모든 화면에 동일하게 노출한다.
-                챗 같은 앱형 레이아웃에서는 SiteFooter 가 스스로 숨어 페이지 스크롤을 만들지 않는다. */}
-            <SiteFooter />
+            <UserProvider>
+              <NavBar />
+              {/* 컨테이너는 각 페이지가 소유한다 — 히어로 밴드가 전체폭으로 깔려야 하기 때문. */}
+              <main>
+                {children}
+              </main>
+              {/* 법적 고지 — 세무사법(조세 자문 독점)·자본시장법(무등록 투자자문) 대비.
+                  페이지마다 복붙하지 않고 레이아웃에서 한 번만 깔아 모든 화면에 동일하게 노출한다.
+                  챗 같은 앱형 레이아웃에서는 SiteFooter 가 스스로 숨어 페이지 스크롤을 만들지 않는다. */}
+              <SiteFooter />
+            </UserProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>

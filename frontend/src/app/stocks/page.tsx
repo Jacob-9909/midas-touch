@@ -53,7 +53,6 @@ import { clientId } from "@/lib/my-profile";
 import { seedChat } from "@/lib/chat-seed";
 import MiniSparkline from "@/components/bits/MiniSparkline";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
-import InteractivePillBar from "@/components/bits/InteractivePillBar";
 import {
   Card,
   PageTitle,
