@@ -30,7 +30,10 @@ class User(PostgresBase):
         server_default=text("gen_random_uuid()"),
     )
     uuid = Column(String(100), unique=True, nullable=True)
-    
+    # 인증(로그인) — 기존 데모 유저(비번 없음) 호환 위해 nullable. 비번 설정된 유저만 로그인 가능.
+    email = Column(String(255), unique=True, nullable=True)
+    password_hash = Column(String(255), nullable=True)
+
     # Personal Info
     age = Column(SmallInteger, nullable=True)
     sex = Column(String(10), nullable=True)

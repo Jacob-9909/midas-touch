@@ -140,30 +140,6 @@ export function AnimatedNumber({
   );
 }
 
-/**
- * 큰 금액을 억/만으로 축약해 애니메이션한다 (fmtKRWShort의 모션 버전).
- * 단위는 고정 텍스트로 두고 숫자만 카운트업해야 단위가 흔들리지 않는다.
- */
-export function AnimatedKRWShort({
-  value,
-  className = "",
-}: {
-  value: number | null | undefined;
-  className?: string;
-}) {
-  if (value == null) return <span className={className}>-</span>;
-  if (value >= 1e8) {
-    const scaled = value / 1e8;
-    // 1.2억처럼 소수 한 자리까지만. 딱 떨어지면 정수로.
-    const decimals = value % 1e8 === 0 ? 0 : 1;
-    return <AnimatedNumber value={scaled} decimals={decimals} suffix="억" className={className} />;
-  }
-  if (value >= 1e4) {
-    return <AnimatedNumber value={Math.round(value / 1e4)} suffix="만" className={className} />;
-  }
-  return <AnimatedNumber value={value} className={className} />;
-}
-
 export function fmtKRW(n: number | null | undefined): string {
   if (n == null) return "-";
   return new Intl.NumberFormat("ko-KR").format(n) + "원";

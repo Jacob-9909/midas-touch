@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from backend.app.api.auth import current_uuid, enforce_owner
 from shared.database.connector import (
     get_all_tax_rules,
     get_latest_market_snapshots,
@@ -30,8 +31,9 @@ def get_users(limit: int = 50, offset: int = 0) -> dict:
 
 
 @router.get("/users/{uuid}")
-def get_user_detail(uuid: str) -> dict:
-    """단일 유저 프로필 + 포트폴리오(+종목)."""
+def get_user_detail(uuid: str, auth_uuid: str | None = Depends(current_uuid)) -> dict:
+    """단일 유저 프로필 + 포트폴리오(+종목). AUTH_ENABLED면 본인 것만 조회 가능."""
+    enforce_owner(auth_uuid, uuid)
     profile = get_user_by_uuid(uuid)
     if not profile:
         raise HTTPException(status_code=404, detail=f"사용자를 찾을 수 없습니다: {uuid}")
@@ -52,9 +54,24 @@ DEFAULT_MACRO_SNAPSHOTS = [
 ]
 
 _MACRO_CACHE: dict = {
-    "data": DEFAULT_MACRO_SNAPSHOTS,
+    "data": [],  # 비워둔다 → 라이브 워밍 전에는 _market_fallback()이 DB 최신값을 준다(May 상수 아님).
     "last_updated": 0.0,
 }
+
+
+def _market_fallback() -> list[dict]:
+    """캐시가 아직 안 데워졌을 때 반환할 값 — DB 최신 스냅샷 우선, 그것도 없으면 하드코딩 기본값(최후).
+
+    예전엔 곧장 DEFAULT_MACRO_SNAPSHOTS(2026-05 고정값)로 폴백해 '안 바뀌는' 느낌을 줬다.
+    DB에는 매일 적재된 최신 시세가 있으니 그걸 먼저 쓴다.
+    """
+    try:
+        rows = get_latest_market_snapshots()
+        if rows:
+            return rows
+    except Exception as exc:
+        logging.getLogger(__name__).warning("시장 폴백 DB 조회 실패: %s", exc)
+    return DEFAULT_MACRO_SNAPSHOTS
 _MACRO_TTL = 300.0  # 5분 인메모리 캐시 (Rate limit 방지)
 
 _MACRO_YFINANCE_MAP = [
@@ -98,7 +115,8 @@ def _update_macro_cache():
             
             val = db_fallback.get("value") or item.get("default_val", 0.0)
             unit = item["unit"]
-            source = item["source"]
+            # 정직한 라벨: 라이브가 실제로 붙으면 아래에서 yfinance_live로 승격. 그전엔 DB인지 상수인지 구분.
+            source = "db" if db_fallback.get("value") else "stale_default"
             date_str = db_fallback.get("snapshot_date", today_str)
 
             if ticker:
@@ -111,6 +129,7 @@ def _update_macro_cache():
                             if last_price and float(last_price) > 0:
                                 val = round(float(last_price), 2)
                                 date_str = today_str
+                                source = "yfinance_live"
                 except Exception as exc:
                     logging.getLogger(__name__).debug("종목 시세 조회 건너뜀: %s", exc)
 
@@ -127,10 +146,13 @@ def _update_macro_cache():
         _MACRO_CACHE["last_updated"] = time.time()
     except Exception:
         if not _MACRO_CACHE["data"]:
-            _MACRO_CACHE["data"] = DEFAULT_MACRO_SNAPSHOTS
+            _MACRO_CACHE["data"] = _market_fallback()
 
+
+import threading
 
 _IS_UPDATING_MACRO = False
+_MACRO_LOCK = threading.Lock()
 
 
 def _do_macro_thread():
@@ -145,16 +167,22 @@ def _do_macro_thread():
 def get_market_snapshots(force_refresh: bool = False) -> dict:
     """data_type/sub_key별 최신 시장 지표 (야후 파이낸스 실시간 배치 + DB 폴백)."""
     global _IS_UPDATING_MACRO
-    import threading
     import time
 
     now = time.time()
-    if (force_refresh or not _MACRO_CACHE["data"] or (now - _MACRO_CACHE["last_updated"] >= _MACRO_TTL)) and not _IS_UPDATING_MACRO:
-        _IS_UPDATING_MACRO = True
-        t = threading.Thread(target=_do_macro_thread, daemon=True)
-        t.start()
+    if (
+        force_refresh
+        or not _MACRO_CACHE["data"]
+        or (now - _MACRO_CACHE["last_updated"] >= _MACRO_TTL)
+    ) and _MACRO_LOCK.acquire(blocking=False):
+        try:
+            if not _IS_UPDATING_MACRO:
+                _IS_UPDATING_MACRO = True
+                threading.Thread(target=_do_macro_thread, daemon=True).start()
+        finally:
+            _MACRO_LOCK.release()
 
-    return {"snapshots": _MACRO_CACHE["data"] or DEFAULT_MACRO_SNAPSHOTS}
+    return {"snapshots": _MACRO_CACHE["data"] or _market_fallback()}
 
 
 @router.get("/market/history")

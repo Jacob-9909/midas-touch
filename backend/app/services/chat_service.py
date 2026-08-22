@@ -17,6 +17,22 @@ from shared.database.repositories.sessions import upsert_chat_session
 
 _TITLE_MAX = 40
 
+# 그래프 노드 → 사람이 읽는 진행상태 라벨. 도구 수집 구간(오래 걸림)에 "지금 뭐 하는지"를 흘리는 용도.
+_NODE_LABELS = {
+    "intent": "질문 의도 분석",
+    "persona_rag": "또래 투자자 데이터 조회",
+    "graph_rag": "세법 지식그래프 탐색",
+    "doc_rag": "세법 문서 검색",
+    "tax_and_market_lookup": "세율·시장지표 조회",
+    "product_research": "금융상품 금리 검색",
+    "news_research": "금리 동향 웹검색",
+    "nts_law_research": "국세청 해석 조회",
+    "stock_backtest": "백테스트 실행",
+    "stock_quick": "주식 기술지표 분석",
+    "cheongyak_lookup": "청약 공고 조회",
+    "synthesize": "답변 작성",
+}
+
 
 class ChatService:
     """멀티턴 채팅 실행기. 엔드포인트당 1회 생성하거나 모듈 싱글톤으로 재사용한다."""
@@ -85,20 +101,46 @@ class ChatService:
     ) -> Iterator[str]:
         """SSE 토큰 스트림 제너레이터. synthesize 노드의 최종 답변 토큰만 흘린다.
 
-        이벤트: {"type":"token","content":...} 반복 후 {"type":"done"}.
+        이벤트: {"type":"status","message":...}(도구 수집 진행) · {"type":"token","content":...}(답변 토큰)
+        반복 후 {"type":"done"}. 도구 구간(웹검색·yfinance·그래프)은 오래 걸리는데 예전엔 synthesize 토큰만
+        흘려 그 구간이 '조용한 대기'였다. updates 모드를 함께 구독해 각 단계를 status로 흘린다.
         체크포인터 영속화/세션 기록은 스트림 종료 시 처리한다.
         """
         state_in, config = self._prepare_inputs(session_id, message, user_uuid, profile)
 
+        def _sse(payload: dict) -> str:
+            return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
         try:
-            for chunk, metadata in self._agent.stream(state_in, config, stream_mode="messages"):
-                # synthesize 노드가 생성하는 최종 답변 토큰만 전달(intent 분류기 LLM은 제외)
+            announced_synth = False
+            for mode, payload in self._agent.stream(
+                state_in, config, stream_mode=["updates", "messages"]
+            ):
+                if mode == "updates":
+                    # 노드가 끝날 때마다 진행상태. intent 완료 시엔 '무엇을 수집하는지'까지 알린다.
+                    for node, update in (payload or {}).items():
+                        if node == "synthesize":
+                            continue
+                        if node == "intent":
+                            route = (update or {}).get("route") or []
+                            tools = ", ".join(_NODE_LABELS.get(t, t) for t in route)
+                            yield _sse({"type": "status", "message": f"수집 중: {tools}" if tools else "답변 준비 중"})
+                        elif node in _NODE_LABELS:
+                            yield _sse({"type": "status", "message": f"{_NODE_LABELS[node]} 완료"})
+                    continue
+
+                # mode == "messages": synthesize 노드의 최종 답변 토큰만 전달(intent 분류기 LLM은 제외)
+                chunk, metadata = payload
                 if metadata.get("langgraph_node") != "synthesize":
                     continue
+                if not announced_synth:
+                    announced_synth = True
+                    yield _sse({"type": "status", "message": "답변 작성 중"})
                 content = getattr(chunk, "content", None)
                 if content:
-                    yield f"data: {json.dumps({'type': 'token', 'content': content}, ensure_ascii=False)}\n\n"
+                    yield _sse({"type": "token", "content": content})
+
             self._record_session(session_id, message, user_uuid, config)
-            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            yield _sse({"type": "done"})
         except Exception as exc:
-            yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)}, ensure_ascii=False)}\n\n"
+            yield _sse({"type": "error", "detail": str(exc)})

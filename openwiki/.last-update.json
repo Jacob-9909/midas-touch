@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
   "updatedAt": "2026-08-13T13:19:27.977Z",
+=======
+  "updatedAt": "2026-08-13T13:19:13.648Z",
+>>>>>>> origin/main
   "command": "update",
   "gitHead": "ae84e9fc21e880e35158334f9e888a291958776c",
   "model": "openai/gpt-oss-120b"

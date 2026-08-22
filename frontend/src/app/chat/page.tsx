@@ -34,6 +34,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState(""); // 스트리밍 대기 구간 진행상태(도구 수집 등)
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [tab, setTab] = useState<"chats" | "kb">("chats");
   /** 메시지 스크롤 박스. 스트리밍 중 자동 하단 추적에 쓴다. */
@@ -136,6 +137,7 @@ export default function ChatPage() {
     stickRef.current = true; // 내가 보낸 메시지라면 자동 추적 재개
     setMessages((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
     setBusy(true);
+    setStatus("");
     try {
       await streamChat(
         {
@@ -158,6 +160,7 @@ export default function ChatPage() {
             };
             return next;
           }),
+        (msg) => setStatus(msg), // 도구 수집 등 진행상태
       );
       await refreshSessions();
     } catch (e) {
@@ -165,6 +168,7 @@ export default function ChatPage() {
       setMessages((m) => m.slice(0, -1)); // 빈 assistant 버블 제거
     } finally {
       setBusy(false);
+      setStatus("");
     }
   };
 
@@ -324,7 +328,12 @@ export default function ChatPage() {
                         m.content ? (
                           <Markdown>{m.content}</Markdown>
                         ) : busy ? (
-                          <span className="caret" />
+                          <span className="inline-flex items-center gap-2 text-muted">
+                            {status && (
+                              <span className="font-mono-spec text-xs">{status}…</span>
+                            )}
+                            <span className="caret" />
+                          </span>
                         ) : null
                       ) : (
                         m.content

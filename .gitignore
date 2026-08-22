@@ -49,3 +49,6 @@ graphify-out/cache/
 
 # 공모전 제출 서류 (바이너리 문서 — 저장소 관리 대상 아님)
 docs/submission/
+
+# Local ops scripts / daemon logs (not part of the repo)
+scripts/

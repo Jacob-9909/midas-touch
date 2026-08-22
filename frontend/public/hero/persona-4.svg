@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <radialGradient id="g5" cx="50%" cy="40%" r="75%">
+      <stop offset="0%" stop-color="#24313a"/>
+      <stop offset="60%" stop-color="#0d1320"/>
+      <stop offset="100%" stop-color="#04060a"/>
+    </radialGradient>
+    <linearGradient id="sheen5" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e8c86b" stop-opacity="0.35"/>
+      <stop offset="45%" stop-color="#d4af37" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#04060a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="#04060a"/>
+  <rect width="1200" height="800" fill="url(#g5)"/>
+  <circle cx="521" cy="611" r="260" fill="url(#g5)" opacity="0.16"/><circle cx="1058" cy="229" r="157" fill="url(#g5)" opacity="0.22"/><circle cx="1174" cy="3" r="121" fill="url(#g5)" opacity="0.24"/><circle cx="762" cy="143" r="186" fill="url(#g5)" opacity="0.19"/><circle cx="202" cy="519" r="291" fill="url(#g5)" opacity="0.12"/>
+  <rect width="1200" height="800" fill="url(#sheen5)"/>
+  <line x1="0" y1="5" x2="1200" y2="-35" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="62" x2="1200" y2="22" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="119" x2="1200" y2="79" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="176" x2="1200" y2="136" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="234" x2="1200" y2="194" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="291" x2="1200" y2="251" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="348" x2="1200" y2="308" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="405" x2="1200" y2="365" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="462" x2="1200" y2="422" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="519" x2="1200" y2="479" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="576" x2="1200" y2="536" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="634" x2="1200" y2="594" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="691" x2="1200" y2="651" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="748" x2="1200" y2="708" stroke="rgba(212,175,96,0.06)" stroke-width="1"/>
+  <text x="600" y="756" text-anchor="middle" font-family="monospace" font-size="26" letter-spacing="6" fill="rgba(241,244,249,0.55)">AGGRESSIVE · 공격형</text>
+</svg>

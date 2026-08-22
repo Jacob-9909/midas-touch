@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.app.api.auth import router as auth_router
 from backend.app.api.chat import router as chat_router
 from backend.app.api.cheongyak import router as cheongyak_router
 from backend.app.api.graph import router as graph_router
@@ -136,27 +137,39 @@ async def _warm_caches() -> None:
     # 웜 11초). 무거운 쪽은 bge-m3 로드가 아니라 PropertyGraphIndex.from_existing이다.
     # ponytail: 비용을 부팅 시점으로 옮기기만 한다. from_existing 자체를 빠르게 하려면
     # 리트리버를 직접 Cypher로 짜야 하는데 그건 별개 작업이다.
-    for name, fn in (
-        ("embedding", get_embedding_model),
-        ("graph-retriever", _get_retriever_bundle),
-        ("macro", _update_macro_cache),
-        ("heatmap", _do_update_heatmap),
-    ):
+    # 병렬 워밍: 예전엔 순차라 가벼운 macro/heatmap이 무거운 graph-retriever(콜드 ~8분) 뒤에 줄서서,
+    # 부팅 후 몇 분간 시장지표가 옛 기본값으로 보였다. gather로 동시에 데워 시장지표는 즉시 신선해진다.
+    async def _warm(name: str, fn) -> None:
         try:
             await asyncio.to_thread(fn)
             _log.info("cache warmed: %s", name)
         except Exception as exc:
             _log.warning("cache warm failed (%s): %s", name, exc)
 
+    await asyncio.gather(
+        _warm("embedding", get_embedding_model),
+        _warm("graph-retriever", _get_retriever_bundle),
+        _warm("macro", _update_macro_cache),
+        _warm("heatmap", _do_update_heatmap),
+    )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """앱 수명 동안 백그라운드 태스크(캐시 예열·분석 검증·거시지표 적재)를 띄우고, 종료 시 정리한다."""
-    tasks = [
-        asyncio.create_task(_warm_caches()),
-        asyncio.create_task(_validation_loop()),
-        asyncio.create_task(_market_ingest_loop()),
-    ]
+    """앱 수명 동안 백그라운드 태스크(캐시 예열·분석 검증·거시지표 적재)를 띄우고, 종료 시 정리한다.
+
+    캐시 예열은 프로세스별 인메모리라 워커마다 돌아야 한다. 반면 분석검증·거시적재는 DB 쓰기/외부적재라
+    워커마다 돌면 중복 실행된다 → RUN_BACKGROUND_JOBS(기본 true) 뒤로 게이트한다. 웹 워커를 N개로
+    늘릴 땐 웹 tier는 false로 두고 전용 워커/크론 1개만 true로 돌린다.
+    # ponytail: env 플래그 = 운영자가 정확히 세팅해야 하는 게 천장. 진짜 스케줄러(Celery beat/k8s CronJob)로
+    #           옮기면 이 규약이 코드로 강제된다. 그 전까지는 플래그로 충분.
+    """
+    tasks = [asyncio.create_task(_warm_caches())]
+    if os.getenv("RUN_BACKGROUND_JOBS", "true").lower() == "true":
+        tasks.append(asyncio.create_task(_validation_loop()))
+        tasks.append(asyncio.create_task(_market_ingest_loop()))
+    else:
+        _log.info("background jobs disabled (RUN_BACKGROUND_JOBS=false) — 검증/적재는 전용 워커가 담당")
     try:
         yield
     finally:
@@ -186,6 +199,7 @@ app.add_middleware(
 )
 
 # 멀티턴 에이전트 라우터 (LangGraph 기반 /api/v1/chat)
+app.include_router(auth_router)
 app.include_router(chat_router)
 # 웹 콘솔 라우터 (유저/대시보드, 지식그래프·문서 인입, GraphRAG 단발 질의)
 app.include_router(users_router)

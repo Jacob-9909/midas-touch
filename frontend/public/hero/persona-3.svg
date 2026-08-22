@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <radialGradient id="g4" cx="50%" cy="40%" r="75%">
+      <stop offset="0%" stop-color="#3a3524"/>
+      <stop offset="60%" stop-color="#0d1320"/>
+      <stop offset="100%" stop-color="#04060a"/>
+    </radialGradient>
+    <linearGradient id="sheen4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e8c86b" stop-opacity="0.35"/>
+      <stop offset="45%" stop-color="#d4af37" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#04060a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="#04060a"/>
+  <rect width="1200" height="800" fill="url(#g4)"/>
+  <circle cx="537" cy="602" r="257" fill="url(#g4)" opacity="0.16"/><circle cx="1068" cy="219" r="155" fill="url(#g4)" opacity="0.22"/><circle cx="1169" cy="2" r="122" fill="url(#g4)" opacity="0.24"/><circle cx="747" cy="151" r="188" fill="url(#g4)" opacity="0.19"/><circle cx="190" cy="529" r="293" fill="url(#g4)" opacity="0.12"/>
+  <rect width="1200" height="800" fill="url(#sheen4)"/>
+  <line x1="0" y1="8" x2="1200" y2="-32" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="65" x2="1200" y2="25" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="122" x2="1200" y2="82" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="179" x2="1200" y2="139" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="237" x2="1200" y2="197" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="294" x2="1200" y2="254" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="351" x2="1200" y2="311" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="408" x2="1200" y2="368" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="465" x2="1200" y2="425" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="522" x2="1200" y2="482" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="579" x2="1200" y2="539" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="637" x2="1200" y2="597" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="694" x2="1200" y2="654" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="751" x2="1200" y2="711" stroke="rgba(212,175,96,0.06)" stroke-width="1"/>
+  <text x="600" y="756" text-anchor="middle" font-family="monospace" font-size="26" letter-spacing="6" fill="rgba(241,244,249,0.55)">GROWTH · 성장형</text>
+</svg>

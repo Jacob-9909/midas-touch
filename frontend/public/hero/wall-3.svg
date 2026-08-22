@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
+  <defs>
+    <radialGradient id="g9" cx="50%" cy="40%" r="75%">
+      <stop offset="0%" stop-color="#33202a"/>
+      <stop offset="60%" stop-color="#0d1320"/>
+      <stop offset="100%" stop-color="#04060a"/>
+    </radialGradient>
+    <linearGradient id="sheen9" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e8c86b" stop-opacity="0.35"/>
+      <stop offset="45%" stop-color="#d4af37" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#04060a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="#04060a"/>
+  <rect width="800" height="1000" fill="url(#g9)"/>
+  <circle cx="306" cy="808" r="271" fill="url(#g9)" opacity="0.15"/><circle cx="676" cy="335" r="166" fill="url(#g9)" opacity="0.22"/><circle cx="793" cy="14" r="120" fill="url(#g9)" opacity="0.24"/><circle cx="548" cy="140" r="175" fill="url(#g9)" opacity="0.20"/><circle cx="168" cy="597" r="281" fill="url(#g9)" opacity="0.13"/>
+  <rect width="800" height="1000" fill="url(#sheen9)"/>
+  <line x1="0" y1="13" x2="800" y2="-27" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="84" x2="800" y2="44" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="156" x2="800" y2="116" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="227" x2="800" y2="187" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="299" x2="800" y2="259" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="370" x2="800" y2="330" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="442" x2="800" y2="402" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="513" x2="800" y2="473" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="584" x2="800" y2="544" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="656" x2="800" y2="616" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="727" x2="800" y2="687" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="799" x2="800" y2="759" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="870" x2="800" y2="830" stroke="rgba(212,175,96,0.06)" stroke-width="1"/><line x1="0" y1="942" x2="800" y2="902" stroke="rgba(212,175,96,0.06)" stroke-width="1"/>
+  
+</svg>

@@ -7,6 +7,42 @@ export const API_BASE =
 // 로컬/다른 환경에선 백엔드가 무시하는 무해한 헤더라 항상 붙여도 됨.
 const DEFAULT_HEADERS = { "ngrok-skip-browser-warning": "true" };
 
+// ── 인증 토큰 (localStorage) ──────────────────────────────────
+// SPA가 별도 백엔드(FastAPI)를 직접 호출하므로 JWT를 클라이언트에 보관하고 Bearer로 붙인다.
+// ponytail: localStorage는 XSS에 노출된다는 한계가 있다. 더 단단히 하려면 백엔드가 httpOnly 쿠키를
+//           SameSite/secure로 내려주고 CORS credentials를 켜야 하는데, 그건 교차출처 설정이 붙는 별개 작업.
+const TOKEN_KEY = "midas.token";
+
+export function getToken(): string | null {
+  return typeof window === "undefined" ? null : localStorage.getItem(TOKEN_KEY);
+}
+export function setToken(t: string): void {
+  if (typeof window !== "undefined") localStorage.setItem(TOKEN_KEY, t);
+}
+export function clearToken(): void {
+  if (typeof window !== "undefined") localStorage.removeItem(TOKEN_KEY);
+}
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const t = getToken();
+  return { ...DEFAULT_HEADERS, ...(extra ?? {}), ...(t ? { Authorization: `Bearer ${t}` } : {}) };
+}
+
+export interface LoginResult {
+  access_token: string;
+  token_type: string;
+  user_uuid: string;
+}
+export async function apiLogin(email: string, password: string): Promise<LoginResult> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...DEFAULT_HEADERS },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await handle<LoginResult>(res);
+  setToken(data.access_token);
+  return data;
+}
+
 async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let detail = res.statusText;
@@ -27,7 +63,7 @@ export async function apiGet<T>(path: string, timeoutMs: number = 4000): Promise
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       cache: "no-store",
-      headers: DEFAULT_HEADERS,
+      headers: authHeaders(),
       signal: controller.signal,
     });
     return await handle<T>(res);
@@ -39,7 +75,7 @@ export async function apiGet<T>(path: string, timeoutMs: number = 4000): Promise
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...DEFAULT_HEADERS },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });
   return handle<T>(res);
@@ -51,7 +87,7 @@ export async function apiUpload<T>(path: string, file: File): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     body: form,
-    headers: DEFAULT_HEADERS,
+    headers: authHeaders(),
   });
   return handle<T>(res);
 }
@@ -59,7 +95,7 @@ export async function apiUpload<T>(path: string, file: File): Promise<T> {
 export async function apiDelete<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "DELETE",
-    headers: DEFAULT_HEADERS,
+    headers: authHeaders(),
   });
   return handle<T>(res);
 }
@@ -68,10 +104,11 @@ export async function apiDelete<T>(path: string): Promise<T> {
 export async function streamChat(
   body: { session_id: string; user_uuid: string; message: string; profile?: string },
   onToken: (t: string) => void,
+  onStatus?: (msg: string) => void, // 도구 수집 등 대기 구간 진행상태(status 이벤트)
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/api/v1/chat/stream`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...DEFAULT_HEADERS },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });
   if (!res.ok || !res.body) {
@@ -92,8 +129,12 @@ export async function streamChat(
       if (!line.startsWith("data:")) continue;
       const evt = JSON.parse(line.slice(5).trim());
       if (evt.type === "token") onToken(evt.content as string);
+      else if (evt.type === "status") onStatus?.(evt.message as string);
       else if (evt.type === "error") throw new Error(evt.detail);
     }
+    // 브라우저가 청크를 버퍼링해 read()가 즉시 반환되면 setState들이 마이크로태스크로 뭉쳐
+    // React가 한 번에 페인트한다("확 나와"). 매 청크 후 매크로태스크로 양보해 점진 렌더를 강제한다.
+    if (parts.length) await new Promise((r) => setTimeout(r, 0));
   }
 }
 
