@@ -46,3 +46,6 @@ graphify-out/cache/
 
 # OS specific
 .DS_Store
+
+# 공모전 제출 서류 (바이너리 문서 — 저장소 관리 대상 아님)
+docs/submission/
