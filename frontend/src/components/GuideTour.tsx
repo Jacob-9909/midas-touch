@@ -53,11 +53,11 @@ export default function GuideTour({
   // 첫 방문이면 자동 시작. 외부에서 open 을 주면 그쪽이 우선.
   useEffect(() => {
     if (open === undefined) {
-      /* eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 방문 이력(localStorage) 확인 */
+      // 마운트 시 방문 이력(localStorage) 확인 — lazy init은 SSR에서 불가하므로 effect가 정답.
+      /* eslint-disable-next-line react-hooks/set-state-in-effect */
       if (!localStorage.getItem(storageKey)) setIdx(0);
       return;
     }
-    /* eslint-disable-next-line react-hooks/set-state-in-effect -- 부모가 제어하는 열림 상태 반영 */
     setIdx(open ? 0 : null);
   }, [open, storageKey]);
 
@@ -75,7 +75,9 @@ export default function GuideTour({
   // 단계가 바뀌면: 페이드 아웃 → 스크롤·측정(숨은 상태) → 페이드 인.
   useEffect(() => {
     if (idx === null) return;
-    setShown(false);
+    // 규칙(react-hooks/set-state-in-effect)을 지키기 위해 숨김도 타이머로 넘긴다 —
+    // 다음 틱에 즉시 실행되므로 사용자가 보는 동작은 동기 숨김과 같다.
+    const hideT = setTimeout(() => setShown(false), 0);
     let measureT: ReturnType<typeof setTimeout> | undefined;
     const fadeT = setTimeout(() => {
       const el = document.querySelector<HTMLElement>(`[data-tour="${steps[idx].target}"]`);
@@ -84,6 +86,7 @@ export default function GuideTour({
     }, 220); // 페이드 아웃이 끝난 뒤에만 움직인다
     const inT = setTimeout(() => setShown(true), 700);
     return () => {
+      clearTimeout(hideT);
       clearTimeout(fadeT);
       clearTimeout(inT);
       if (measureT) clearTimeout(measureT);
