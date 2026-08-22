@@ -16,12 +16,18 @@ frontend/
 │   │   └── dashboard/[uuid]/page.tsx # User dashboard with portfolio donut chart
 │   ├── components/         # Reusable UI building blocks
 │   │   ├── bits/            # Animation/UI effect components (CountUp, DecryptedText, MiniSparkline, Radar, SpecularMetricCard)
-│   │   └── AmbientBackground.tsx  # Global ambient light effect for dark theme
+│   │   # (AmbientBackground component removed in recent refactor)
 
 │   │   ├── NavBar.tsx      # Header with core/engine navigation groups and theme toggle
 │   │   ├── JobProgress.tsx # Shows async job progress bars fetched from `/api/v1/jobs`
 │   │   ├── GraphView.tsx   # D3‑based force‑graph viewer for Neo4j snapshots
 │   │   ├── Reveal.tsx      # Custom animation component used across cards
+│   │   ├── GuideTour.tsx   # Guided onboarding flow for new users
+│   │   ├── ProfileNudge.tsx # UI nudge for profile actions
+│   │   ├── LandingGuide.tsx # Introductory guide shown on landing page
+│   │   ├── MoneyInput.tsx   # Money input component used in simulator
+│   │   ├── SegmentedTabs.tsx # Tabbed UI component
+│   │   ├── SiteFooter.tsx    # Footer navigation and links
 │   │   └── ui.tsx          # Common primitives: Card, PageTitle, SectionLabel, Spinner, LoadingBlock
 │   ├── lib/                # Client‑side utilities
 │   │   ├── api.ts          # Thin wrapper around backend REST endpoints; handles JSON, query strings, and SSE token streaming
