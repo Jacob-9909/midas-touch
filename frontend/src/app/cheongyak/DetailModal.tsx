@@ -277,7 +277,7 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
           <button
             onClick={onClose}
             aria-label="닫기"
-            className="btn-ghost flex h-8 w-8 shrink-0 items-center justify-center"
+            className="btn-ghost btn-icon shrink-0"
           >
             <X size={18} />
           </button>

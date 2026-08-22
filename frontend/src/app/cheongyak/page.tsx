@@ -20,10 +20,8 @@ import {
   loadProfile,
   type MyProfile,
 } from "@/lib/my-profile";
-import OGHeroCard from "@/components/bits/OGHeroCard";
-import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
-import { Card, Skeleton } from "@/components/ui";
+import { Card, PageTitle, Skeleton } from "@/components/ui";
 import ProfileNudge from "@/components/ProfileNudge";
 import { useToast } from "@/lib/toast";
 import DetailModal, { SHOW_SCORES_KINDS } from "./DetailModal";
@@ -292,22 +290,31 @@ export default function CheongyakPage() {
   };
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-6">
-      <OGHeroCard
-        categoryTag="REAL ESTATE & SUBSCRIPTION"
-        title="전국 청약 분양정보 큐레이션"
-        subtitle="한국부동산원 청약홈 실시간 공공 데이터로 주택, 오피스텔, 잔여세대 분양 정보를 탐색하고 AI 가점 분석을 받으세요."
-        badgeContent={<LiveSyncBadge state="live" label="CHEONGYAK-HOME LIVE" latencyMs={10} />}
-        metrics={[
-          { label: "실시간 분양 공고", value: items ? `${items.length}건` : "조회중" },
-          { label: "접수 중 단지", value: items ? `${statusCounts["접수중"] ?? 0}개` : "-" },
-        ]}
+    <main className="mx-auto max-w-[1200px] px-6 py-[72px] space-y-6">
+      {/* 데이터 화면은 흰 카탈로그 모드다(문서 §Overview) — 다크 히어로 카드를 걷어내고
+          디스플레이 타이포 + 헤어라인 지표 줄로 바꿨다. */}
+      <PageTitle
+        eyebrow="청약 정보"
+        title="전국 청약 분양정보"
+        subtitle="한국부동산원 청약홈 실시간 공공 데이터로 APT·오피스텔·무순위/잔여세대 공고를 조회하고, 내 가점·1순위 자격과 대조합니다."
       />
+
+      <div className="flex flex-wrap gap-x-12 gap-y-4 border-y border-line py-6">
+        {[
+          ["실시간 분양 공고", items ? `${items.length}건` : "조회중"],
+          ["접수 중 단지", items ? `${statusCounts["접수중"] ?? 0}개` : "-"],
+        ].map(([label, value]) => (
+          <div key={label}>
+            <div className="text-xs text-muted">{label}</div>
+            <div className="font-display mt-1 text-2xl tabular-nums text-fg">{value}</div>
+          </div>
+        ))}
+      </div>
 
       <ProfileNudge />
       <MyScoreCard profile={profile} applicable={SHOW_SCORES_KINDS.includes(kind)} />
 
-      <div className="flex flex-wrap items-center gap-2 font-mono-spec text-xs bg-[#090d16]/80 p-1.5 rounded-full border border-line-50">
+      <div className="flex flex-wrap items-center gap-2 rounded-full border border-line bg-[var(--ink-2)] p-1.5 text-xs">
         {TABS.map((t) => (
           <button
             key={t.kind}

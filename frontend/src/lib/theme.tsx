@@ -19,13 +19,13 @@ interface ThemeCtx {
 const Ctx = createContext<ThemeCtx | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("light");
 
   // 마운트 시 <html>의 실제 클래스(인라인 스크립트가 적용해둔 값)와 동기화
   useEffect(() => {
-    const current = document.documentElement.classList.contains("light")
-      ? "light"
-      : "dark";
+    const current = document.documentElement.classList.contains("dark")
+      ? "dark"
+      : "light";
     // 마운트 1회 DOM 동기화. lazy init은 SSR(서버엔 document 없음) 하이드레이션 불일치라 effect가 정답.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(current);
@@ -55,4 +55,4 @@ export function useTheme() {
 }
 
 // FOUC 방지: 하이드레이션 전에 <html>에 테마 클래스를 즉시 적용하는 인라인 스크립트.
-export const themeInitScript = `(function(){try{var t=localStorage.getItem('${STORAGE_KEY}')||'dark';document.documentElement.classList.add(t);}catch(e){document.documentElement.classList.add('dark');}})();`;
+export const themeInitScript = `(function(){try{var t=localStorage.getItem('${STORAGE_KEY}')||'light';document.documentElement.classList.add(t);}catch(e){document.documentElement.classList.add('light');}})();`;

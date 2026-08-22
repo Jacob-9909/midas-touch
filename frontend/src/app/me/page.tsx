@@ -86,7 +86,7 @@ export default function MyProfilePage() {
   const needDeposit = depositRequirement(regionOf(p.sido), p.targetArea);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 space-y-6">
+    <main className="mx-auto max-w-[1200px] px-6 py-[72px] space-y-6">
       <GuideTour
         steps={TOUR}
         storageKey="midas.tour.me.v1"

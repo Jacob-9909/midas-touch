@@ -11,8 +11,6 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { useTheme } from "@/lib/theme";
-import ShinyText from "@/components/bits/ShinyText";
-import GlassSurface from "@/components/bits/GlassSurface";
 import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 
 // 헤드라인은 청약(상담 + 목록조회 + 시뮬레이터 + 내 정보)이라 "core"로 앞세우고,
@@ -38,37 +36,18 @@ export default function NavBar() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <header className="sticky top-3 z-50 mx-auto mt-2 w-[calc(100%-1.5rem)] max-w-6xl sm:top-4 sm:mt-3">
-      {/* 뒤의 골드 앰비언트가 유리를 통과해 굴절된다.
-          SVG 필터 미지원 브라우저에서는 컴포넌트 내부 폴백(backdrop-filter)으로 내려간다. */}
-      <GlassSurface
-        width="100%"
-        height="auto"
-        borderRadius={10}
-        blur={14}
-        backgroundOpacity={0.55}
-        saturation={1.4}
-        distortionScale={-140}
-        displace={1.2}
-        className="border border-line shadow-md"
-      >
-      <nav className="flex h-14 items-center gap-1 px-4 sm:px-5">
+    // 문서 §Components: 네비는 캔버스에 밀착된 평평한 바다. 유리·굴절·그림자를 걷어내고
+    // 아래쪽 1px 헤어라인으로만 본문과 나눈다(full-bleed).
+    <header className="sticky top-0 z-50 border-b border-line bg-[var(--ink)]">
+      <nav className="mx-auto flex h-16 max-w-[1200px] items-center gap-1 px-6">
         <Link
           href="/"
           className="mr-5 flex shrink-0 items-center gap-2.5 whitespace-nowrap font-display text-xl font-normal tracking-tight"
         >
-          <ShieldChevron
-            weight="fill"
-            className="text-accent drop-shadow-[0_0_8px_var(--accent)]"
-            size={20}
-          />
-          {/* 정적 그라디언트 대신 금이 흐르는 하이라이트. 브랜드명이 곧 Midas라 여기가 제자리다. */}
-          <ShinyText
-            text="Midas Touch"
-            speed={4}
-            delay={2.5}
-            className="font-semibold tracking-wide"
-          />
+          {/* 브랜드 스탬프 — 문서 §Colors에서 어센트는 '드물게 찍는 도장'이다.
+              발광·흐르는 하이라이트는 걷어내고 글리프에만 골드를 남긴다. */}
+          <ShieldChevron weight="fill" className="text-accent" size={20} />
+          <span className="font-semibold tracking-tight">Midas Touch</span>
           <span className="hidden font-mono-spec text-[9px] uppercase tracking-widest text-muted border border-line/60 px-1.5 py-0.5 rounded sm:inline-block">
             Console
           </span>
@@ -108,7 +87,7 @@ export default function NavBar() {
           <button
             onClick={toggle}
             aria-label="테마 전환"
-            className="btn-ghost flex h-8 w-8 shrink-0 items-center justify-center rounded border border-line"
+            className="btn-ghost btn-icon shrink-0"
           >
             {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
           </button>
@@ -118,7 +97,7 @@ export default function NavBar() {
             onClick={() => setOpen((o) => !o)}
             aria-label="메뉴"
             aria-expanded={open}
-            className="btn-ghost flex h-8 w-8 shrink-0 items-center justify-center rounded border border-line md:hidden"
+            className="btn-ghost btn-icon shrink-0 md:hidden"
           >
             {open ? <X size={16} /> : <List size={16} />}
           </button>
@@ -144,7 +123,6 @@ export default function NavBar() {
           ))}
         </div>
       )}
-      </GlassSurface>
     </header>
   );
 }

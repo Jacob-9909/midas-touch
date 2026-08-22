@@ -1,17 +1,16 @@
 @import "tailwindcss";
 
 /* ────────────────────────────────────────────────
-   디자인 토큰 — PREMIUM SOFT (신뢰감 있는 사파이어 블루 × 부드러운 깊이)
-   taste-skill / soft-skill 적용: 순수 블랙 금지 → 쿨 네이비 톤,
-   거친 드롭섀도 금지 → 확산된 앰비언트 + 내부 하이라이트.
-   은행권 무드: 차분한 사파이어 액센트로 신뢰감 전달.
-   html.dark / html.light 에서 팔레트를 교체한다.
-   ──────────────────────────────────────────────── */
-/* ────────────────────────────────────────────────
-   디자인 토큰 — SWISS FINANCIAL EDITORIAL (Anti-AI 하이엔드 정밀 디테일)
-   - 퍼플/네온 그라디언트 및 뻔한 AI 카드 탈피
-   - 클래식 에디토리얼 세리프 + 1px 헤어라인 그리드 + 정밀 테크니컬 모노 믹스
-   - 미세 필름 노이즈(Tactile Grain) 질감으로 실물 인쇄물 같은 깊이감 형성
+   디자인 토큰 — docs/DESIGN-revolut.md 적용
+   두 모드 캔버스: 흰 카탈로그(기본, 데이터 화면) ↔ 진짜 검정 스토리텔링 밴드.
+   문서와 다른 점 하나 — 브랜드 어센트는 코발트 바이올렛 대신 골드를 유지한다.
+   서비스명이 Midas Touch라 코발트로 갈면 이름과 색이 따로 논다.
+   나머지(캔버스 이원화·pill 버튼·20px 카드·헤어라인·그림자 없음)는 문서를 따른다.
+
+   문서 원칙 중 특히 지킨 것:
+   - 그림자 언어 없음. 깊이는 캔버스 전환과 표면 명도 차이로만 만든다.
+   - 다크 표면 사다리는 두 칸뿐(#000000 → #0a0a0a → #16181a).
+   - 본문은 Inter 400/600, 디스플레이는 500 + 큰 음수 자간.
    ──────────────────────────────────────────────── */
 @theme inline {
   --color-ink: var(--ink);
@@ -26,77 +25,73 @@
   --color-gilt-soft: var(--gilt-soft);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-display: var(--font-geist-mono), var(--font-geist-sans), monospace;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), "JetBrains Mono", monospace;
 }
 
 :root {
-  --r-sm: 4px;
-  --r-md: 8px;
-  --r-lg: 14px;
-  --r-xl: 20px;
-  --r-pill: 999px;
+  /* rounded 스케일 — 문서 §Shapes */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 9999px;
+  /* spacing — 문서 §Layout. 밴드 리듬을 만드는 값이라 토큰으로 둔다 */
+  --s-block: 80px;
+  --s-section: 88px;
+  --s-band: 120px;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-html.dark {
-  /* MOLTEN GOLD: 캔버스를 더 깊게 내려 골드 광원의 대비를 확보한다.
-     화려함은 광원의 세기가 아니라 배경과의 대비에서 나온다. */
-  --ink: #04060a;
-  --ink-1: #090d16;
-  --ink-2: #0d1320;
-  --surface: rgba(255, 255, 255, 0.035);
-  --line: rgba(212, 175, 96, 0.2);
-  --line-subtle: rgba(255, 255, 255, 0.07);
-  --fg: #f1f4f9;
-  --muted: #848e9f;
-  --accent: #d4af37;
-  --accent-soft: #e8c86b;
-  --gilt: var(--accent);
-  --gilt-soft: var(--accent-soft);
-  --positive: #34d399;
-  --negative: #f87171;
-  --glow: rgba(212, 175, 96, 0.13);
-  /* 표면 하이라이트를 골드 기가 도는 흰빛으로 — 금속 스펙큘러 느낌 */
-  --specular: rgba(255, 240, 200, 0.09);
-  --shadow-soft:
-    0 1px 0 0 var(--specular) inset,
-    0 4px 20px -6px rgba(0, 0, 0, 0.7);
-  --shadow-float:
-    0 1px 0 0 rgba(255, 240, 200, 0.14) inset,
-    0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
-    0 18px 50px -18px rgba(0, 0, 0, 0.9),
-    0 0 40px -12px color-mix(in srgb, var(--accent) 26%, transparent);
-  color-scheme: dark;
-}
-
+/* ── 흰 카탈로그 모드 (기본) ── */
 html.light {
-  --ink: #f7f8fa;
+  --ink: #ffffff;
   --ink-1: #ffffff;
-  --ink-2: #ffffff;
-  --surface: #ffffff;
-  --line: rgba(160, 125, 45, 0.22);
-  --line-subtle: rgba(0, 0, 0, 0.08);
-  --fg: #0d1522;
-  --muted: #576375;
+  --ink-2: #f4f4f4;
+  --surface: #f4f4f4;
+  --line: #e2e2e7;
+  --line-subtle: rgba(25, 28, 31, 0.08);
+  --fg: #191c1f;
+  --muted: #505a63;
+  --stone: #8d969e;
   --accent: #92701a;
   --accent-soft: #b08a26;
   --gilt: var(--accent);
   --gilt-soft: var(--accent-soft);
-  --positive: #059669;
-  --negative: #dc2626;
-  --glow: rgba(160, 125, 45, 0.06);
-  --specular: rgba(255, 255, 255, 0.9);
-  --shadow-soft:
-    0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
-    0 4px 16px -4px rgba(10, 25, 55, 0.08);
-  --shadow-float:
-    0 1px 0 0 rgba(255, 255, 255, 1) inset,
-    0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent),
-    0 14px 36px -12px rgba(10, 25, 55, 0.18);
+  --positive: #006400;
+  --negative: #8b0000;
+  --glow: transparent;
+  --specular: transparent;
+  /* 문서 §Elevation: 드롭섀도 없음. 남겨두되 값은 비운다(기존 참조가 깨지지 않게). */
+  --shadow-soft: none;
+  --shadow-float: none;
   color-scheme: light;
+}
+
+/* ── 검정 스토리텔링 모드 ── */
+html.dark {
+  --ink: #000000;
+  --ink-1: #0a0a0a;
+  --ink-2: #16181a;
+  --surface: #16181a;
+  --line: rgba(255, 255, 255, 0.12);
+  --line-subtle: rgba(255, 255, 255, 0.06);
+  --fg: #ffffff;
+  --muted: rgba(255, 255, 255, 0.72);
+  --stone: #8d969e;
+  --accent: #d4af37;
+  --accent-soft: #e8c86b;
+  --gilt: var(--accent);
+  --gilt-soft: var(--accent-soft);
+  --positive: #00a87e;
+  --negative: #e23b4a;
+  --glow: transparent;
+  --specular: transparent;
+  --shadow-soft: none;
+  --shadow-float: none;
+  color-scheme: dark;
 }
 
 /* 배경은 반드시 html이 소유한다.
@@ -104,10 +99,7 @@ html.light {
    그려지므로, body가 불투명 배경을 가지면 캔버스를 덮어버린다.
    루트 스택 컨텍스트(html)의 배경 위에 캔버스가 올라오도록 여기에 둔다. */
 html {
-  background:
-    radial-gradient(100% 60% at 50% 0%, var(--glow) 0%, transparent 60%),
-    var(--ink);
-  background-attachment: fixed;
+  background: var(--ink);
 }
 
 body {
@@ -118,24 +110,17 @@ body {
   position: relative;
 }
 
-/* Tactile Grain Noise Overlay — 실물 종이/필름 같은 섬세한 질감 추가 */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  opacity: 0.032;
-  pointer-events: none;
-  z-index: 9999;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-}
+/* 그레인 오버레이는 제거했다 — 문서엔 질감 레이어가 없고, 흰 캔버스에서는
+   먼지처럼 보여 카탈로그 모드의 깔끔함을 깎아먹는다. */
 
 /* Clean Static Financial Numerical Typography */
+/* 디스플레이 — 문서 §Typography: weight 500, lineHeight 1.0, 큰 음수 자간.
+   Aeonik Pro 를 못 쓰므로 문서가 지정한 대체 경로(Inter + -1% 자간)를 따른다. */
 .font-display {
-  font-family: var(--font-mono), var(--font-sans), monospace;
-  font-variant-numeric: tabular-nums lining-nums;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 500;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
 }
 
 .font-mono-spec {
@@ -149,128 +134,126 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-pill);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--accent) 7%, transparent);
-  padding: 0.2rem 0.65rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.22em;
+  background: transparent;
+  padding: 0.3rem 0.8rem;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--muted);
 }
 
 /* 에디토리얼 골드 그라디언트 텍스트 */
+/* 문서엔 그라디언트 타이포가 없다 — 단색 어센트로 내린다.
+   클래스명은 쓰는 곳이 있어 유지. */
 .text-gradient-accent {
-  background: linear-gradient(135deg, #f3e5ab 0%, var(--accent-soft) 40%, var(--accent) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--accent);
 }
 
-/* 글래스 카드 — 헤어라인 패널 + 금속 스펙큘러.
-   배경을 살짝 투과시켜 뒤의 앰비언트 골드가 카드 상단을 은은히 물들이게 한다.
-   backdrop-filter는 일부러 쓰지 않았다: 카드가 화면당 수십 개라 비용이 크다. */
+/* 콘텐츠 카드 — 문서 §Elevation. 그림자 없이 헤어라인과 표면 명도로만 층을 만든다.
+   클래스명은 .glass 그대로 둔다(27개 파일이 쓰고 있음). 유리 효과는 이제 없다. */
 .glass {
   position: relative;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, transparent) 0%, transparent 40%),
-    color-mix(in srgb, var(--ink-1) 92%, transparent);
+  background: var(--ink-1);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-soft);
+  border-radius: var(--r-lg);
 }
 
-/* 상단 모서리를 따라 흐르는 1px 스펙큘러 — 금속 패널의 광택 엣지 */
-.glass::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  border-radius: var(--r-md) var(--r-md) 0 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--specular) 20%,
-    color-mix(in srgb, var(--accent) 55%, transparent) 50%,
-    var(--specular) 80%,
-    transparent 100%
-  );
-  pointer-events: none;
+/* 검정 밴드 — 흰 캔버스 사이에 끼워 넣는 스토리텔링 구간(문서 §Overview).
+   전체 폭으로 깔리도록 좌우를 뷰포트까지 늘린다. */
+.band-dark {
+  background: #000000;
+  color: #ffffff;
+  /* --ink 까지 뒤집어야 한다. .btn-accent 가 배경 var(--fg) · 글자 var(--ink) 라
+     이걸 빠뜨리면 검정 밴드에서 흰 pill 에 흰 글씨가 되어 사라진다. */
+  --ink: #000000;
+  --fg: #ffffff;
+  --muted: rgba(255, 255, 255, 0.72);
+  --line: rgba(255, 255, 255, 0.12);
+  --ink-1: #0a0a0a;
+  --ink-2: #16181a;
+  --surface: #16181a;
+  --accent: #d4af37;
+  --accent-soft: #e8c86b;
 }
 
-/* 에디토리얼 버튼 — 깔끔한 1px 테두리와 정밀 호버 효과 */
-.btn-accent {
-  background: var(--accent);
-  color: #0b0f19;
+/* 버튼 — 문서 §Components. 전부 pill(9999px), 최소 높이 48px, 그림자 없음.
+   .btn-gilt 가 주 CTA(골드 채움), .btn-accent 는 그 아래 단계, .btn-ghost 는 외곽선. */
+.btn-accent,
+.btn-gilt,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0.875rem 1.75rem;
+  /* 라벨 없는 아이콘 버튼은 이 규격을 벗어나야 한다 — 아래 .btn-icon 을 함께 쓴다. */
+  border-radius: var(--r-pill);
   font-weight: 600;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--accent-soft);
+  letter-spacing: 0.015em;
   transition:
-    transform 0.15s var(--ease-soft),
-    box-shadow 0.2s var(--ease-soft),
-    filter 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    background 0.18s var(--ease-soft),
+    border-color 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease;
 }
-.btn-accent:hover:not(:disabled) {
-  filter: brightness(1.1);
-  box-shadow: 0 0 22px -4px color-mix(in srgb, var(--accent) 55%, transparent);
+
+.btn-gilt {
+  background: var(--accent);
+  color: #ffffff;
+  border: 1px solid var(--accent);
 }
-.btn-accent:active:not(:disabled) {
-  transform: translateY(1px);
+.btn-gilt:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft);
 }
-.btn-accent:disabled {
+.btn-gilt:disabled {
   opacity: 0.4;
 }
 
-/* 주요 CTA — 용융 금속 표면. 3-스톱 그라디언트로 금속 광택의 꺾임을 만든다. */
-.btn-gilt {
-  background: linear-gradient(135deg, #f3e5ab 0%, var(--accent-soft) 45%, var(--accent) 100%);
-  color: #0b0f19;
-  font-weight: 600;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--accent-soft);
-  box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.45) inset,
-    0 0 18px -6px color-mix(in srgb, var(--accent) 50%, transparent);
-  transition:
-    transform 0.15s var(--ease-soft),
-    box-shadow 0.25s var(--ease-soft),
-    filter 0.2s ease;
+.btn-accent {
+  background: var(--fg);
+  color: var(--ink);
+  border: 1px solid var(--fg);
 }
-.btn-gilt:hover:not(:disabled) {
-  filter: brightness(1.1);
-  box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
-    0 0 26px -4px color-mix(in srgb, var(--accent) 65%, transparent);
+.btn-accent:hover:not(:disabled) {
+  opacity: 0.85;
 }
-.btn-gilt:active:not(:disabled) {
-  transform: translateY(1px);
+.btn-accent:disabled {
+  opacity: 0.35;
 }
 
 .btn-ghost {
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  color: var(--fg);
   background: transparent;
-  transition:
-    background 0.2s var(--ease-soft),
-    border-color 0.2s ease;
+  color: var(--fg);
+  border: 1px solid var(--line);
 }
 .btn-ghost:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border-color: var(--accent);
+  border-color: var(--fg);
 }
-.btn-ghost:active:not(:disabled) {
-  transform: translateY(1px);
+.btn-ghost:disabled {
+  opacity: 0.4;
+}
+
+/* 아이콘 정사각 버튼 — 테마 토글·햄버거처럼 라벨이 없는 것들.
+   pill 규격(48px 높이 + 28px 좌우 패딩)을 그대로 먹으면 빈 원처럼 커진다. */
+.btn-icon {
+  min-height: 0;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-pill);
 }
 
 /* 입력 필드 — 스위스 정밀 테두리 */
 .field {
   background: var(--ink-2);
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
+  min-height: 56px;
   color: var(--fg);
   font-family: var(--font-sans);
   outline: none;
@@ -282,8 +265,8 @@ body::before {
   color: var(--muted);
 }
 .field:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: var(--fg);
+  box-shadow: none;
 }
 
 /* 스켈레톤 시머 */
@@ -357,18 +340,15 @@ body::before {
   background: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
-/* 카드 호버 리프트 (인터랙티브 카드 전용) — 부드럽게 떠오름 */
+/* 카드 호버 — 문서엔 그림자 언어가 없으므로 표면 명도와 테두리로만 반응한다. */
 .lift {
   transition:
-    transform 0.3s var(--ease-soft),
-    box-shadow 0.3s var(--ease-soft),
-    border-color 0.3s ease;
+    background 0.2s var(--ease-soft),
+    border-color 0.2s ease;
 }
 .lift:hover {
-  transform: translateY(-3px);
-  /* shadow-float에 골드 앰비언트 글로우가 포함돼 있어 호버 시 카드가 발광한다 */
-  box-shadow: var(--shadow-float);
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: var(--surface);
+  border-color: var(--fg);
 }
 
 /* 스트리밍 응답 깜빡이는 커서 (이모지/블록문자 대체) */
@@ -408,7 +388,6 @@ body::before {
   background: color-mix(in srgb, var(--accent) 15%, transparent);
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  box-shadow: 0 0 14px -3px color-mix(in srgb, var(--accent) 30%, transparent);
   font-weight: 600;
 }
 .pill-tab-inactive {
@@ -478,13 +457,11 @@ body::before {
   color: var(--accent);
   font-family: var(--font-mono);
   font-weight: 600;
-  box-shadow: 0 0 16px -2px color-mix(in srgb, var(--accent) 28%, transparent);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .popular-pill:hover {
   background: color-mix(in srgb, var(--accent) 22%, transparent);
   border-color: var(--accent);
-  box-shadow: 0 0 24px 0 color-mix(in srgb, var(--accent) 45%, transparent);
   transform: translateY(-1px);
 }
 

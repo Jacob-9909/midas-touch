@@ -89,7 +89,7 @@ export default function SimulatorPage() {
   const diffMonths = reachA !== null && reachB !== null ? reachA - reachB : null;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-6">
+    <main className="mx-auto max-w-[1200px] px-6 py-[72px] space-y-6">
       <PageTitle
         title="자금마련 타임라인 시뮬레이터"
         eyebrow="Fund Timeline"

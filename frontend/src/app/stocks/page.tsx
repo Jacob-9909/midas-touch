@@ -532,7 +532,7 @@ export default function StocksPage() {
       />
 
       {/* ── 탭 선택 (Swiss Sleek Pill Segmented Control) ────────────────────── */}
-      <div className="mb-6 flex gap-1.5 rounded-full border border-line-50 bg-[#090d16]/90 p-1.5 shadow-inner">
+      <div className="mb-6 flex gap-1.5 rounded-full border border-line bg-[var(--ink-2)] p-1.5">
         <button
           onClick={() => setActiveTab("quick")}
           className={`flex flex-1 items-center justify-center gap-2 rounded-full py-2 text-xs font-mono-spec transition-all duration-200 ${

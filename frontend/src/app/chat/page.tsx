@@ -164,13 +164,13 @@ export default function ChatPage() {
     s ? new Date(s).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }) : "";
 
   return (
-    <div>
+    <div className="mx-auto max-w-[1200px] px-6 py-[72px]">
       <PageTitle eyebrow="AI Advisor" title="에이전트 챗봇" subtitle="MidasAdviser · 멀티턴 · 실시간 스트리밍" />
       <div className="flex gap-4">
         {/* 좌측 사이드바: 대화 목록 / 지식베이스 탭 */}
         <aside className="w-64 shrink-0">
           {/* 사이드바 탭 (Swiss Sleek Pill Segmented Control) */}
-          <div className="mb-4 flex gap-1 rounded-full border border-line-50 bg-[#090d16]/80 p-1">
+          <div className="mb-4 flex gap-1 rounded-full border border-line bg-[var(--ink-2)] p-1">
             {(["chats", "kb"] as const).map((t) => (
               <button
                 key={t}
@@ -277,7 +277,7 @@ export default function ChatPage() {
                             setInput(item.prompt);
                             requestAnimationFrame(() => inputRef.current?.focus());
                           }}
-                          className="p-3 border border-line/60 bg-[#090d16] hover:border-accent hover:bg-accent/10 rounded-lg text-left transition group"
+                          className="p-4 border border-line bg-[var(--ink-1)] hover:border-fg rounded-[var(--r-md)] text-left transition group"
                         >
                           <div className="text-xs font-semibold text-accent group-hover:text-accent-soft">{item.title}</div>
                           <div className="text-[11px] text-muted truncate mt-0.5">&ldquo;{item.prompt}&rdquo;</div>

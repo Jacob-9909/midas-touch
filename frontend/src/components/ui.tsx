@@ -1,5 +1,4 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import BlurText from "@/components/bits/BlurText";
 import DecryptedText from "@/components/bits/DecryptedText";
 import CountUp from "@/components/bits/CountUp";
 
@@ -37,26 +36,15 @@ export function PageTitle({
   eyebrow?: string;
 }) {
   return (
-    <div className="mb-10 animate-rise space-y-3">
+    // 문서 §Typography: 디스플레이는 weight 500 · lineHeight 1.0 · 큰 음수 자간.
+    // 골드 세로바와 발광은 뺐다 — 어센트는 도장처럼 드물게만 찍는다.
+    <div className="mb-12 space-y-5">
       {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-      <div className="flex items-baseline gap-4">
-        <span
-          aria-hidden
-          className="h-7 w-0.5 shrink-0 bg-accent shadow-[0_0_12px_var(--accent)]"
-        />
-        {/* 제목은 단어 단위 블러 인. 모든 페이지의 첫인상이라 여기만 모션을 크게 준다. */}
-        <BlurText
-          as="h1"
-          text={title}
-          animateBy="words"
-          delay={90}
-          className="font-display text-[2.2rem] font-normal leading-[1.05] tracking-tight text-fg sm:text-[3.1rem]"
-        />
-      </div>
+      <h1 className="font-display max-w-[18ch] text-[clamp(2.5rem,6vw,3.75rem)] text-fg">
+        {title}
+      </h1>
       {subtitle && (
-        <p className="max-w-[64ch] pl-5 text-xs leading-relaxed text-muted font-sans border-l border-line/40">
-          {subtitle}
-        </p>
+        <p className="max-w-[62ch] text-[1.0625rem] leading-[1.56] text-muted">{subtitle}</p>
       )}
     </div>
   );

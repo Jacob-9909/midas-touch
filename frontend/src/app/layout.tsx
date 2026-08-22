@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider, themeInitScript } from "@/lib/theme";
 import { ToastProvider } from "@/lib/toast";
@@ -7,13 +7,15 @@ import NavBar from "@/components/NavBar";
 import AmbientBackground from "@/components/AmbientBackground";
 import ClickSpark from "@/components/bits/ClickSpark";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-const display = Cormorant_Garamond({
-  variable: "--font-display",
+// 문서 §Typography: 본문·버튼·캡션은 Inter 400/600. 디스플레이도 Aeonik Pro 대체로
+// Inter 를 쓰되(문서가 지정한 대체 경로) 500 weight + 음수 자간으로 조인다.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
+// 숫자 정렬용 모노는 유지한다 — 금액·가점·개월수가 표에서 자릿수를 맞춰야 한다.
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Midas Touch · 청약·자금마련 AI 콘솔",
@@ -25,23 +27,24 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko" className="dark h-full antialiased" suppressHydrationWarning>
+    <html lang="ko" className="light h-full antialiased" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${display.variable} min-h-full`}>
+      <body className={`${inter.variable} ${geistMono.variable} min-h-full`}>
         <ThemeProvider>
           <ToastProvider>
               {/* 전역 골드 앰비언트 — 앱 전체에서 유일한 WebGL 캔버스 */}
               <AmbientBackground />
               <ClickSpark sparkRadius={18} sparkCount={9} duration={480}>
                 <NavBar />
-                <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+                {/* 컨테이너는 각 페이지가 소유한다 — 랜딩의 검정 히어로 밴드가 전체폭으로 깔려야 하기 때문. */}
+                <main>
                   {children}
                 </main>
                 {/* 법적 고지 — 세무사법(조세 자문 독점)·자본시장법(무등록 투자자문) 대비.
                     페이지마다 복붙하지 않고 레이아웃에서 한 번만 깔아 모든 화면에 동일하게 노출한다. */}
-                <footer className="mx-auto max-w-6xl px-4 pb-10 sm:px-6">
+                <footer className="mx-auto max-w-[1200px] px-6 pb-16 pt-20">
                   <p className="rounded-xl border border-line/60 bg-[var(--ink-1)]/60 px-4 py-3 text-[11px] leading-relaxed text-muted">
                     <span className="font-semibold text-fg/80">고지</span> · 본 서비스가 제공하는 주가
                     전망·세금 계산·자산배분 결과는 <span className="text-fg/80">정보 제공 및 시뮬레이션
