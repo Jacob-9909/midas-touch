@@ -1,7 +1,8 @@
 # Midas Touch
 
-> **AI 기반의 올인원 금융 & 자산 어시스턴트**  
-> 복잡한 세법, 주식 분석, 부동산 청약 정보를 AI 에이전트와 대화하며 직관적으로 확인하세요.
+**무주택 사회초년생을 위한 청약·자금마련 AI 콘솔**입니다. 흩어진 청약 조건과 자금 계획을 한자리에서 정리합니다 — LangGraph 멀티턴 에이전트가 pgvector/Neo4j GraphRAG로 세법·청약 조문 근거를 붙여 설명하고, 청약가점 계산기와 자금마련 타임라인 시뮬레이터로 "내 조건에서 언제 얼마가 필요한지"까지 이어집니다.
+
+판단을 대신하지 않고 근거를 정리해 보여주는 **정보 제공 서비스**이며, 투자·세무 자문이 아닙니다.
 
 ---
 
@@ -15,61 +16,81 @@
 
 ## 📱 핵심 기능
 
-* 💬 **AI 금융 챗봇 (`/chat`)**  
-  * 주식 시세, 세법, 청약 공고, 최신 금융 뉴스를 통합 분석하여 실시간 스트리밍으로 답변합니다.
-  * 복잡한 질문도 필요한 도구들을 스스로 판단해 안전하고 객관적인 정보를 제공합니다.
+핵심 여정은 **청약 상담 → 내 가점·목표자금 확인 → 자금마련 타임라인** 3단계입니다.
 
-* 📈 **주식 분석 & 백테스트 (`/stocks`)**  
-  * RSI, MACD 등 주요 기술지표 자동 진단과 AI 분석 코멘트를 제공합니다.
-  * 과거 데이터 기반의 전략 백테스트로 수익률과 리스크를 시뮬레이션합니다.
+* 💬 **청약 상담 챗봇 (`/chat`)**
+  * LangGraph 기반 멀티턴 에이전트 및 PostgresSaver 세션 저장
+  * Intent 판정 후 9개 툴 병렬 실행 및 SSE 토큰 스트리밍 응답
+  * 내 조건에 적용되는 청약 유형·특별공급 자격을 세법·청약 조문 근거와 함께 정리
 
-* 🏠 **부동산 청약 알리미 (`/cheongyak`)**  
-  * 공공데이터 기반 아파트, 오피스텔, 무순위(줍줍), 임대주택 공고를 실시간 조회합니다.
-  * 주택형별 경쟁률, 당첨 가점 커트라인, 특별공급 조건을 한눈에 비교합니다.
+* 🏠 **청약 정보 및 가점 계산 (`/cheongyak`)**
+  * 공공데이터 API 기반 APT, 오피스텔, 무순위, 공공임대 공고 조회
+  * 주택형별 경쟁률, 당첨 가점, 특별공급 현황 상세 조회 및 챗봇 연계
+  * 청약가점 계산기(84점 만점, 「주택공급에 관한 규칙」 별표1 기준) — 공고별 최저 당첨가점과 내 점수를 나란히 비교
 
-* 🕸️ **세법 지식그래프 (`/graph`)**  
-  * 복잡한 세법과 절세 전략을 인터랙티브 2D 네트워크 그래프로 시각화합니다.
-  * AI가 어떤 법령과 근거를 참고했는지 원문과 함께 투명하게 확인합니다.
+* 📊 **자금마련 타임라인 시뮬레이터 (`/simulator`)**
+  * 목표금액(청약 예치금 기준표 또는 직접 입력) · 현재 자산 · 월 저축액 입력 → 도달 시점 시각화
+  * 상품 2개(연이율) 비교로 "이 상품을 쓰면 O개월 당겨짐"을 그래프로 제시
+  * 계산은 전부 브라우저에서 수행 — 개인 자산 숫자가 서버로 전송되지 않음
 
-* 📊 **스마트 대시보드 (`/dashboard`)**  
-  * KOSPI, S&P500, 주요국 기준금리 등 실시간 시장 지표를 모니터링합니다.
-  * 또래 투자자 그룹과의 포트폴리오 비교 및 자산 배분 차트를 제공합니다.
+* 🕸️ **지식그래프 및 GraphRAG (`/graph`, `/query`)**
+  * Neo4j 기반 세법 및 자산 관계 지식그래프 증분 구축
+  * D3 Force 2D 시각화 및 근거 서브그래프/원문 출처 조회 API (`/query`)
+  * PDF 문서 업로드 → 파싱·임베딩 인입(`POST /api/v1/graph/upload`)
+
+* 📈 **주식 분석 및 백테스트 (`/stocks`)** — 보조
+  * yfinance 실데이터 기반 기술지표 스냅샷(RSI, MACD, KDJ, BB, ATR) 및 진단 코멘트
+  * 매매 전략 백테스트, 파라미터 그리드 서치, 과거 분석 이력(stock_analysis_memory) 검증
+
+* 👤 **내 정보 (`/me`)** — 청약가점 3요소·1순위 자격·자금 상황 입력
+  * 입력값은 브라우저에만 저장되며 공고 목록·챗봇·시뮬레이터의 계산 기준이 됩니다
 
 ---
 
-## ⚡ 빠른 시작 (Quick Start)
+## 🚀 시작하기
 
-### 1. 사전 준비
-* **Python 3.12+** (`uv` 설치 권장)
-* **Node.js 20+**
-* **Docker** (DB 컨테이너 구동용)
+### 1. 의존성 설치 및 DB 마이그레이션
 
-### 2. 환경 설정
+`uv` 패키지 관리자를 사용해 개발 및 런처 환경을 동기화합니다.
+
 ```bash
-# 환경 변수 파일 생성
-cp .env.example .env
+uv sync
+(cd frontend && npm install)
+uv run alembic upgrade head
 ```
-> `.env` 파일에 NVIDIA NIM, Tavily, 공공데이터 등의 API 키를 입력합니다.
 
-### 3. 앱 실행
-`dev.sh` 스크립트를 실행하면 필요한 DB 컨테이너와 백엔드/프론트엔드가 자동으로 실행됩니다.
+### 2. 앱 실행
 
 ```bash
-# 로컬 개발 서버 실행 (Backend :8000 / Frontend :3000)
+# 개발 모드 (백엔드 :8000 / 프론트엔드 :3000)
 ./dev.sh
+
+# 프로덕션 모드
+./start.sh
 ```
 
 * **웹 콘솔 접속**: [http://localhost:3000](http://localhost:3000)
 * **API 문서 (Swagger)**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
+### 3. 코드 린팅 및 테스트
+
+```bash
+# 린팅 (ruff)
+uv run ruff check .
+
+# 테스트 (pytest)
+uv run pytest
+```
+
 ---
 
 ## 🛠️ 기술 스택
 
-* **Frontend**: Next.js 16 (React 19), Tailwind CSS, GSAP, D3.js
-* **Backend**: FastAPI, LangGraph, LangChain, PostgreSQL (pgvector), Neo4j
-* **AI & Data**: NVIDIA NIM (`gpt-oss-120b`, `bge-m3`), yfinance, 청약홈 공공데이터 API
-* **Tooling**: uv, Docker Compose, pytest, ruff
+* **Frontend**: Next.js 16 (React 19), TypeScript, Tailwind CSS v4
+* **Backend**: Python 3.12, FastAPI, Uvicorn, LangGraph, LangChain, Alembic
+* **Database**: PostgreSQL 16 (pgvector), Neo4j Graph DB
+* **AI & Data**: NVIDIA NIM (`openai/gpt-oss-120b`, `BAAI/bge-m3`), Tavily, yfinance, 청약홈 공공데이터 API
+* **Tooling**: uv, Docker Compose, ruff, pytest
 
 ---
 
@@ -79,8 +100,12 @@ cp .env.example .env
 midas-touch/
 ├── frontend/       # Next.js 웹 콘솔 UI
 ├── backend/        # FastAPI API 및 LangGraph 에이전트 서비스
-├── pipelines/      # 데이터 수집, 임베딩, 지식그래프 빌더
-├── shared/         # 공통 DB 커넥터 및 유틸리티
+│   └── app/
+│       ├── api/    # HTTP 라우터 (chat, stocks, cheongyak, graph 등)
+│       └── services/
+├── pipelines/      # 데이터 수집, 문서 파싱·임베딩, Neo4j 빌더 파이프라인
+├── shared/         # PostgreSQL/Neo4j 클라이언트, NIM Rate Limiter
+├── tests/          # 백엔드, 라우터, 단위/통합 테스트
 ├── openwiki/       # 상세 아키텍처 및 도메인 문서 모음
 ├── dev.sh          # 로컬 개발 통합 실행 스크립트
 └── start.sh        # 프로덕션 실행 스크립트
@@ -90,9 +115,10 @@ midas-touch/
 
 ## 📖 상세 문서
 
-시스템 아키텍처, 에이전트 설계, API 명세 등 자세한 내용은 [OpenWiki](openwiki/quickstart.md)를 참고하세요.
+시스템 아키텍처, 에이전트 설계, 디자인 시스템 등 자세한 내용은 다음 문서를 참고하세요.
 
 * [OpenWiki Quickstart](openwiki/quickstart.md)
 * [시스템 아키텍처](openwiki/architecture.md)
 * [에이전트 구조](openwiki/agents.md)
 * [API 명세서](openwiki/api.md)
+* [디자인 시스템 — Bullion Terminal](docs/DESIGN-bullion-terminal.md)

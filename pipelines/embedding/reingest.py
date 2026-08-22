@@ -1,7 +1,7 @@
 """reingest.py
 
-손상된 텍스트 레이어 PDF를 DocumentParser(비전 폴백 포함)로 재파싱하여
-emb_passages 테이블에 재적재하는 일회성/재사용 유틸리티.
+PDF를 DocumentParser로 재파싱하여 emb_passages 테이블에 재적재하는 일회성/재사용 유틸리티.
+(텍스트 레이어가 손상된 PDF는 경고 로그만 남고 비전 전사는 하지 않는다.)
 
 사용:
     python -m pipelines.embedding.reingest <pdf_path>
@@ -16,7 +16,6 @@ from dotenv import load_dotenv
 # Load env variables
 load_dotenv(str(Path(__file__).resolve().parent.parent.parent / ".env"))
 
-from pipelines.embedding.config import DEFAULT_CONFIG
 from pipelines.embedding.document_parser import DocumentParser
 from shared.database.connector import bulk_upsert_emb_passages
 
@@ -34,7 +33,7 @@ def main() -> None:
         raise SystemExit(1)
 
     path = Path(sys.argv[1])
-    parser = DocumentParser(DEFAULT_CONFIG)
+    parser = DocumentParser()
     passages = parser.parse_file(path)
 
     if not passages:

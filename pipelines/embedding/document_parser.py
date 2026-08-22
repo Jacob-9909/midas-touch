@@ -23,7 +23,6 @@ try:
 except ImportError:
     pypdf = None
 
-from .config import PipelineConfig
 
 logger = logging.getLogger(__name__)
 
@@ -188,8 +187,7 @@ class DocumentParser:
     고품질 임베딩 단락(Passage)으로 정제 청킹하는 리더.
     """
 
-    def __init__(self, config: PipelineConfig) -> None:
-        self._cfg = config
+    def __init__(self) -> None:
         self._chunker = FinancialChunker(
             chunk_size=750,  # 한국어 금융 문맥 보존용 최적 크기
             chunk_overlap=150,

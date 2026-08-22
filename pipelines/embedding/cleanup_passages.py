@@ -72,13 +72,8 @@ def main() -> None:
         print("삭제할 단락이 없습니다.")
         return
 
-    with db_cursor() as (_, cur):
-        cur.execute(
-            "SELECT COUNT(*) FROM emb_synthetic_queries WHERE passage_id = ANY(%s)", (junk_ids,)
-        )
-        cascade_queries = cur.fetchone()[0]
-    print(f"연쇄 삭제될 emb_synthetic_queries(FK CASCADE): {cascade_queries}건")
-
+    # 파인튜닝 파이프라인 제거(2026-08-20) 후 emb_synthetic_queries 는 더 이상 채워지지 않아
+    # CASCADE 건수 조회를 뺐다. 테이블·FK 자체는 마이그레이션 이력 보존을 위해 스키마에 남아 있음.
     chunk_ids = _neo4j_junk_chunks(junk_ids)
     print(f"연동 삭제할 Neo4j Chunk: {len(chunk_ids)}건")
 

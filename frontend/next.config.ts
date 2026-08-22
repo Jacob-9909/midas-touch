@@ -5,9 +5,11 @@ import type { NextConfig } from "next";
 const BACKEND_ORIGIN = process.env.BACKEND_ORIGIN ?? "http://localhost:8000";
 
 const nextConfig: NextConfig = {
-  // Next의 gzip이 프록시된 SSE(/api/v1/chat/stream)를 압축하면서 스트림을 버퍼링해
-  // 답변이 토큰 단위로 안 흐르고 끝에 통째로 나왔다("확 나와"). 압축을 꺼 스트리밍을 살린다.
-  // (정적 자산 압축은 운영 시 앞단 프록시/CDN이 담당하면 된다.)
+  // SSE(/api/v1/chat/stream)를 죽이지 않으려면 반드시 꺼야 한다.
+  // Next 가 프록시 응답을 gzip 으로 다시 감싸면서 text/event-stream 을 통째로 버퍼링해,
+  // 브라우저에는 청크가 0개(빈 응답)로 도착한다 — 챗봇이 아무것도 못 뱉는 것처럼 보인다.
+  // 백엔드(:8000) 직접 호출은 멀쩡한데 :3000 경유만 죽는 게 이 증상의 특징.
+  // 정적 자산 압축은 앞단(ngrok/CDN)이 처리하므로 여기서 끄는 비용은 사실상 없다.
   compress: false,
   async rewrites() {
     return [

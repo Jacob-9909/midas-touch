@@ -16,8 +16,7 @@ import { useToast } from "@/lib/toast";
 import JobProgress from "@/components/JobProgress";
 import GraphView from "@/components/GraphView";
 
-// WebGL은 서버에서 못 돈다. 이 페이지가 앱의 유일한 WebGL 캔버스를 소유하며,
-// 그 대가로 AmbientBackground가 /graph에서 전역 앰비언트를 양보한다.
+// WebGL은 서버에서 못 돈다. 이 페이지가 앱의 유일한 WebGL 캔버스를 소유한다.
 const Radar = dynamic(() => import("@/components/bits/Radar"), { ssr: false });
 
 function RadarSweep() {
@@ -102,7 +101,7 @@ export default function GraphPage() {
     : [];
 
   return (
-    <div className="space-y-6">
+    <main className="mx-auto max-w-[1200px] space-y-6 px-6 py-[72px]">
       <PageTitle
         eyebrow="Knowledge Graph"
         title="지식그래프"
@@ -231,6 +230,6 @@ export default function GraphPage() {
           </div>
         )}
       </Card>
-    </div>
+    </main>
   );
 }

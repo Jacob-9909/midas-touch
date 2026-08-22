@@ -32,7 +32,12 @@ def _service() -> ChatService:
 class ChatRequest(BaseModel):
     session_id: str = Field(min_length=1, max_length=200)
     message: str = Field(min_length=1, max_length=4000)
+    # 로그인이 없으므로 이건 신원이 아니라 "이 브라우저"를 가리키는 익명 키다.
+    # 세션 묶기에만 쓰고, 프로필 조회 키로는 더 이상 쓰지 않는다.
     user_uuid: str = Field(min_length=1, max_length=100)
+    # 사용자가 화면(/me)에 직접 입력한 청약 조건 요약. 첫 턴 시스템 프롬프트에만 합치고
+    # 저장하지 않는다. 없으면 프로필 없이 일반 상담으로 동작한다.
+    profile: str | None = Field(default=None, max_length=4000)
 
 
 class ChatResponse(BaseModel):
@@ -44,7 +49,7 @@ class ChatResponse(BaseModel):
 def chat(req: ChatRequest, auth_uuid: str | None = Depends(current_uuid)) -> ChatResponse:
     uid = resolve_user_uuid(auth_uuid, req.user_uuid)
     try:
-        reply = _service().run(req.session_id, req.message, uid)
+        reply = _service().run(req.session_id, req.message, uid, req.profile)
         return ChatResponse(session_id=req.session_id, reply=reply)
     except HTTPException:
         raise
@@ -56,7 +61,7 @@ def chat(req: ChatRequest, auth_uuid: str | None = Depends(current_uuid)) -> Cha
 def chat_stream(req: ChatRequest, auth_uuid: str | None = Depends(current_uuid)) -> StreamingResponse:
     """멀티턴 채팅을 SSE로 스트리밍한다(synthesize 노드의 최종 답변 토큰만 흘린다)."""
     uid = resolve_user_uuid(auth_uuid, req.user_uuid)
-    stream = _service().stream(req.session_id, req.message, uid)
+    stream = _service().stream(req.session_id, req.message, uid, req.profile)
     return StreamingResponse(
         stream,
         media_type="text/event-stream",

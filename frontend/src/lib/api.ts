@@ -102,7 +102,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
 
 /** /api/v1/chat/stream SSE를 읽어 토큰을 onToken으로 흘린다. */
 export async function streamChat(
-  body: { session_id: string; user_uuid: string; message: string },
+  body: { session_id: string; user_uuid: string; message: string; profile?: string },
   onToken: (t: string) => void,
   onStatus?: (msg: string) => void, // 도구 수집 등 대기 구간 진행상태(status 이벤트)
 ): Promise<void> {
@@ -418,6 +418,21 @@ export function getQuickAnalysis(ticker: string): Promise<QuickAnalysis> {
   // 이 GET은 yfinance 조회 + NIM LLM 다중 시간축 생성을 동기로 수행해 통상 ~10s 걸린다.
   // 기본 4s 타임아웃(가벼운 메타 GET 기준)이면 항상 abort 되므로 넉넉히 준다.
   return apiGet(`/api/v1/stocks/quick-analysis?ticker=${encodeURIComponent(ticker)}`, 60000);
+}
+
+export interface PriceHistory {
+  ticker: string;
+  period: string;
+  points: { date: string; close: number }[];
+  changePct: number;
+}
+
+/** 종가 시계열 (yfinance 실데이터). 스파크라인 등 미니 차트용. */
+export function getPriceHistory(ticker: string, period = "1mo"): Promise<PriceHistory> {
+  return apiGet(
+    `/api/v1/stocks/price-history?ticker=${encodeURIComponent(ticker)}&period=${period}`,
+    15000,
+  );
 }
 
 export function runBacktest(body: BacktestRequest): Promise<BacktestResult> {

@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import BlurText from "@/components/bits/BlurText";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import DecryptedText from "@/components/bits/DecryptedText";
 import CountUp from "@/components/bits/CountUp";
 
@@ -7,18 +6,24 @@ export function Card({
   children,
   className = "",
   variant = "editorial",
+  ...rest
 }: {
   children: ReactNode;
   className?: string;
   variant?: "editorial" | "glass" | "subtle" | "interactive";
-}) {
+  // 나머지 div 속성은 그대로 통과시킨다(가이드 투어의 data-tour 앵커 등).
+} & Omit<ComponentPropsWithoutRef<"div">, "className" | "children">) {
   const variantStyles = {
     editorial: "glass border-line-50 shadow-soft",
-    glass: "glass border-line/60 shadow-md",
+    glass: "glass border-line/60",
     subtle: "bg-surface/30 border border-line/40 rounded-xl",
     interactive: "glass border-line-50 lift cursor-pointer",
   };
-  return <div className={`${variantStyles[variant]} p-5 sm:p-6 ${className}`}>{children}</div>;
+  return (
+    <div className={`${variantStyles[variant]} p-5 sm:p-6 ${className}`} {...rest}>
+      {children}
+    </div>
+  );
 }
 
 export function PageTitle({
@@ -31,26 +36,15 @@ export function PageTitle({
   eyebrow?: string;
 }) {
   return (
-    <div className="mb-10 animate-rise space-y-3">
+    // 문서 §Typography: 디스플레이는 weight 500 · lineHeight 1.0 · 큰 음수 자간.
+    // 골드 세로바와 발광은 뺐다 — 어센트는 도장처럼 드물게만 찍는다.
+    <div className="mb-12 space-y-5">
       {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-      <div className="flex items-baseline gap-4">
-        <span
-          aria-hidden
-          className="h-7 w-0.5 shrink-0 bg-accent shadow-[0_0_12px_var(--accent)]"
-        />
-        {/* 제목은 단어 단위 블러 인. 모든 페이지의 첫인상이라 여기만 모션을 크게 준다. */}
-        <BlurText
-          as="h1"
-          text={title}
-          animateBy="words"
-          delay={90}
-          className="font-display text-[2.2rem] font-normal leading-[1.05] tracking-tight text-fg sm:text-[3.1rem]"
-        />
-      </div>
+      <h1 className="font-display max-w-[18ch] text-[clamp(2.5rem,6vw,3.75rem)] text-fg">
+        {title}
+      </h1>
       {subtitle && (
-        <p className="max-w-[64ch] pl-5 text-xs leading-relaxed text-muted font-sans border-l border-line/40">
-          {subtitle}
-        </p>
+        <p className="max-w-[62ch] text-[1.0625rem] leading-[1.56] text-muted">{subtitle}</p>
       )}
     </div>
   );
@@ -59,26 +53,10 @@ export function PageTitle({
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <h2 className="mb-3 font-mono-spec text-[10px] font-semibold uppercase tracking-[0.25em] text-accent flex items-center gap-2">
-      <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_6px_var(--accent)]" />
+      <span className="h-1.5 w-1.5 rounded-full bg-accent" />
       {children}
     </h2>
   );
-}
-
-export function StatusBadge({
-  label,
-  tone = "gold",
-}: {
-  label: string;
-  tone?: "positive" | "negative" | "gold" | "neutral";
-}) {
-  const toneClasses = {
-    positive: "status-indicator-positive",
-    negative: "status-indicator-negative",
-    gold: "status-indicator-gold",
-    neutral: "text-muted bg-surface/50 border-line/40",
-  };
-  return <span className={`status-indicator ${toneClasses[tone]}`}>{label}</span>;
 }
 
 export function Skeleton({ className = "" }: { className?: string }) {

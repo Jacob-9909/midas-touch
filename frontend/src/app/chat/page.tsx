@@ -10,12 +10,14 @@ import {
   streamChat,
   type ChatSessionMeta,
 } from "@/lib/api";
-import { useSelectedUser } from "@/lib/user-context";
+import { clientId, loadProfile, profileSummary } from "@/lib/my-profile";
+import { totalCheongyakScore } from "@/lib/cheongyak-score";
 import { useToast } from "@/lib/toast";
 import { consumeChatSeed } from "@/lib/chat-seed";
-import { Card, PageTitle, Spinner } from "@/components/ui";
+import { Card, Spinner } from "@/components/ui";
 import { Markdown } from "@/components/Markdown";
 import KnowledgePanel from "./KnowledgePanel";
+import SegmentedTabs from "@/components/SegmentedTabs";
 
 interface Msg {
   role: "user" | "assistant";
@@ -23,7 +25,9 @@ interface Msg {
 }
 
 export default function ChatPage() {
-  const { selected, setSelected } = useSelectedUser();
+  // 로그인이 없으므로 세션은 이 브라우저의 익명 id 로 묶고, "누구인가"는
+  // /me 에 직접 입력한 내 정보를 첫 턴에 요약해 보내는 것으로 대신한다.
+  const [uid, setUid] = useState<string | null>(null);
   const toast = useToast();
   const [sessions, setSessions] = useState<ChatSessionMeta[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -33,14 +37,22 @@ export default function ChatPage() {
   const [status, setStatus] = useState(""); // 스트리밍 대기 구간 진행상태(도구 수집 등)
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [tab, setTab] = useState<"chats" | "kb">("chats");
-  const endRef = useRef<HTMLDivElement>(null);
+  /** 메시지 스크롤 박스. 스트리밍 중 자동 하단 추적에 쓴다. */
+  const scrollBoxRef = useRef<HTMLDivElement>(null);
+  /** 유저가 위로 올려 과거를 읽고 있으면 자동 추적을 멈춘다(맨 아래 근처일 때만 붙는다). */
+  const stickRef = useRef(true);
   const inputRef = useRef<HTMLInputElement>(null);
   const initedFor = useRef<string | null>(null);
   const seedRef = useRef<string | null>(null);
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 브라우저 식별자 복원
+    setUid(clientId());
+  }, []);
+
   const refreshSessions = useCallback(async () => {
     try {
-      const qs = selected ? `?user_uuid=${encodeURIComponent(selected.uuid)}` : "";
+      const qs = uid ? `?user_uuid=${encodeURIComponent(uid)}` : "";
       const res = await apiGet<{ sessions: ChatSessionMeta[] }>(
         `/api/v1/chat/sessions${qs}`,
       );
@@ -48,29 +60,30 @@ export default function ChatPage() {
     } catch {
       /* 사이드바 로드 실패는 조용히 무시 */
     }
-  }, [selected]);
+  }, [uid]);
 
   const startNewChat = useCallback(() => {
-    if (!selected) return;
-    setCurrentId(`${selected.uuid}-${Date.now()}`);
+    if (!uid) return;
+    setCurrentId(`${uid}-${Date.now()}`);
     setMessages([]);
-  }, [selected]);
+  }, [uid]);
 
-  // 선택 유저가 바뀌면 세션 목록 갱신 + 새 대화 준비 (유저당 1회)
   useEffect(() => {
-    if (!selected) return;
-    /* eslint-disable react-hooks/set-state-in-effect -- 유저 변경 시 세션 목록 동기화 + 새 대화 준비(외부 동기) */
+    if (!uid) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- 식별자 준비 시 세션 목록 동기화 + 새 대화 준비(외부 동기) */
     void refreshSessions();
-    if (initedFor.current !== selected.uuid) {
-      initedFor.current = selected.uuid;
+    if (initedFor.current !== uid) {
+      initedFor.current = uid;
       startNewChat();
     }
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [selected, refreshSessions, startNewChat]);
+  }, [uid, refreshSessions, startNewChat]);
 
+  // 메시지 변화(스트리밍 토큰 포함)마다, 유저가 맨 아래 근처에 붙어 있을 때만 바닥으로 붙인다.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, busy]);
+    const el = scrollBoxRef.current;
+    if (el && stickRef.current) el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   // 분석 페이지에서 넘어온 상담 seed를 1회 소비(마운트 시).
   useEffect(() => {
@@ -79,20 +92,17 @@ export default function ChatPage() {
 
   // 챗 준비(유저 선택 + 세션 생성)되면 seed를 입력창에 프리필 + 포커스.
   useEffect(() => {
-    if (seedRef.current && selected && currentId) {
+    if (seedRef.current && uid && currentId) {
       setInput(seedRef.current);
       seedRef.current = null;
       requestAnimationFrame(() => inputRef.current?.focus());
     }
-  }, [selected, currentId]);
+  }, [uid, currentId]);
 
   const openSession = async (s: ChatSessionMeta) => {
     setCurrentId(s.session_id);
-    if (s.user_uuid && s.user_uuid !== selected?.uuid) {
-      setSelected({ uuid: s.user_uuid, label: `유저 ${s.user_uuid.slice(0, 6)}` });
-      initedFor.current = s.user_uuid; // 새 대화 자동생성 방지
-    }
     setLoadingHistory(true);
+    stickRef.current = true;
     try {
       const res = await apiGet<{ messages: Msg[] }>(
         `/api/v1/chat/history/${encodeURIComponent(s.session_id)}`,
@@ -121,15 +131,26 @@ export default function ChatPage() {
   };
 
   const send = async () => {
-    if (!input.trim() || !selected || !currentId || busy) return;
+    if (!input.trim() || !uid || !currentId || busy) return;
     const text = input.trim();
     setInput("");
+    stickRef.current = true; // 내가 보낸 메시지라면 자동 추적 재개
     setMessages((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
     setBusy(true);
     setStatus("");
     try {
       await streamChat(
-        { session_id: currentId, user_uuid: selected.uuid, message: text },
+        {
+          session_id: currentId,
+          user_uuid: uid,
+          message: text,
+          // /me 에 입력해 둔 내 정보를 요약해 동봉한다. 백엔드는 첫 턴에만 시스템 프롬프트로
+          // 합치고 저장하지 않는다 — 원시 입력값(자산 금액 등)은 보내지 않는다.
+          profile: (() => {
+            const me = loadProfile();
+            return profileSummary(me, totalCheongyakScore(me));
+          })(),
+        },
         (tok) =>
           setMessages((m) => {
             const next = [...m];
@@ -155,40 +176,44 @@ export default function ChatPage() {
     s ? new Date(s).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }) : "";
 
   return (
-    <div>
-      <PageTitle eyebrow="AI Advisor" title="에이전트 챗봇" subtitle="MidasAdviser · 멀티턴 · 실시간 스트리밍" />
-      <div className="flex gap-4">
+    /* 앱형 레이아웃 — NavBar(64px)를 뺀 나머지 뷰포트를 채운다. 페이지 스크롤 없음,
+       스크롤은 메시지 영역과 사이드바 목록이 각자 소유한다. */
+    <div className="mx-auto flex h-[calc(100dvh-4rem)] max-w-[1200px] flex-col px-6 pb-5 pt-5">
+      <header className="mb-4 flex items-baseline gap-3">
+        <h1 className="font-display text-xl text-fg">에이전트 챗봇</h1>
+        <span className="eyebrow">AI Advisor</span>
+        <span className="hidden font-mono-spec text-[10px] uppercase tracking-widest text-muted sm:inline">
+          MidasAdviser · 멀티턴 · 실시간 스트리밍
+        </span>
+      </header>
+      <div className="flex min-h-0 flex-1 gap-4">
         {/* 좌측 사이드바: 대화 목록 / 지식베이스 탭 */}
-        <aside className="w-64 shrink-0">
-          {/* 사이드바 탭 (Swiss Sleek Pill Segmented Control) */}
-          <div className="mb-4 flex gap-1 rounded-full border border-line-50 bg-[#090d16]/80 p-1">
-            {(["chats", "kb"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`flex-1 rounded-full px-3 py-1.5 text-xs font-mono-spec transition-all duration-200 ${
-                  tab === t
-                    ? "bg-accent/20 text-accent border border-accent/40 font-semibold shadow-[0_0_10px_rgba(212,175,96,0.16)]"
-                    : "text-muted hover:text-fg border border-transparent"
-                }`}
-              >
-                {t === "chats" ? "대화" : "지식베이스"}
-              </button>
-            ))}
-          </div>
+        <aside className="flex w-64 min-h-0 shrink-0 flex-col">
+          {/* 사이드바 탭 */}
+          <SegmentedTabs
+            className="mb-4"
+            tabs={[
+              { id: "chats", label: "대화" },
+              { id: "kb", label: "지식베이스" },
+            ]}
+            active={tab}
+            onChange={setTab}
+          />
 
           {tab === "kb" ? (
-            <KnowledgePanel />
+            <div className="scroll-thin min-h-0 flex-1 overflow-y-auto pr-1">
+              <KnowledgePanel />
+            </div>
           ) : (
             <>
               <button
                 onClick={startNewChat}
-                disabled={!selected}
-                className="btn-accent mb-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm"
+                disabled={!uid}
+                className="btn-ghost mb-3 w-full text-sm"
               >
                 <Plus weight="bold" size={16} />새 대화
               </button>
-              <div className="space-y-1">
+              <div className="scroll-thin min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
                 {sessions.length === 0 && (
                   <p className="px-2 text-xs text-muted">대화 기록이 없습니다.</p>
                 )}
@@ -229,25 +254,23 @@ export default function ChatPage() {
         </aside>
 
         {/* 대화 영역 */}
-        <div className="min-w-0 flex-1">
-          {!selected ? (
-            <Card className="text-center">
-              <p className="text-fg">먼저 대화할 유저를 선택하세요.</p>
-              <Link
-                href="/"
-                className="btn-accent mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-sm"
-              >
-                유저 선택하러 가기
-                <ArrowRight weight="bold" size={15} />
-              </Link>
-            </Card>
-          ) : !currentId ? (
+        <div className="flex min-w-0 flex-1 flex-col">
+          {!currentId ? (
             <Card className="text-center text-muted">
               왼쪽에서 대화를 선택하거나 <b className="text-accent">+ 새 대화</b>를 시작하세요.
             </Card>
           ) : (
-            <Card className="flex h-[60vh] flex-col p-0">
-              <div className="scroll-thin flex-1 space-y-4 overflow-auto p-5">
+            <Card className="flex min-h-0 flex-1 flex-col p-0">
+              <div
+                ref={scrollBoxRef}
+                onScroll={() => {
+                  const el = scrollBoxRef.current;
+                  if (!el) return;
+                  stickRef.current =
+                    el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+                }}
+                className="scroll-thin min-h-0 flex-1 space-y-4 overflow-y-auto p-5"
+              >
                 {loadingHistory && (
                   <p className="text-center text-sm text-muted">기록 불러오는 중…</p>
                 )}
@@ -259,16 +282,19 @@ export default function ChatPage() {
                       </div>
                       <h3 className="text-sm font-semibold text-fg">무엇이든 질문해보세요</h3>
                       <p className="text-xs text-muted mt-1">
-                        유저 자산 정보, 마크로 금융 지표, 청약 자격, 개별 주식 분석을 종합하여 맞춤형 인사이트를 제공합니다.
+                        청약 자격·가점, 세법 조문, 자금마련 계획을 근거와 함께 정리해 드립니다.
                       </p>
                     </div>
 
+                    {/* 예시 질문은 첫 화면의 실질적 헤드라인이다 — 헤드라인(주택청약·자금마련)을 앞에 두고
+                        주식은 맨 뒤 하나만 남긴다. 이전엔 4개 중 3개가 주식이었고 "공모주 청약"은
+                        주택청약과 아예 다른 것(IPO)이라 타겟에게 오해를 줬다. */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left max-w-lg mx-auto pt-2">
                       {[
-                        { title: "📊 포트폴리오 자산배분", prompt: "나와 비슷한 투자자들의 자산 배분과 내 포트폴리오 리스크를 분석해줘" },
-                        { title: "💵 금리 인상 파급 효과", prompt: "미국 10년물 국채 금리 변화가 내 주식 포트폴리오에 미치는 영향은?" },
-                        { title: "🏢 공모주 청약 자격 체크", prompt: "올해 하반기 주요 공모주 청약 일정과 내 진단 등급 자격을 확인해줘" },
-                        { title: "⚡ NVDA & TSLA 지표 분석", prompt: "엔비디아(NVDA)와 테슬라(TSLA)의 기술적 지표 및 중단기 전망을 분석해줘" },
+                        { title: "🏠 내 조건에 맞는 청약", prompt: "29살 미혼 무주택인데 서울에서 청약 넣으려면 어떤 조건이 필요한가요?" },
+                        { title: "🎯 특별공급 자격 확인", prompt: "사회초년생이 노려볼 만한 특별공급 유형과 각각의 자격 요건을 근거 조문과 함께 정리해줘" },
+                        { title: "💰 청약 자금 마련", prompt: "청약 예치금과 계약금까지 생각하면 얼마가 필요하고, 어떤 저축상품을 쓰면 언제쯤 모을 수 있어?" },
+                        { title: "📊 내 자산 진단", prompt: "나와 비슷한 조건인 사람들의 자산 배분과 비교해서 내 현황을 진단해줘" },
                       ].map((item, idx) => (
                         <button
                           key={idx}
@@ -276,7 +302,7 @@ export default function ChatPage() {
                             setInput(item.prompt);
                             requestAnimationFrame(() => inputRef.current?.focus());
                           }}
-                          className="p-3 border border-line/60 bg-[#090d16] hover:border-accent hover:bg-accent/10 rounded-lg text-left transition group"
+                          className="p-4 border border-line bg-[var(--ink-1)] hover:border-fg rounded-[var(--r-md)] text-left transition group"
                         >
                           <div className="text-xs font-semibold text-accent group-hover:text-accent-soft">{item.title}</div>
                           <div className="text-[11px] text-muted truncate mt-0.5">&ldquo;{item.prompt}&rdquo;</div>
@@ -315,7 +341,6 @@ export default function ChatPage() {
                     </div>
                   </div>
                 ))}
-                <div ref={endRef} />
               </div>
               <div className="flex gap-2 border-t border-line p-3">
                 <input

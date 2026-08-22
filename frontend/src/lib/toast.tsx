@@ -59,7 +59,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div
               key={t.id}
-              className="toast-enter pointer-events-auto flex items-center gap-3 px-5 py-3 text-xs sm:text-sm font-mono-spec bg-[#0c1220]/95 border border-accent/60 text-fg rounded-md shadow-2xl backdrop-blur-md transition-all duration-300 animate-rise border-l-4 border-l-accent"
+              className="toast-enter pointer-events-auto flex items-center gap-3 px-5 py-3 text-xs sm:text-sm font-mono-spec bg-[var(--ink-2)] border border-line text-fg rounded-[var(--r-md)] transition-all duration-300 animate-rise border-l-4 border-l-accent"
             >
               <Icon
                 weight="fill"

@@ -30,12 +30,12 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-sm flex-col justify-center">
-      <div className="rounded-2xl border border-line/70 bg-[var(--ink-1)]/60 p-7 shadow-xl">
+      <div className="rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-7">
         <div className="mb-6 flex items-center gap-2.5">
           <ShieldChevron
             weight="fill"
             size={22}
-            className="text-accent drop-shadow-[0_0_8px_var(--accent)]"
+            className="text-accent"
           />
           <h1 className="font-display text-xl font-semibold tracking-tight">Midas Touch 로그인</h1>
         </div>

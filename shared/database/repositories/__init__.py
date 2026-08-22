@@ -8,9 +8,6 @@ from .checkpoints import delete_checkpoint_thread, list_checkpoint_threads
 from .connection import apply_schema, db_cursor, get_connection
 from .embeddings import (
     bulk_upsert_emb_passages,
-    bulk_upsert_emb_queries,
-    bulk_upsert_emb_triplets,
-    get_emb_corpus_stats,
     list_emb_sources,
     search_similar_passages_db,
 )
@@ -41,8 +38,6 @@ __all__ = [
     "apply_schema",
     # embeddings
     "bulk_upsert_emb_passages",
-    "bulk_upsert_emb_queries",
-    "bulk_upsert_emb_triplets",
     "bulk_upsert_market_snapshots",
     "bulk_upsert_portfolios",
     "bulk_upsert_users",
@@ -53,7 +48,6 @@ __all__ = [
     "get_all_tax_rules",
     # connection
     "get_connection",
-    "get_emb_corpus_stats",
     "get_last_ingest_time",
     "get_latest_market_snapshots",
     "get_latest_market_value",

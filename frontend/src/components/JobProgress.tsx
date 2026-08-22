@@ -12,7 +12,7 @@ export default function JobProgress({
   onDone,
 }: {
   jobId: string;
-  endpoint: string; // 예: "/api/v1/finetune/jobs" 또는 "/api/v1/graph/build/jobs"
+  endpoint: string; // 예: "/api/v1/graph/ingest/jobs" 또는 "/api/v1/graph/build/jobs"
   onDone?: (job: JobState) => void;
 }) {
   const [job, setJob] = useState<JobState | null>(null);

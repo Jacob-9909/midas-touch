@@ -1,60 +1,24 @@
-"use client";
-
-import { useRef, useState, MouseEvent, ReactNode } from "react";
+import { ReactNode } from "react";
 
 interface SpecularMetricCardProps {
   children: ReactNode;
+  /** 이전 버전의 마우스 추적 광원 색. 디자인 문서(docs/DESIGN-revolut.md §Elevation)가
+   * 카드 글로우를 금지하므로 더는 시각 효과에 쓰이지 않는다 — 호출부 호환만 위해 남긴다. */
   glowColor?: "gold" | "emerald" | "rose" | "cyan";
   className?: string;
 }
 
+/** 지표 카드 — 문서 규격(20px 카드 + 헤어라인 + 그림자 없음).
+ * 깊이는 표면 명도 차이로만 만들고, 반응은 테두리 색으로만 낸다. */
 export default function SpecularMetricCard({
   children,
-  glowColor = "gold",
   className = "",
 }: SpecularMetricCardProps) {
-  const divRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [opacity, setOpacity] = useState(0);
-
-  const colors = {
-    gold: "rgba(212, 175, 96, 0.22)",
-    emerald: "rgba(16, 185, 129, 0.22)",
-    rose: "rgba(244, 63, 94, 0.22)",
-    cyan: "rgba(6, 182, 212, 0.22)",
-  };
-
-  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-    if (!divRef.current) return;
-    const rect = divRef.current.getBoundingClientRect();
-    setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  };
-
   return (
     <div
-      ref={divRef}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setOpacity(1)}
-      onMouseLeave={() => setOpacity(0)}
-      className={`group relative overflow-hidden rounded-2xl border border-line-50/80 bg-surface/50 p-5 backdrop-blur-md transition-all duration-300 hover:border-accent/50 hover:shadow-[0_8px_30px_rgba(0,0,0,0.25)] ${className}`}
+      className={`group relative rounded-[var(--r-lg)] border border-line-50/80 bg-[var(--ink-1)] p-5 transition-colors duration-200 hover:border-accent/50 ${className}`}
     >
-      {/* Specular Light Cone */}
-      <div
-        className="pointer-events-none absolute -inset-px transition-opacity duration-300"
-        style={{
-          opacity,
-          background: `radial-gradient(450px circle at ${pos.x}px ${pos.y}px, ${colors[glowColor]}, transparent 50%)`,
-        }}
-      />
-      {/* Dynamic Specular Border Glow Highlight */}
-      <div
-        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100 border border-accent/30"
-        style={{
-          maskImage: `radial-gradient(180px circle at ${pos.x}px ${pos.y}px, black, transparent)`,
-          WebkitMaskImage: `radial-gradient(180px circle at ${pos.x}px ${pos.y}px, black, transparent)`,
-        }}
-      />
-      <div className="relative z-10">{children}</div>
+      {children}
     </div>
   );
 }

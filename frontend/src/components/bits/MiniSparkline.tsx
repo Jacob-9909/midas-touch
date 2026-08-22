@@ -30,9 +30,9 @@ export default function MiniSparkline({
     .join(" ");
 
   const colorHex = {
-    positive: "#34d399",
-    negative: "#f87171",
-    accent: "#d4af37",
+    positive: "var(--positive)",
+    negative: "var(--negative)",
+    accent: "var(--accent)",
   }[color];
 
   return (

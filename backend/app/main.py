@@ -16,7 +16,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.auth import router as auth_router
 from backend.app.api.chat import router as chat_router
 from backend.app.api.cheongyak import router as cheongyak_router
-from backend.app.api.finetune import router as finetune_router
 from backend.app.api.graph import router as graph_router
 from backend.app.api.query import router as query_router
 from backend.app.api.research import router as research_router
@@ -202,9 +201,8 @@ app.add_middleware(
 # 멀티턴 에이전트 라우터 (LangGraph 기반 /api/v1/chat)
 app.include_router(auth_router)
 app.include_router(chat_router)
-# 웹 콘솔 라우터 (유저/대시보드, 파인튜닝, 지식그래프, GraphRAG 단발 질의)
+# 웹 콘솔 라우터 (유저/대시보드, 지식그래프·문서 인입, GraphRAG 단발 질의)
 app.include_router(users_router)
-app.include_router(finetune_router)
 app.include_router(graph_router)
 app.include_router(query_router)
 # 라이브 기능 라우터 (wealth_advisor 이식: 주식 백테스트/분석, 청약 조회, 시장 리서치)
