@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errMsg } from "@/lib/async";
-import Link from "next/link";
-import { Plus, TrashSimple, ArrowRight, PaperPlaneTilt } from "@phosphor-icons/react";
+import { Plus, TrashSimple, PaperPlaneTilt } from "@phosphor-icons/react";
 import {
   apiDelete,
   apiGet,

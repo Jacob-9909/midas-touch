@@ -32,7 +32,6 @@ import {
   ShieldCheck,
 } from "@phosphor-icons/react";
 import {
-  apiGet,
   getStrategies,
   getQuickAnalysis,
   getPriceHistory,
@@ -47,7 +46,6 @@ import {
   type QuickAnalysis,
   type PriceHistory,
   type OutlookHorizon,
-  type UserDetail,
 } from "@/lib/api";
 import { clientId } from "@/lib/my-profile";
 import { seedChat } from "@/lib/chat-seed";
@@ -222,21 +220,6 @@ function MetricTile({
       {sub && <div className="mt-0.5 text-[11px] text-muted font-mono-spec">{sub}</div>}
     </div>
   );
-}
-
-function portfolioTickers(detail: UserDetail | null): { ticker: string; name: string }[] {
-  if (!detail) return [];
-  const seen = new Set<string>();
-  const out: { ticker: string; name: string }[] = [];
-  for (const pf of detail.portfolios) {
-    for (const it of pf.items) {
-      const t = (it.ticker || "").trim();
-      if (!t || seen.has(t.toUpperCase())) continue;
-      seen.add(t.toUpperCase());
-      out.push({ ticker: t, name: it.name || t });
-    }
-  }
-  return out;
 }
 
 // ── Quick Analysis sub-components ─────────────────────────────────────────────

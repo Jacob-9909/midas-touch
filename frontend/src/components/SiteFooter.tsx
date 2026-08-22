@@ -7,7 +7,6 @@
  * 그래서 라우트별로 노출 여부를 여기서 결정한다(고지 자체는 챗 입력창 위 안내로 커버).
  */
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /** 푸터를 숨길 앱형 라우트 */
