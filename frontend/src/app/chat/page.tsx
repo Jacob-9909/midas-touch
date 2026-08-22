@@ -193,7 +193,7 @@ export default function ChatPage() {
               <button
                 onClick={startNewChat}
                 disabled={!uid}
-                className="btn-accent mb-3 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm"
+                className="btn-ghost mb-3 w-full text-sm"
               >
                 <Plus weight="bold" size={16} />새 대화
               </button>
