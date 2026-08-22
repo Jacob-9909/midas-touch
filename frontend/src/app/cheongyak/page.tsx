@@ -9,6 +9,7 @@ import {
   CalendarBlank,
   ChatCircleText,
   MagnifyingGlassPlus,
+  Compass,
 } from "@phosphor-icons/react";
 import { listCheongyak, type CheongyakKind, type CheongyakSummary } from "@/lib/api";
 import Link from "next/link";
@@ -24,6 +25,7 @@ import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
 import { Card, PageTitle, Skeleton } from "@/components/ui";
 import SegmentedTabs from "@/components/SegmentedTabs";
 import ProfileNudge from "@/components/ProfileNudge";
+import GuideTour, { type TourStep } from "@/components/GuideTour";
 import { useToast } from "@/lib/toast";
 import DetailModal, { SHOW_SCORES_KINDS } from "./DetailModal";
 import KoreaMap from "./KoreaMap";
@@ -194,6 +196,36 @@ function MyScoreCard({
   );
 }
 
+/** 처음 온 사람에게 청약 목록 화면을 어떻게 읽는지 순서대로 짚어준다.
+ * 화면 구조가 바뀌면 target(data-tour)도 같이 고쳐야 한다. */
+const TOUR: TourStep[] = [
+  {
+    target: "kinds",
+    title: "공고 유형을 먼저 고르세요",
+    body: "APT·오피스텔·무순위/잔여·임의공급·공공임대 탭으로 유형을 바꿔볼 수 있습니다. 청약가점제(84점)는 APT와 무순위 일반공급에만 적용되므로, 탭을 옮기면 아래 내 가점 카드의 표시도 함께 바뀝니다. 오른쪽 '내 지역만'은 /me 에 저장된 거주 지역 공고만 걸러 줍니다.",
+  },
+  {
+    target: "score",
+    title: "내 가점과 1순위 요건부터 확인하세요",
+    body: "/me 에서 입력한 무주택 기간·부양가족·통장 가입 기간으로 계산한 가점과, 민영주택 1순위 요건 충족 여부가 표시됩니다. 공고를 볼 때마다 이 숫자와 대조하는 게 이 화면의 기본 읽기입니다. 수정은 '내 정보 수정'으로 갑니다.",
+  },
+  {
+    target: "status",
+    title: "접수중·접수예정·마감으로 좁혀 보세요",
+    body: "상태 칩에는 각 상태의 공고 수가 함께 보입니다. 경쟁률·가점은 접수 마감 후에야 공개되므로, 결과가 있는 마감 공고를 목록에서 먼저 보여줍니다 — 당첨 가능성을 가늠할 데이터가 있는 공고부터 읽는 셈입니다.",
+  },
+  {
+    target: "region-map",
+    title: "지역은 지도로 좁힙니다",
+    body: "시도를 누르면 해당 지역 공고만 남고 지도도 그 지역으로 확대됩니다. 색이 진할수록 공고가 많은 지역입니다. 같은 곳을 다시 누르거나 '전체 보기'로 돌아올 수 있습니다.",
+  },
+  {
+    target: "list",
+    title: "공고 카드는 일정과 두 버튼으로 읽습니다",
+    body: "카드마다 모집공고일과 접수 기간이 찍혀 있으니 접수 마감 전인지 먼저 확인하세요. '상세보기'는 내 가점과의 비교까지 보여주고, '상담받기'는 그 공고 정보를 챗봇에 심어 바로 자문받습니다.",
+  },
+];
+
 export default function CheongyakPage() {
   const toast = useToast();
   const router = useRouter();
@@ -205,6 +237,8 @@ export default function CheongyakPage() {
   const [mapRegion, setMapRegion] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<CheongyakSummary | null>(null);
   const [profile, setProfile] = useState<MyProfile>(DEFAULT_PROFILE);
+  // 가이드 재실행용. undefined 면 GuideTour 가 첫 방문 여부로 스스로 판단한다.
+  const [tourOpen, setTourOpen] = useState<boolean | undefined>(undefined);
 
   // 마운트 1회 localStorage 복원(서버엔 localStorage 없어 lazy init 불가 → effect가 정답).
   // 거주 지역도 여기서 나온다 — 예전엔 페르소나 API를 왕복해서 가져왔지만
@@ -292,13 +326,29 @@ export default function CheongyakPage() {
 
   return (
     <main className="mx-auto max-w-[1200px] px-6 py-[72px] space-y-6">
+      <GuideTour
+        steps={TOUR}
+        storageKey="midas.tour.cheongyak.v1"
+        open={tourOpen}
+        onClose={() => setTourOpen(undefined)}
+      />
       {/* 데이터 화면은 흰 카탈로그 모드다(문서 §Overview) — 다크 히어로 카드를 걷어내고
           디스플레이 타이포 + 헤어라인 지표 줄로 바꿨다. */}
-      <PageTitle
-        eyebrow="청약 정보"
-        title="전국 청약 분양정보"
-        subtitle="한국부동산원 청약홈 실시간 공공 데이터로 APT·오피스텔·무순위/잔여세대 공고를 조회하고, 내 가점·1순위 자격과 대조합니다."
-      />
+      <div className="flex items-start justify-between gap-4">
+        <PageTitle
+          eyebrow="청약 정보"
+          title="전국 청약 분양정보"
+          subtitle="한국부동산원 청약홈 실시간 공공 데이터로 APT·오피스텔·무순위/잔여세대 공고를 조회하고, 내 가점·1순위 자격과 대조합니다."
+        />
+        <button
+          type="button"
+          onClick={() => setTourOpen(true)}
+          className="inline-flex shrink-0 items-center gap-2 rounded-[var(--r-pill)] border border-accent/50 bg-accent/12 px-4 py-2 text-xs font-semibold text-accent transition-colors duration-150 hover:border-accent hover:bg-accent/20"
+        >
+          <Compass size={15} weight="bold" />
+          사용 가이드
+        </button>
+      </div>
 
       <div className="flex flex-wrap gap-x-12 gap-y-4 border-y border-line py-6">
         {[
@@ -313,9 +363,11 @@ export default function CheongyakPage() {
       </div>
 
       <ProfileNudge />
-      <MyScoreCard profile={profile} applicable={SHOW_SCORES_KINDS.includes(kind)} />
+      <div data-tour="score">
+        <MyScoreCard profile={profile} applicable={SHOW_SCORES_KINDS.includes(kind)} />
+      </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div data-tour="kinds" className="flex flex-wrap items-center gap-2">
         <SegmentedTabs
           tabs={TABS.map((t) => ({ id: t.kind, label: t.label }))}
           active={kind}
@@ -338,7 +390,7 @@ export default function CheongyakPage() {
 
       {/* 상태 필터: 접수중 / 접수예정 / 마감 */}
       {items && items.length > 0 && (
-        <div className="mb-5 flex flex-wrap items-center gap-2">
+        <div data-tour="status" className="mb-5 flex flex-wrap items-center gap-2">
           {STATUS_FILTERS.map((s) => {
             const count = s === "전체" ? items.length : statusCounts[s] ?? 0;
             const active = statusFilter === s;
@@ -365,7 +417,10 @@ export default function CheongyakPage() {
 
       {/* 지역 지도: 클릭하면 해당 시도로 필터 + 포커싱 */}
       {items && items.length > 0 && (
-        <Card className="mb-5 flex flex-col items-center gap-5 lg:flex-row lg:items-start">
+        <Card
+          data-tour="region-map"
+          className="mb-5 flex flex-col items-center gap-5 lg:flex-row lg:items-start"
+        >
           <KoreaMap counts={regionCounts} selected={mapRegion} onSelect={setMapRegion} />
           <div className="min-w-0 flex-1 text-sm">
             {mapRegion ? (
@@ -442,7 +497,7 @@ export default function CheongyakPage() {
       )}
 
       {view && view.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <div data-tour="list" className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {view.map((item) => (
             <CheongyakCard
               key={`${item.house_manage_no}-${item.pblanc_no}`}

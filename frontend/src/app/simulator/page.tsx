@@ -13,9 +13,13 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
+import {
+  Compass,
+} from "@phosphor-icons/react";
 import { Card, PageTitle, SectionLabel, fmtKRW, fmtKRWShort } from "@/components/ui";
 import { MoneyInput } from "@/components/MoneyInput";
 import ProfileNudge from "@/components/ProfileNudge";
+import GuideTour, { type TourStep } from "@/components/GuideTour";
 import { loadProfile } from "@/lib/my-profile";
 import {
   AREA_LABELS,
@@ -34,9 +38,34 @@ const labelTextClass = "text-xs text-muted";
 const TOOLTIP_STYLE = {
   background: "var(--ink-2)",
   border: "1px solid var(--line)",
-  borderRadius: 14,
+  borderRadius: 12,
   color: "var(--fg)",
 };
+
+/** 처음 온 사람에게 시뮬레이터를 어떻게 읽는지 순서대로 짚어준다.
+ * 화면 구조가 바뀌면 target(data-tour)도 같이 고쳐야 한다. */
+const TOUR: TourStep[] = [
+  {
+    target: "target-input",
+    title: "목표금액부터 정하세요",
+    body: "'청약 예치금 기준'은 지역·전용면적별 국토부 고시 금액을, '직접 입력'은 계약금 등 실제로 준비할 금액을 씁니다. 예치금은 청약 자격용일 뿐 실질 필요자금보다 작으니, 분양가를 알고 있다면 직접 입력이 정확합니다.",
+  },
+  {
+    target: "situation",
+    title: "지금 내 상황을 넣습니다",
+    body: "/me 에 저장한 현재 자산과 월 저축액이 초기값으로 깔려 있습니다. 입력값은 서버로 전송되지 않고 이 브라우저 안에서만 계산됩니다. 또 여기서 값을 바꿔도 내 정보는 바뀌지 않습니다 — '만약에'를 굴려 보는 곳이니 마음껏 조정해 보세요.",
+  },
+  {
+    target: "products",
+    title: "비교할 상품 두 개의 이율을 놓습니다",
+    body: "왼쪽이 일반 적금, 오른쪽이 청년도약계좌 같은 정책상품입니다. 이름과 연이율을 직접 바꾸면 그래프와 결과가 즉시 다시 계산됩니다. 최신 금리는 아래 링크로 챗봇에 물어볼 수 있습니다.",
+  },
+  {
+    target: "result",
+    title: "결과는 개월 수와 '당겨짐'으로 읽습니다",
+    body: "두 타일이 각 상품으로 목표에 도달하는 개월 수입니다. 파선(목표) 위로 두 줄이 언제 닿는지가 그래프의 핵심이고, 이율이 높은 상품은 도달 시점이 당겨집니다 — 몇 개월 당겨지는지가 상품 비교의 결론입니다.",
+  },
+];
 
 export default function SimulatorPage() {
   // 기본값은 데모 시나리오(28세 사회초년생·서울 특공 관심)에 맞춤. 예치금(300만원)은 기본 자산으로
@@ -53,6 +82,9 @@ export default function SimulatorPage() {
   const [rateA, setRateA] = useState(3.5);
   const [labelB, setLabelB] = useState("청년도약계좌 등 정책상품");
   const [rateB, setRateB] = useState(6.0);
+
+  // 가이드 재실행용. undefined 면 GuideTour 가 첫 방문 여부로 스스로 판단한다.
+  const [tourOpen, setTourOpen] = useState<boolean | undefined>(undefined);
 
   // 청약 상세모달 "이 청약으로 계획 세우기"에서 넘어온 경우 목표금액을 그 공고 기준으로 채운다.
   // useSearchParams는 Suspense 경계가 필요해 번거로우니, 이 페이지가 전부 클라이언트 전용인 점을
@@ -90,17 +122,33 @@ export default function SimulatorPage() {
 
   return (
     <main className="mx-auto max-w-[1200px] px-6 py-[72px] space-y-6">
-      <PageTitle
-        title="자금마련 타임라인 시뮬레이터"
-        eyebrow="Fund Timeline"
-        subtitle="청약 목표금액까지 지금 저축 계획으로 얼마나 걸리는지, 상품을 바꾸면 얼마나 당겨지는지 시뮬레이션합니다. 정보 제공 목적의 시뮬레이션이며 투자·저축 자문이 아닙니다."
+      <GuideTour
+        steps={TOUR}
+        storageKey="midas.tour.simulator.v1"
+        open={tourOpen}
+        onClose={() => setTourOpen(undefined)}
       />
+      <div className="flex items-start justify-between gap-4">
+        <PageTitle
+          title="자금마련 타임라인 시뮬레이터"
+          eyebrow="Fund Timeline"
+          subtitle="청약 목표금액까지 지금 저축 계획으로 얼마나 걸리는지, 상품을 바꾸면 얼마나 당겨지는지 시뮬레이션합니다. 정보 제공 목적의 시뮬레이션이며 투자·저축 자문이 아닙니다."
+        />
+        <button
+          type="button"
+          onClick={() => setTourOpen(true)}
+          className="inline-flex shrink-0 items-center gap-2 rounded-[var(--r-pill)] border border-accent/50 bg-accent/12 px-4 py-2 text-xs font-semibold text-accent transition-colors duration-150 hover:border-accent hover:bg-accent/20"
+        >
+          <Compass size={15} weight="bold" />
+          사용 가이드
+        </button>
+      </div>
 
       <ProfileNudge />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
         <div className="space-y-6">
-          <Card>
+          <Card data-tour="target-input">
             <SectionLabel>목표금액</SectionLabel>
             <div className="space-y-3">
               <label className={labelClass}>
@@ -168,7 +216,7 @@ export default function SimulatorPage() {
             </div>
           </Card>
 
-          <Card>
+          <Card data-tour="situation">
             <SectionLabel>현재 상황</SectionLabel>
             <div className="space-y-3">
               <label className={labelClass}>
@@ -182,7 +230,7 @@ export default function SimulatorPage() {
             </div>
           </Card>
 
-          <Card>
+          <Card data-tour="products">
             <SectionLabel>비교할 상품 2개</SectionLabel>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -236,7 +284,7 @@ export default function SimulatorPage() {
         </div>
 
         <div className="space-y-6">
-          <Card>
+          <Card data-tour="result">
             <SectionLabel>도달 시점 비교</SectionLabel>
             <div className="mb-4 grid grid-cols-2 gap-4">
               <ResultTile label={labelA} months={reachA} />
