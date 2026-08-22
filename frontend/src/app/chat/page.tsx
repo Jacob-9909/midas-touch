@@ -327,9 +327,12 @@ export default function ChatPage() {
                         m.content ? (
                           <Markdown>{m.content}</Markdown>
                         ) : busy ? (
-                          <span className="inline-flex items-center gap-2 text-muted">
+                          <span className="font-mono-spec inline-flex items-center gap-2 text-[11px] text-muted">
                             {status && (
-                              <span className="font-mono-spec text-xs">{status}…</span>
+                              <span>
+                                {"⟳ "}
+                                {status}…
+                              </span>
                             )}
                             <span className="caret" />
                           </span>

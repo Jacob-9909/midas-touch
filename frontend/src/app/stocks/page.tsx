@@ -70,10 +70,9 @@ import WatchlistCard from "./WatchlistCard";
 const TOOLTIP_STYLE = {
   background: "var(--ink-2)",
   border: "1px solid var(--line)",
-  borderRadius: 14,
+  borderRadius: 12,
   color: "var(--fg)",
   fontSize: 12,
-  boxShadow: "var(--shadow-float)",
 } as const;
 
 const PERIODS: { value: BacktestPeriod; label: string }[] = [
