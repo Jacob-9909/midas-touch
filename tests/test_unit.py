@@ -11,6 +11,7 @@ import os
 import sys
 import unittest
 from datetime import UTC, datetime
+from typing import ClassVar
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
@@ -171,10 +172,10 @@ class TestChatService(unittest.TestCase):
         import backend.app.services.chat_service as cs
 
         class _FakeState:
-            values = {"messages": existing_messages}
+            values: ClassVar[dict] = {"messages": existing_messages}
 
         class _FakeAgent:
-            def get_state(self, config):  # noqa: ARG002
+            def get_state(self, config):
                 return _FakeState()
 
         svc = object.__new__(cs.ChatService)  # __init__(에이전트 생성) 우회
