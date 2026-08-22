@@ -22,6 +22,7 @@ import {
 } from "@/lib/my-profile";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
 import { Card, PageTitle, Skeleton } from "@/components/ui";
+import SegmentedTabs from "@/components/SegmentedTabs";
 import ProfileNudge from "@/components/ProfileNudge";
 import { useToast } from "@/lib/toast";
 import DetailModal, { SHOW_SCORES_KINDS } from "./DetailModal";
@@ -41,13 +42,13 @@ const STATUS_FILTERS = ["전체", "접수중", "접수예정", "마감"] as cons
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 const STATUS_TONE: Record<string, string> = {
-  접수중: "text-[#58c8a0] border-[#58c8a0]/40 bg-[#58c8a0]/10",
+  접수중: "text-positive border-positive/40 bg-positive/10",
   접수예정: "text-accent border-accent/40 bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]",
   마감: "text-muted border-line bg-[var(--ink-2)]/40",
   일정미정: "text-muted border-line bg-[var(--ink-2)]/40",
 };
 
-function StatusBadge({ status }: { status: string }) {
+function StatusPill({ status }: { status: string }) {
   const tone = STATUS_TONE[status] ?? STATUS_TONE["일정미정"];
   const isLive = status === "접수중";
   return (
@@ -56,8 +57,8 @@ function StatusBadge({ status }: { status: string }) {
     >
       {isLive && (
         <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#58c8a0] opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#58c8a0]" />
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-positive opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-positive" />
         </span>
       )}
       {status || "-"}
@@ -82,7 +83,7 @@ function CheongyakCard({
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             {isHot && (
-              <span className="inline-block rounded-full border border-orange-500/40 bg-orange-500/10 px-2 py-0.5 font-mono-spec text-[9px] font-bold text-orange-400">
+              <span className="inline-block rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 font-mono-spec text-[9px] font-bold text-accent">
                 🔥 POPULAR HOT
               </span>
             )}
@@ -93,7 +94,7 @@ function CheongyakCard({
               {item.house_nm || "(이름 없음)"}
             </button>
           </div>
-          <StatusBadge status={item.status} />
+          <StatusPill status={item.status} />
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted font-mono-spec">
           {item.region && (
@@ -174,9 +175,9 @@ function MyScoreCard({
         <div className="text-xs">
           <span className="text-muted">민영주택 1순위: </span>
           {unmet.length === 0 ? (
-            <span className="text-emerald-400">입력값 기준 요건 충족</span>
+            <span className="text-positive">입력값 기준 요건 충족</span>
           ) : (
-            <span className="text-amber-400">
+            <span className="text-warning">
               {unmet.map((c) => c.label).join(", ")} 미달
             </span>
           )}
@@ -314,26 +315,18 @@ export default function CheongyakPage() {
       <ProfileNudge />
       <MyScoreCard profile={profile} applicable={SHOW_SCORES_KINDS.includes(kind)} />
 
-      <div className="flex flex-wrap items-center gap-2 rounded-full border border-line bg-[var(--ink-2)] p-1.5 text-xs">
-        {TABS.map((t) => (
-          <button
-            key={t.kind}
-            onClick={() => setKind(t.kind)}
-            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200 ${
-              kind === t.kind
-                ? "bg-accent/20 text-accent border border-accent/40 shadow-[0_0_12px_rgba(212,175,96,0.18)]"
-                : "text-muted hover:text-fg border border-transparent"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2">
+        <SegmentedTabs
+          tabs={TABS.map((t) => ({ id: t.kind, label: t.label }))}
+          active={kind}
+          onChange={setKind}
+        />
         {district && (
           <button
             onClick={() => setOnlyMyRegion((v) => !v)}
-            className={`ml-auto inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition ${
+            className={`ml-auto inline-flex items-center gap-1 rounded-[var(--r-pill)] border px-3 py-1.5 text-xs transition ${
               onlyMyRegion
-                ? "border-accent/40 bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] text-accent"
+                ? "border-accent/40 bg-accent/10 text-accent"
                 : "border-line text-muted hover:text-fg"
             }`}
             title={`${district} 매칭 공고만`}
@@ -420,8 +413,8 @@ export default function CheongyakPage() {
       )}
 
       {error && (
-        <Card className="border-[#e2607b]/40">
-          <p className="text-sm text-[#e2607b]">조회 실패: {error}</p>
+        <Card className="border-negative/40">
+          <p className="text-sm text-negative">조회 실패: {error}</p>
           <p className="mt-1 text-xs text-muted">
             CHEONGYAK_API_KEY 가 설정되지 않았으면 .env 에 공공데이터포털 키를 넣어주세요.
           </p>

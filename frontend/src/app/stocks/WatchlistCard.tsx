@@ -94,7 +94,7 @@ export default function WatchlistCard({
                 onClick={() => mutate(() => removeWatchlist(userUuid, t))}
                 disabled={busy}
                 aria-label={`${t} 제거`}
-                className="rounded-full p-0.5 text-muted hover:text-[#e2607b] disabled:opacity-40"
+                className="rounded-full p-0.5 text-muted hover:text-negative disabled:opacity-40"
               >
                 <X size={12} />
               </button>

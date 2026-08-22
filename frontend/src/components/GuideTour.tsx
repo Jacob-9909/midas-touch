@@ -46,6 +46,9 @@ export default function GuideTour({
 }) {
   const [idx, setIdx] = useState<number | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
+  /** 오버레이 전체의 페이드 상태. 단계가 바뀔 때 스윽 사라졌다가 새 위치에서 스윽 나타난다 —
+   * 스포트라이트가 화면을 가로질러 미끄러지는 움직임을 노출하지 않기 위함. */
+  const [shown, setShown] = useState(false);
 
   // 첫 방문이면 자동 시작. 외부에서 open 을 주면 그쪽이 우선.
   useEffect(() => {
@@ -69,13 +72,22 @@ export default function GuideTour({
     setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
   }, [idx, steps]);
 
-  // 단계가 바뀌면 타겟을 화면 안으로 넣고 위치를 잰다.
+  // 단계가 바뀌면: 페이드 아웃 → 스크롤·측정(숨은 상태) → 페이드 인.
   useEffect(() => {
     if (idx === null) return;
-    const el = document.querySelector<HTMLElement>(`[data-tour="${steps[idx].target}"]`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-    const t = setTimeout(measure, 420); // 스크롤이 멎은 뒤에 재야 정확하다
-    return () => clearTimeout(t);
+    setShown(false);
+    let measureT: ReturnType<typeof setTimeout> | undefined;
+    const fadeT = setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-tour="${steps[idx].target}"]`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      measureT = setTimeout(measure, 420); // 스크롤이 멎은 뒤에 재야 정확하다
+    }, 220); // 페이드 아웃이 끝난 뒤에만 움직인다
+    const inT = setTimeout(() => setShown(true), 700);
+    return () => {
+      clearTimeout(fadeT);
+      clearTimeout(inT);
+      if (measureT) clearTimeout(measureT);
+    };
   }, [idx, steps, measure]);
 
   useEffect(() => {
@@ -124,21 +136,27 @@ export default function GuideTour({
 
   return (
     <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label="사용 가이드">
-      {/* 구멍: 타겟만 남기고 나머지를 덮는다. 타겟을 클릭할 수 있게 pointer-events 는 끈다. */}
-      {rect ? (
-        <div
-          className="pointer-events-none absolute rounded-xl ring-2 ring-accent transition-all duration-300"
-          style={{
-            top: rect.top - PAD,
-            left: rect.left - PAD,
-            width: rect.width + PAD * 2,
-            height: rect.height + PAD * 2,
-            boxShadow: "0 0 0 9999px rgba(3,6,14,0.78)",
-          }}
-        />
-      ) : (
-        <div className="absolute inset-0 bg-[rgba(3,6,14,0.78)]" />
-      )}
+      {/* 딤·스포트라이트 레이어 — 단계 전환 때 통째로 페이드한다. */}
+      <div
+        className={`pointer-events-none absolute inset-0 transition-opacity duration-300 ease-out ${
+          shown ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        {rect ? (
+          <div
+            className="absolute rounded-[var(--r-md)] ring-2 ring-accent"
+            style={{
+              top: rect.top - PAD,
+              left: rect.left - PAD,
+              width: rect.width + PAD * 2,
+              height: rect.height + PAD * 2,
+              boxShadow: "0 0 0 9999px rgba(3,6,14,0.78)",
+            }}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-[rgba(3,6,14,0.78)]" />
+        )}
+      </div>
 
       {/* 빈 곳을 누르면 종료 */}
       <button
@@ -149,11 +167,13 @@ export default function GuideTour({
       />
 
       <div
-        className="absolute w-[320px] rounded-2xl border border-accent/40 bg-[var(--ink-1)] p-4 shadow-2xl"
+        className={`absolute w-[320px] rounded-[var(--r-lg)] border border-accent/40 bg-[var(--ink-1)] p-4 transition-all duration-300 ease-out ${
+          shown && rect ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+        }`}
         style={{ top: cardTop, left: cardLeft }}
       >
         <div className="mb-2 flex items-center gap-2">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-[#0b0f19]">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-[var(--ink)]">
             {idx + 1}
           </span>
           <h3 className="font-display text-sm font-semibold text-fg">{step.title}</h3>
@@ -182,7 +202,7 @@ export default function GuideTour({
             )}
             <button
               onClick={() => (last ? finish() : setIdx(idx + 1))}
-              className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-[#0b0f19] transition hover:opacity-90"
+              className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition hover:opacity-90"
             >
               {last ? "시작하기" : "다음"}
             </button>

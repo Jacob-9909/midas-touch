@@ -108,9 +108,9 @@ function ListingEligibility({
       <div
         className={`mb-3 rounded-xl border px-3 py-2 text-xs ${
           allOk
-            ? "border-[#58c8a0]/30 bg-[#58c8a0]/10 text-[#58c8a0]"
+            ? "border-positive/30 bg-positive/10 text-positive"
             : noneOk
-              ? "border-[#e2a05b]/30 bg-[#e2a05b]/10 text-[#e2a05b]"
+              ? "border-warning/30 bg-warning/10 text-warning"
               : "border-line bg-[var(--ink-2)]/50 text-fg"
         }`}
       >
@@ -120,7 +120,7 @@ function ListingEligibility({
       <ul className="space-y-2">
         {shared.map((c) => (
           <li key={c.label} className="flex gap-2 text-xs">
-            <span className={c.ok ? "text-[#58c8a0]" : "text-[#e2a05b]"}>{c.ok ? "✓" : "✕"}</span>
+            <span className={c.ok ? "text-positive" : "text-warning"}>{c.ok ? "✓" : "✕"}</span>
             <span className="min-w-0">
               <span className="text-fg">{c.label}</span>
               {c.regulatedOnly && <span className="ml-1 text-[10px] text-muted/70">(규제지역)</span>}
@@ -132,7 +132,7 @@ function ListingEligibility({
         ))}
         {depositRows.map(({ area, check }) => (
           <li key={area} className="flex gap-2 text-xs">
-            <span className={check.ok ? "text-[#58c8a0]" : "text-[#e2a05b]"}>
+            <span className={check.ok ? "text-positive" : "text-warning"}>
               {check.ok ? "✓" : "✕"}
             </span>
             <span className="min-w-0">
@@ -257,7 +257,7 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
@@ -297,7 +297,7 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
 
         {/* 본문 */}
         {error && (
-          <p className="mt-5 text-sm text-[#e2607b]">
+          <p className="mt-5 text-sm text-negative">
             상세 조회 실패: {error}
             <br />
             <span className="text-xs text-muted">
@@ -429,9 +429,9 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
                                   {diff === null ? (
                                     "-"
                                   ) : diff >= 0 ? (
-                                    <span className="text-[#58c8a0]">최저가점 이상 (+{diff})</span>
+                                    <span className="text-positive">최저가점 이상 (+{diff})</span>
                                   ) : (
-                                    <span className="text-[#e2a05b]">{Math.abs(diff)}점 부족</span>
+                                    <span className="text-warning">{Math.abs(diff)}점 부족</span>
                                   )}
                                 </td>
                               </tr>

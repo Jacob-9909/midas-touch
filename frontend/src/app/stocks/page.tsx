@@ -35,6 +35,7 @@ import {
   apiGet,
   getStrategies,
   getQuickAnalysis,
+  getPriceHistory,
   runBacktest,
   runGridSearch,
   runStockAnalysis,
@@ -44,6 +45,7 @@ import {
   type BacktestPeriod,
   type GridSearchResult,
   type QuickAnalysis,
+  type PriceHistory,
   type OutlookHorizon,
   type UserDetail,
 } from "@/lib/api";
@@ -52,7 +54,6 @@ import { seedChat } from "@/lib/chat-seed";
 import MiniSparkline from "@/components/bits/MiniSparkline";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
 import InteractivePillBar from "@/components/bits/InteractivePillBar";
-import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 import {
   Card,
   PageTitle,
@@ -61,6 +62,9 @@ import {
   LoadingBlock,
   AnimatedNumber,
 } from "@/components/ui";
+import SegmentedTabs from "@/components/SegmentedTabs";
+import GuideTour, { type TourStep } from "@/components/GuideTour";
+import { Compass } from "@phosphor-icons/react";
 import { useToast } from "@/lib/toast";
 import TickerAutocomplete from "./TickerAutocomplete";
 import MemoryStatsCard from "./MemoryStatsCard";
@@ -96,9 +100,9 @@ const EXIT_LABEL: Record<string, string> = {
 };
 const EXIT_TONE: Record<string, string> = {
   signal: "text-muted",
-  stop_loss: "text-[#e2607b]",
-  trailing_stop: "text-[#e2a15a]",
-  take_profit: "text-[#58c8a0]",
+  stop_loss: "text-negative",
+  trailing_stop: "text-warning",
+  take_profit: "text-positive",
 };
 
 // 백테스트에 적용된 리스크 오버레이를 사람이 읽는 한 줄로 (null=미적용은 생략).
@@ -188,9 +192,9 @@ function MetricTile({
   sub?: string;
 }) {
   const color =
-    tone === "up" ? "text-[#58c8a0]" : tone === "down" ? "text-[#e2607b]" : "text-fg";
+    tone === "up" ? "text-positive" : tone === "down" ? "text-negative" : "text-fg";
   const toneBg =
-    tone === "up" ? "bg-[#58c8a0]" : tone === "down" ? "bg-[#e2607b]" : "bg-accent";
+    tone === "up" ? "bg-positive" : tone === "down" ? "bg-negative" : "bg-accent";
 
   // 호출부는 "12.34%", "-1,203원" 같은 완성된 문자열을 넘긴다.
   // 여기서 앞쪽 수치만 떼어 카운트업하고 단위는 그대로 붙인다 →
@@ -199,8 +203,8 @@ function MetricTile({
   const numeric = /^(-?[\d,]+(?:\.\d+)?)(.*)$/.exec(value);
 
   return (
-    <div className="rounded-2xl border border-line bg-[var(--ink-2)]/40 px-4 py-3 relative overflow-hidden group hover:border-accent/40 hover:shadow-[0_0_28px_-10px_var(--accent)] transition">
-      <div className={`absolute top-0 left-0 h-1 w-full ${toneBg} shadow-[0_0_12px_currentColor]`} />
+    <div className="rounded-2xl border border-line bg-[var(--ink-2)]/40 px-4 py-3 relative overflow-hidden group hover:border-accent/40 transition">
+      <div className={`absolute top-0 left-0 h-1 w-full ${toneBg}`} />
       <div className="text-xs uppercase tracking-wider text-muted font-mono-spec">{label}</div>
       <div className={`mt-1 font-display text-xl font-extrabold ${color}`}>
         {numeric ? (
@@ -241,15 +245,15 @@ function portfolioTickers(detail: UserDetail | null): { ticker: string; name: st
 function RsiGauge({ value, signal }: { value: number; signal: string }) {
   const color =
     signal === "oversold"
-      ? "text-[#58c8a0]"
+      ? "text-positive"
       : signal === "overbought"
-        ? "text-[#e2607b]"
+        ? "text-negative"
         : "text-fg";
   const label =
     signal === "oversold" ? "과매도" : signal === "overbought" ? "과매수" : "중립";
   const barPct = Math.min(100, Math.max(0, value));
   const barColor =
-    barPct < 30 ? "#58c8a0" : barPct > 70 ? "#e2607b" : "var(--accent)";
+    barPct < 30 ? "var(--positive)" : barPct > 70 ? "var(--negative)" : "var(--accent)";
   return (
     <div className="rounded-2xl border border-line bg-[var(--ink-2)]/40 p-4">
       <div className="mb-2 text-xs uppercase tracking-wider text-muted">RSI (14)</div>
@@ -283,7 +287,7 @@ function IndicatorCard({
   tone?: "up" | "down" | "neutral";
 }) {
   const color =
-    tone === "up" ? "text-[#58c8a0]" : tone === "down" ? "text-[#e2607b]" : "text-fg";
+    tone === "up" ? "text-positive" : tone === "down" ? "text-negative" : "text-fg";
   return (
     <div className="rounded-2xl border border-line bg-[var(--ink-2)]/40 p-4">
       <div className="mb-2 text-xs uppercase tracking-wider text-muted">{title}</div>
@@ -306,12 +310,12 @@ function OutlookCard({
   const Icon =
     trend === "BUY" ? ArrowUp : trend === "SELL" ? ArrowDown : Minus;
   const color =
-    trend === "BUY" ? "text-[#58c8a0]" : trend === "SELL" ? "text-[#e2607b]" : "text-muted";
+    trend === "BUY" ? "text-positive" : trend === "SELL" ? "text-negative" : "text-muted";
   const bg =
     trend === "BUY"
-      ? "border-[#58c8a0]/30 bg-[#58c8a0]/5"
+      ? "border-positive/30 bg-positive/5"
       : trend === "SELL"
-        ? "border-[#e2607b]/30 bg-[#e2607b]/5"
+        ? "border-negative/30 bg-negative/5"
         : "border-line bg-[var(--ink-2)]/30";
   const trendKo = trend === "BUY" ? "매수" : trend === "SELL" ? "매도" : "보유";
   const strengthKo = strength === "strong" ? "강함" : strength === "moderate" ? "보통" : "약함";
@@ -327,6 +331,36 @@ function OutlookCard({
   );
 }
 
+/** 처음 온 사람에게 주식 분석 화면의 구조와 지표 읽는 법을 순서대로 짚어준다.
+ * 화면 구조가 바뀌면 target(data-tour)도 같이 고쳐야 한다. */
+const TOUR: TourStep[] = [
+  {
+    target: "setup",
+    title: "티커를 검색하고 실행하세요",
+    body: "AAPL·TSLA처럼 미국 주식 티커를 검색해 선택하면, 아래 빠른 분석·백테스트가 모두 이 종목 기준으로 실행됩니다.",
+  },
+  {
+    target: "watchlist",
+    title: "자주 보는 종목은 관심종목에",
+    body: "저장해 둔 관심종목을 클릭하면 입력창에 바로 불러와집니다. 종목을 매번 검색하지 않아도 됩니다.",
+  },
+  {
+    target: "tabs",
+    title: "두 가지 모드가 있습니다",
+    body: "빠른 분석은 지금 이 순간의 기술적 지표 스냅샷 + AI 전망입니다. 백테스트는 과거 데이터로 전략의 수익률을 검증합니다. '지금 어떻게 되고 있나'는 빠른 분석, '이 전략이 통했을까'는 백테스트에서 봅니다.",
+  },
+  {
+    target: "indicators",
+    title: "기술적 지표는 방향과 위치로 읽습니다",
+    body: "RSI 70 이상은 과매수·30 이하는 과매도, MACD와 MA 추세는 방향, 볼린저 %B는 밴드 내 위치(0~100%), 지지선·저항선은 매매 참고 가격대입니다. 한 지표만 믿지 말고 방향+위치를 함께 보세요.",
+  },
+  {
+    target: "outlook",
+    title: "AI 전망은 결정·신뢰도·보정으로 읽습니다",
+    body: "매수/매도/보유 결정과 24시간~1개월 네 구간 목표가가 표시됩니다. 신뢰도 보정은 AI 자신감을 과거 적중률로 깎아내린 실측치라, 이 숫자가 낮으면 전망을 크게 참고하지 않는 게 좋습니다. '이 분석으로 상담받기'로 챗봇에 바로 물어볼 수도 있습니다.",
+  },
+];
+
 export default function StocksPage() {
   const toast = useToast();
   const router = useRouter();
@@ -340,9 +374,13 @@ export default function StocksPage() {
   // Shared state
   const [ticker, setTicker] = useState("AAPL");
   const [activeTab, setActiveTab] = useState<"quick" | "backtest">("quick");
+  // 가이드 재실행용. undefined 면 GuideTour 가 첫 방문 여부로 스스로 판단한다.
+  const [tourOpen, setTourOpen] = useState<boolean | undefined>(undefined);
 
   // Quick analysis state
   const [qa, setQa] = useState<QuickAnalysis | null>(null);
+  /** 가격 헤더 스파크라인용 실제 종가 시계열(최근 1개월, yfinance). */
+  const [series, setSeries] = useState<number[]>([]);
   const [qaBusy, setQaBusy] = useState(false);
   const [tradesOpen, setTradesOpen] = useState(false);
 
@@ -380,6 +418,10 @@ export default function StocksPage() {
     try {
       const res = await getQuickAnalysis(symbol);
       setQa(res);
+      // 가격 헤더의 스파크라인용 실제 종가 시계열(최근 1개월). 실패해도 분석 자체는 유효하므로 조용히 무시.
+      getPriceHistory(symbol, "1mo")
+        .then((h: PriceHistory) => setSeries(h.points.map((p) => p.close)))
+        .catch(() => setSeries([]));
     } catch (e) {
       toast(`빠른 분석 실패: ${errMsg(e)}`, "error");
     } finally {
@@ -495,15 +537,31 @@ export default function StocksPage() {
   const m = result?.metrics;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <PageTitle
-        eyebrow="TRADING LAB"
-        title="주식 분석"
-        subtitle="기술적 지표 스냅샷과 AI 다중 시간축 전망, 전략 백테스트로 글로벌 종목을 분석하세요."
+    <main className="mx-auto max-w-[1200px] px-6 py-[72px]">
+      <GuideTour
+        steps={TOUR}
+        storageKey="midas.tour.stocks.v1"
+        open={tourOpen}
+        onClose={() => setTourOpen(undefined)}
       />
+      <div className="flex items-start justify-between gap-4">
+        <PageTitle
+          eyebrow="TRADING LAB"
+          title="주식 분석"
+          subtitle="기술적 지표 스냅샷과 AI 다중 시간축 전망, 전략 백테스트로 글로벌 종목을 분석하세요."
+        />
+        <button
+          type="button"
+          onClick={() => setTourOpen(true)}
+          className="inline-flex shrink-0 items-center gap-2 rounded-[var(--r-pill)] border border-accent/50 bg-accent/12 px-4 py-2 text-xs font-semibold text-accent transition-colors duration-150 hover:border-accent hover:bg-accent/20"
+        >
+          <Compass size={15} weight="bold" />
+          사용 가이드
+        </button>
+      </div>
 
       {/* ── 공통 입력 ──────────────────────────────────────────────── */}
-      <Card className="mb-6">
+      <Card className="mb-6" data-tour="setup">
         <SectionLabel>종목 설정</SectionLabel>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <TickerAutocomplete
@@ -525,36 +583,25 @@ export default function StocksPage() {
             직접 담는 관심종목(아래 WatchlistCard)이 그 자리를 대신한다. */}
       </Card>
 
-      <WatchlistCard
-        userUuid={uid}
-        currentTicker={ticker}
-        onPick={(t) => (activeTab === "quick" ? runQuick(t) : run(t, strategy))}
-      />
+      <div data-tour="watchlist" className="mb-6">
+        <WatchlistCard
+          userUuid={uid}
+          currentTicker={ticker}
+          onPick={(t) => (activeTab === "quick" ? runQuick(t) : run(t, strategy))}
+        />
+      </div>
 
-      {/* ── 탭 선택 (Swiss Sleek Pill Segmented Control) ────────────────────── */}
-      <div className="mb-6 flex gap-1.5 rounded-full border border-line bg-[var(--ink-2)] p-1.5">
-        <button
-          onClick={() => setActiveTab("quick")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-full py-2 text-xs font-mono-spec transition-all duration-200 ${
-            activeTab === "quick"
-              ? "bg-accent/20 text-accent border border-accent/40 shadow-[0_0_12px_rgba(212,175,96,0.18)] font-semibold"
-              : "text-muted hover:text-fg border border-transparent"
-          }`}
-        >
-          <Lightning size={15} />
-          빠른 분석
-        </button>
-        <button
-          onClick={() => setActiveTab("backtest")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-full py-2 text-xs font-mono-spec transition-all duration-200 ${
-            activeTab === "backtest"
-              ? "bg-accent/20 text-accent border border-accent/40 shadow-[0_0_12px_rgba(212,175,96,0.18)] font-semibold"
-              : "text-muted hover:text-fg border border-transparent"
-          }`}
-        >
-          <ChartLineUp size={15} />
-          백테스트
-        </button>
+      {/* ── 탭 선택 ─────────────────────────────────────────────────────── */}
+      <div data-tour="tabs">
+        <SegmentedTabs
+          className="mb-6"
+          tabs={[
+            { id: "quick", label: "빠른 분석", icon: <Lightning size={15} /> },
+            { id: "backtest", label: "백테스트", icon: <ChartLineUp size={15} /> },
+          ]}
+          active={activeTab}
+          onChange={setActiveTab}
+        />
       </div>
 
       {/* ── 빠른 분석 탭 ─────────────────────────────────────────────────── */}
@@ -582,11 +629,14 @@ export default function StocksPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-mono-spec text-xs font-bold uppercase tracking-wider text-accent">{qa.ticker}</span>
-                      <LiveSyncBadge state="live" label="REALTIME" latencyMs={8} />
+                      {/* 실시간 표시는 과장이므로 빼고, 데이터 출처·분석 시점을 정직하게 남긴다 */}
+                      <span className="rounded-full border border-line px-2 py-0.5 font-mono-spec text-[10px] text-muted">
+                        yfinance · {new Date().toLocaleDateString("ko-KR")}
+                      </span>
                     </div>
                     <p className="font-display text-3xl font-bold tracking-tight text-fg">{price(qa.current_price)}</p>
                     <div className="flex items-center gap-2">
-                      <span className={`text-sm font-semibold ${qa.change_pct >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      <span className={`text-sm font-semibold ${qa.change_pct >= 0 ? "text-positive" : "text-negative"}`}>
                         {qa.change_pct >= 0 ? "▲ +" : "▼ "}
                         {pct(qa.change_pct)} 전일 대비
                       </span>
@@ -594,15 +644,22 @@ export default function StocksPage() {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    {/* Mini Sparkline Chart */}
-                    <div className="hidden sm:block">
-                      <MiniSparkline
-                        data={qa.change_pct >= 0 ? [100, 101, 100.5, 102, 101.8, 103] : [103, 102, 102.5, 101, 100]}
-                        color={qa.change_pct >= 0 ? "positive" : "negative"}
-                        width={110}
-                        height={36}
-                      />
-                    </div>
+                    {/* 최근 1개월 종가 스파크라인 (yfinance 실데이터).
+                        색은 오늘 등락이 아니라 이 시계열 자체의 추세를 따른다 — 그래프가
+                        그리는 대상과 색의 근거가 달라지면 읽는 사람이 혼란스럽다. */}
+                    {series.length > 2 && (
+                      <div className="hidden flex-col items-end sm:flex">
+                        <MiniSparkline
+                          data={series}
+                          color={series[series.length - 1] >= series[0] ? "positive" : "negative"}
+                          width={110}
+                          height={36}
+                        />
+                        <span className="mt-0.5 font-mono-spec text-[10px] text-muted">
+                          최근 1개월 종가
+                        </span>
+                      </div>
+                    )}
                     <button
                       onClick={consultQuick}
                       className="rounded-full border border-accent/40 bg-accent/15 px-3.5 py-1.5 text-xs font-mono-spec text-accent hover:bg-accent/25 transition flex items-center gap-1.5"
@@ -614,8 +671,13 @@ export default function StocksPage() {
               </SpecularMetricCard>
 
               {/* Technical indicators */}
-              <Card>
+              <Card data-tour="indicators">
                 <SectionLabel>기술적 지표</SectionLabel>
+                <p className="mb-3 text-xs leading-relaxed text-muted">
+                  <span className="font-semibold text-fg/80">읽는 법</span> · RSI 70 이상 과매수 / 30
+                  이하 과매도 · MACD·MA 추세는 방향 · 볼린저 %B는 밴드 내 위치(0~100%) · 지지선·저항선은
+                  반등/저항을 기대해 볼 가격대. 한 지표보다 방향+위치를 함께 보세요.
+                </p>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <RsiGauge value={qa.rsi.value} signal={qa.rsi.signal} />
                   <IndicatorCard
@@ -686,7 +748,7 @@ export default function StocksPage() {
 
               {/* AI Outlook */}
               {qa.outlook && !qa.outlook.error && (
-                <Card>
+                <Card data-tour="outlook">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <SectionLabel>
@@ -695,6 +757,10 @@ export default function StocksPage() {
                         </span>
                       </SectionLabel>
                       <p className="mt-1 text-sm text-fg/80">{qa.outlook.summary}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted">
+                        네 구간(24시간~1개월)의 목표가와 신뢰도입니다. 신뢰도 보정은 AI 자신감을 과거
+                        적중률로 깎아내린 실측치 — 낮게 나오면 이 전망을 크게 참고하지 않는 게 좋습니다.
+                      </p>
                     </div>
                     <div className="shrink-0 rounded-full border border-line px-3 py-1 text-xs font-medium">
                       {qa.outlook.decision === "BUY"
@@ -722,8 +788,8 @@ export default function StocksPage() {
                       <span
                         className={`font-semibold ${
                           qa.outlook.calibration.calibrated_pct >= qa.outlook.calibration.raw_pct
-                            ? "text-[#58c8a0]"
-                            : "text-[#e2607b]"
+                            ? "text-positive"
+                            : "text-negative"
                         }`}
                       >
                         실측 {qa.outlook.calibration.calibrated_pct}%
@@ -748,11 +814,11 @@ export default function StocksPage() {
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       {qa.outlook.key_reasons?.length > 0 && (
                         <div>
-                          <p className="mb-1.5 text-xs font-medium text-[#58c8a0]">핵심 근거</p>
+                          <p className="mb-1.5 text-xs font-medium text-positive">핵심 근거</p>
                           <ul className="space-y-1 text-xs text-fg/80">
                             {qa.outlook.key_reasons.map((r, i) => (
                               <li key={i} className="flex gap-1.5">
-                                <span className="mt-0.5 text-[#58c8a0]">•</span>
+                                <span className="mt-0.5 text-positive">•</span>
                                 {r}
                               </li>
                             ))}
@@ -761,11 +827,11 @@ export default function StocksPage() {
                       )}
                       {qa.outlook.risks?.length > 0 && (
                         <div>
-                          <p className="mb-1.5 text-xs font-medium text-[#e2607b]">리스크 요인</p>
+                          <p className="mb-1.5 text-xs font-medium text-negative">리스크 요인</p>
                           <ul className="space-y-1 text-xs text-fg/80">
                             {qa.outlook.risks.map((r, i) => (
                               <li key={i} className="flex gap-1.5">
-                                <span className="mt-0.5 text-[#e2607b]">•</span>
+                                <span className="mt-0.5 text-negative">•</span>
                                 {r}
                               </li>
                             ))}
@@ -792,9 +858,9 @@ export default function StocksPage() {
                     {qa.similar_patterns.map((p) => {
                       const decColor =
                         p.decision === "BUY"
-                          ? "text-[#58c8a0]"
+                          ? "text-positive"
                           : p.decision === "SELL"
-                            ? "text-[#e2607b]"
+                            ? "text-negative"
                             : "text-muted";
                       const decKo = p.decision === "BUY" ? "매수" : p.decision === "SELL" ? "매도" : "보유";
                       return (
@@ -811,8 +877,8 @@ export default function StocksPage() {
                                 <span
                                   className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
                                     p.was_correct
-                                      ? "bg-[#58c8a0]/10 text-[#58c8a0]"
-                                      : "bg-[#e2607b]/10 text-[#e2607b]"
+                                      ? "bg-positive/10 text-positive"
+                                      : "bg-negative/10 text-negative"
                                   }`}
                                 >
                                   {p.was_correct ? "적중" : "빗나감"}
@@ -846,6 +912,11 @@ export default function StocksPage() {
           {/* Strategy + period controls */}
           <Card>
             <SectionLabel>백테스트 설정</SectionLabel>
+            <p className="mb-3 text-xs leading-relaxed text-muted">
+              <span className="font-semibold text-fg/80">백테스트란?</span> 선택한 전략(예: 골든크로스,
+              RSI 역추세)을 과거 가격 데이터에 그대로 적용해, 실제로 얼마나 수익이 났을지 검증하는
+              시뮬레이션입니다. 수익률과 함께 최대낙폭(MDD)·승률을 꼭 함께 보세요.
+            </p>
             <div className="flex flex-wrap gap-3">
               <label className="flex flex-col gap-1.5 sm:w-56">
                 <span className="text-xs text-muted">전략</span>
@@ -966,7 +1037,7 @@ export default function StocksPage() {
                     <span className="text-xs">
                       수익률{" "}
                       <span
-                        className={`font-semibold ${gridResult.best_return >= 0 ? "text-[#58c8a0]" : "text-[#e2607b]"}`}
+                        className={`font-semibold ${gridResult.best_return >= 0 ? "text-positive" : "text-negative"}`}
                       >
                         {pct(gridResult.best_return)}
                       </span>{" "}
@@ -1108,7 +1179,7 @@ export default function StocksPage() {
                               <td className="py-1.5 pr-4 text-right font-mono">{price(t.entry_price)}</td>
                               <td className="py-1.5 pr-4 text-right font-mono">{price(t.exit_price)}</td>
                               <td
-                                className={`py-1.5 pr-4 text-right font-mono font-medium ${t.pnl_pct >= 0 ? "text-[#58c8a0]" : "text-[#e2607b]"}`}
+                                className={`py-1.5 pr-4 text-right font-mono font-medium ${t.pnl_pct >= 0 ? "text-positive" : "text-negative"}`}
                               >
                                 {t.pnl_pct >= 0 ? "+" : ""}
                                 {pct(t.pnl_pct)}

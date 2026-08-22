@@ -1,16 +1,20 @@
 @import "tailwindcss";
 
 /* ────────────────────────────────────────────────
-   디자인 토큰 — docs/DESIGN-revolut.md 적용
-   두 모드 캔버스: 흰 카탈로그(기본, 데이터 화면) ↔ 진짜 검정 스토리텔링 밴드.
-   문서와 다른 점 하나 — 브랜드 어센트는 코발트 바이올렛 대신 골드를 유지한다.
-   서비스명이 Midas Touch라 코발트로 갈면 이름과 색이 따로 논다.
-   나머지(캔버스 이원화·pill 버튼·20px 카드·헤어라인·그림자 없음)는 문서를 따른다.
+   디자인 토큰 — "Bullion Terminal"
+   근거: docs 내 리서치(Linear/Vercel/Mercury 벤치마크) + 코드베이스 감사.
+   이 앱의 실체는 데이터 콘솔(가점표·백테스트·시뮬레이터·그래프)이므로
+   근흑색 콘솔 캔버스를 주력으로 하고, 골드(#D4AF37)는 Midas 정체성을
+   "달성·목표·주 CTA" 신호로만 찍는다. 시맨틱 색(상승/하락/경고)은
+   골드와 분리해 별도 토큰으로만 쓴다.
 
-   문서 원칙 중 특히 지킨 것:
-   - 그림자 언어 없음. 깊이는 캔버스 전환과 표면 명도 차이로만 만든다.
-   - 다크 표면 사다리는 두 칸뿐(#000000 → #0a0a0a → #16181a).
-   - 본문은 Inter 400/600, 디스플레이는 500 + 큰 음수 자간.
+   라이트 모드는 보조 크림 원장(Mercury 계열)으로 같은 토큰 이름을 유지 —
+   토큰 값 교체만으로 전환되게 한다.
+
+   원칙:
+   - 깊이는 그림자가 아니라 표면 명도 사다리(canvas→card→hover)로 만든다.
+   - radius: 버튼·입력 6px / 카드 8px / 패널·모달 12px / 배지 pill.
+   - 숫자는 항상 tabular-nums, 표에서 우측 정렬.
    ──────────────────────────────────────────────── */
 @theme inline {
   --color-ink: var(--ink);
@@ -25,19 +29,23 @@
   --color-gilt-soft: var(--gilt-soft);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
-  --font-sans: var(--font-inter), system-ui, sans-serif;
-  --font-display: var(--font-inter), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), "JetBrains Mono", monospace;
+  --color-warning: var(--warning);
+  --font-sans: var(--font-inter), "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  --font-display: var(--font-inter), "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Tailwind 원시 radius 클래스를 스케일에 맞춘다 — 페이지마다 흩어진
+     rounded-xl/2xl 카드가 자동으로 패널 규격(12px)에 수렴한다. */
+  --radius-2xl: 12px;
 }
 
 :root {
-  /* rounded 스케일 — 문서 §Shapes */
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 20px;
-  --r-xl: 28px;
+  /* radius 스케일 — 버튼·입력 6 / 카드 8 / 패널·모달 12 / 배지 pill */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
   --r-pill: 9999px;
-  /* spacing — 문서 §Layout. 밴드 리듬을 만드는 값이라 토큰으로 둔다 */
+  /* 세로 리듬 — 데이터 화면 72px, 랜딩 밴드 104~120px */
   --s-block: 80px;
   --s-section: 88px;
   --s-band: 120px;
@@ -45,48 +53,26 @@
   --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ── 흰 카탈로그 모드 (기본) ── */
-html.light {
-  --ink: #ffffff;
-  --ink-1: #ffffff;
-  --ink-2: #f4f4f4;
-  --surface: #f4f4f4;
-  --line: #e2e2e7;
-  --line-subtle: rgba(25, 28, 31, 0.08);
-  --fg: #191c1f;
-  --muted: #505a63;
-  --stone: #8d969e;
-  --accent: #92701a;
-  --accent-soft: #b08a26;
-  --gilt: var(--accent);
-  --gilt-soft: var(--accent-soft);
-  --positive: #006400;
-  --negative: #8b0000;
-  --glow: transparent;
-  --specular: transparent;
-  /* 문서 §Elevation: 드롭섀도 없음. 남겨두되 값은 비운다(기존 참조가 깨지지 않게). */
-  --shadow-soft: none;
-  --shadow-float: none;
-  color-scheme: light;
-}
-
-/* ── 검정 스토리텔링 모드 ── */
+/* ── 다크 콘솔 (기본) — Bullion Terminal
+   순흑 대신 근흑(#101116)을 쓴다 — 장시간 상주하는 콘솔이라 완전 검정은
+   진동·피로를 부른다. 카드는 캔버스보다 두 단 위로 떠서 깊이를 만든다. */
 html.dark {
-  --ink: #000000;
-  --ink-1: #0a0a0a;
-  --ink-2: #16181a;
-  --surface: #16181a;
-  --line: rgba(255, 255, 255, 0.12);
+  --ink: #101116;            /* 캔버스 base */
+  --ink-2: #17181e;          /* 인셋·입력 배경 */
+  --ink-1: #1d1f26;          /* 카드 표면 */
+  --surface: #262933;        /* hover/inset lift */
+  --line: #32353f;           /* 헤어라인 */
   --line-subtle: rgba(255, 255, 255, 0.06);
-  --fg: #ffffff;
-  --muted: rgba(255, 255, 255, 0.72);
-  --stone: #8d969e;
-  --accent: #d4af37;
-  --accent-soft: #e8c86b;
+  --fg: #e8e9ec;
+  --muted: #8b8f99;
+  --stone: #6f737d;
+  --accent: #d4af37;         /* 골드 — 목표·달성·주 CTA 전용 */
+  --accent-soft: #e3c25c;
   --gilt: var(--accent);
   --gilt-soft: var(--accent-soft);
-  --positive: #00a87e;
-  --negative: #e23b4a;
+  --positive: #3fb68b;
+  --negative: #e5484d;
+  --warning: #e08a3c;
   --glow: transparent;
   --specular: transparent;
   --shadow-soft: none;
@@ -94,10 +80,32 @@ html.dark {
   color-scheme: dark;
 }
 
-/* 배경은 반드시 html이 소유한다.
-   음수 z-index인 앰비언트 Aurora 캔버스는 페인팅 순서상 body의 배경보다 먼저
-   그려지므로, body가 불투명 배경을 가지면 캔버스를 덮어버린다.
-   루트 스택 컨텍스트(html)의 배경 위에 캔버스가 올라오도록 여기에 둔다. */
+/* ── 라이트 크림 원장 (보조) ── */
+html.light {
+  --ink: #faf7f0;            /* 웜 크림 캔버스 */
+  --ink-2: #f7f4ed;          /* 인셋·입력 배경 */
+  --ink-1: #ffffff;          /* 카드 표면 */
+  --surface: #f2eee5;        /* hover/subtle */
+  --line: #e3ded2;
+  --line-subtle: rgba(38, 36, 31, 0.07);
+  --fg: #26241f;
+  --muted: #6e6a5e;
+  --stone: #8a857a;
+  --accent: #a67c00;         /* 다크 골드 — 크림 위 대비 확보용 */
+  --accent-soft: #8f6900;
+  --gilt: var(--accent);
+  --gilt-soft: var(--accent-soft);
+  --positive: #1f6f54;
+  --negative: #b33830;
+  --warning: #9a6a1f;
+  --glow: transparent;
+  --specular: transparent;
+  --shadow-soft: none;
+  --shadow-float: none;
+  color-scheme: light;
+}
+
+/* 배경은 반드시 html이 소유한다 (음수 z-index 캔버스 페인팅 순서 보호). */
 html {
   background: var(--ink);
 }
@@ -108,19 +116,18 @@ body {
   background: transparent;
   min-height: 100dvh;
   position: relative;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* 그레인 오버레이는 제거했다 — 문서엔 질감 레이어가 없고, 흰 캔버스에서는
-   먼지처럼 보여 카탈로그 모드의 깔끔함을 깎아먹는다. */
-
-/* Clean Static Financial Numerical Typography */
-/* 디스플레이 — 문서 §Typography: weight 500, lineHeight 1.0, 큰 음수 자간.
-   Aeonik Pro 를 못 쓰므로 문서가 지정한 대체 경로(Inter + -1% 자간)를 따른다. */
+/* 디스플레이 타이포 — weight 500 · lineHeight 1.0 · 음수 자간.
+   콘솔 제목은 과하지 않게: clamp 상한을 낮게 유지한다. */
 .font-display {
   font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 500;
-  line-height: 1.0;
-  letter-spacing: -0.03em;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
 }
 
 .font-mono-spec {
@@ -129,7 +136,7 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* 아이브로우 태그 — 에디토리얼 모노 캡션 */
+/* 아이브로우 태그 — 모노 캡션 */
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -137,81 +144,44 @@ body {
   border-radius: var(--r-pill);
   border: 1px solid var(--line);
   background: transparent;
-  padding: 0.3rem 0.8rem;
-  font-size: 12px;
+  padding: 0.25rem 0.7rem;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-/* 에디토리얼 골드 그라디언트 텍스트 */
-/* 문서엔 그라디언트 타이포가 없다 — 단색 어센트로 내린다.
-   클래스명은 쓰는 곳이 있어 유지. */
-.text-gradient-accent {
-  color: var(--accent);
-}
-
-/* 콘텐츠 카드 — 문서 §Elevation. 그림자 없이 헤어라인과 표면 명도로만 층을 만든다.
-   클래스명은 .glass 그대로 둔다(27개 파일이 쓰고 있음). 유리 효과는 이제 없다. */
+/* 콘텐츠 카드 — 헤어라인 + 표면 명도로만 층을 만든다.
+   클래스명은 .glass 그대로 둔다(다수 파일이 쓰고 있음). 유리 효과는 없다. */
 .glass {
   position: relative;
   background: var(--ink-1);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-md);
 }
 
-/* 검정 밴드 — 흰 캔버스 사이에 끼워 넣는 스토리텔링 구간(문서 §Overview).
-   전체 폭으로 깔리도록 좌우를 뷰포트까지 늘린다. */
-.band-dark {
-  background: #000000;
-  color: #ffffff;
-  /* --ink 까지 뒤집어야 한다. .btn-accent 가 배경 var(--fg) · 글자 var(--ink) 라
-     이걸 빠뜨리면 검정 밴드에서 흰 pill 에 흰 글씨가 되어 사라진다. */
-  --ink: #000000;
-  --fg: #ffffff;
-  --muted: rgba(255, 255, 255, 0.72);
-  --line: rgba(255, 255, 255, 0.12);
-  --ink-1: #0a0a0a;
-  --ink-2: #16181a;
-  --surface: #16181a;
-  --accent: #d4af37;
-  --accent-soft: #e8c86b;
-}
-
-/* 버튼 — 문서 §Components. 전부 pill(9999px), 최소 높이 48px, 그림자 없음.
-   .btn-gilt 가 주 CTA(골드 채움), .btn-accent 는 그 아래 단계, .btn-ghost 는 외곽선. */
+/* 버튼 — 6px 라운드(터미널 규격), 최소 높이 48px, 그림자 없음.
+   .btn-accent 가 주 CTA(캔버스 반전), .btn-ghost 는 외곽선.
+   배지·탭은 pill을 유지한다. */
 .btn-accent,
-.btn-gilt,
 .btn-ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   min-height: 48px;
-  padding: 0.875rem 1.75rem;
-  /* 라벨 없는 아이콘 버튼은 이 규격을 벗어나야 한다 — 아래 .btn-icon 을 함께 쓴다. */
-  border-radius: var(--r-pill);
+  padding: 0.75rem 1.5rem;
+  /* 라벨 없는 아이콘 버튼은 이 규격을 벗어나야 한다 — .btn-icon 을 함께 쓴다. */
+  border-radius: var(--r-sm);
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.015em;
+  letter-spacing: 0.01em;
   transition:
-    background 0.18s var(--ease-soft),
-    border-color 0.18s ease,
-    color 0.18s ease,
-    opacity 0.18s ease;
-}
-
-.btn-gilt {
-  background: var(--accent);
-  color: #ffffff;
-  border: 1px solid var(--accent);
-}
-.btn-gilt:hover:not(:disabled) {
-  background: var(--accent-soft);
-  border-color: var(--accent-soft);
-}
-.btn-gilt:disabled {
-  opacity: 0.4;
+    background 0.15s var(--ease-soft),
+    border-color 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .btn-accent {
@@ -232,44 +202,44 @@ body {
   border: 1px solid var(--line);
 }
 .btn-ghost:hover:not(:disabled) {
-  border-color: var(--fg);
+  border-color: var(--muted);
+  background: var(--surface);
 }
 .btn-ghost:disabled {
   opacity: 0.4;
 }
 
-/* 아이콘 정사각 버튼 — 테마 토글·햄버거처럼 라벨이 없는 것들.
-   pill 규격(48px 높이 + 28px 좌우 패딩)을 그대로 먹으면 빈 원처럼 커진다. */
+/* 아이콘 정사각 버튼 — 라벨 없는 것들 전용. */
 .btn-icon {
   min-height: 0;
   padding: 0;
   width: 40px;
   height: 40px;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-sm);
 }
 
-/* 입력 필드 — 스위스 정밀 테두리 */
+/* 입력 필드 — 인셋 표면 + 헤어라인, 포커스는 골드 테두리 한 단. */
 .field {
   background: var(--ink-2);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  min-height: 56px;
+  border-radius: var(--r-sm);
+  min-height: 44px;
   color: var(--fg);
   font-family: var(--font-sans);
   outline: none;
   transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s var(--ease-soft);
+    border-color 0.15s ease,
+    box-shadow 0.15s var(--ease-soft);
 }
 .field::placeholder {
-  color: var(--muted);
+  color: var(--stone);
 }
 .field:focus {
-  border-color: var(--fg);
+  border-color: var(--accent);
   box-shadow: none;
 }
 
-/* 스켈레톤 시머 */
+/* 스켈레톤 시머 — 중립 표면 명도로만 깜빡인다(골드 발광 금지). */
 .skeleton {
   position: relative;
   overflow: hidden;
@@ -281,12 +251,13 @@ body {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
+  /* 전경색 기반 — 다크에선 밝게, 라이트 크림에서는 어둡게 지나간다. */
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--accent) 28%, transparent),
-    color-mix(in srgb, #fff6d5 18%, transparent),
-    color-mix(in srgb, var(--accent) 28%, transparent),
+    color-mix(in srgb, var(--fg) 5%, transparent),
+    color-mix(in srgb, var(--fg) 9%, transparent),
+    color-mix(in srgb, var(--fg) 5%, transparent),
     transparent
   );
   animation: shimmer 1.6s infinite;
@@ -337,21 +308,21 @@ body {
   border-radius: 4px;
 }
 .scroll-thin::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--stone);
 }
 
-/* 카드 호버 — 문서엔 그림자 언어가 없으므로 표면 명도와 테두리로만 반응한다. */
+/* 카드 호버 — 그림자 없이 표면 명도와 테두리로만 반응한다. */
 .lift {
   transition:
-    background 0.2s var(--ease-soft),
-    border-color 0.2s ease;
+    background 0.15s var(--ease-soft),
+    border-color 0.15s ease;
 }
 .lift:hover {
   background: var(--surface);
-  border-color: var(--fg);
+  border-color: var(--muted);
 }
 
-/* 스트리밍 응답 깜빡이는 커서 (이모지/블록문자 대체) */
+/* 스트리밍 응답 커서 */
 .caret {
   display: inline-block;
   width: 0.5ch;
@@ -367,105 +338,19 @@ body {
   }
 }
 
-/* Swiss Editorial & recent.design Utilities */
+/* 유틸리티 */
 .border-line-50 {
   border-color: color-mix(in srgb, var(--line) 50%, transparent);
 }
 
-.pill-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.35rem 0.85rem;
-  border-radius: var(--r-pill);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1px solid transparent;
-}
-.pill-tab-active {
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  font-weight: 600;
-}
-.pill-tab-inactive {
-  color: var(--muted);
-}
-.pill-tab-inactive:hover {
-  color: var(--fg);
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
-  border-color: color-mix(in srgb, var(--line) 40%, transparent);
+/* 캔버스에서 반 단 위 떠 있는 표면 — 히어로 밴드처럼 섹션에 미묘한 구분감을 줄 때.
+   전경색을 섞는 방식이라 하드코딩 없이 양쪽 테마 모두에서 자동으로 맞물린다
+   (라이트: 크림이 살짝 깊어짐 / 다크: 캔버스보다 살짝 떠 보임). */
+.surface-raised {
+  background: color-mix(in srgb, var(--fg) 4.5%, var(--ink));
 }
 
-.status-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375em;
-  padding: 0.15rem 0.5rem;
-  border-radius: var(--r-pill);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  border: 1px solid var(--line-subtle);
-}
-.status-indicator-positive {
-  background: color-mix(in srgb, var(--positive) 12%, transparent);
-  color: var(--positive);
-  border-color: color-mix(in srgb, var(--positive) 30%, transparent);
-}
-.status-indicator-negative {
-  background: color-mix(in srgb, var(--negative) 12%, transparent);
-  color: var(--negative);
-  border-color: color-mix(in srgb, var(--negative) 30%, transparent);
-}
-.status-indicator-gold {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-}
-
-/* recent.design Popular Sort Aesthetic Utilities */
-.popular-glow {
-  position: relative;
-}
-.popular-glow::after {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 60%, transparent), transparent 60%, color-mix(in srgb, var(--accent) 30%, transparent));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  opacity: 0.6;
-  transition: opacity 0.3s ease;
-}
-.popular-glow:hover::after {
-  opacity: 1;
-}
-
-.popular-pill {
-  border-radius: var(--r-pill);
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-weight: 600;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.popular-pill:hover {
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
-  border-color: var(--accent);
-  transform: translateY(-1px);
-}
-
-/* prefers-reduced-motion: 모든 모션 제거 (skill 6.B 필수) */
+/* prefers-reduced-motion: 모든 모션 제거 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

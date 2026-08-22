@@ -14,9 +14,10 @@ import { clientId, loadProfile, profileSummary } from "@/lib/my-profile";
 import { totalCheongyakScore } from "@/lib/cheongyak-score";
 import { useToast } from "@/lib/toast";
 import { consumeChatSeed } from "@/lib/chat-seed";
-import { Card, PageTitle, Spinner } from "@/components/ui";
+import { Card, Spinner } from "@/components/ui";
 import { Markdown } from "@/components/Markdown";
 import KnowledgePanel from "./KnowledgePanel";
+import SegmentedTabs from "@/components/SegmentedTabs";
 
 interface Msg {
   role: "user" | "assistant";
@@ -35,7 +36,10 @@ export default function ChatPage() {
   const [busy, setBusy] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [tab, setTab] = useState<"chats" | "kb">("chats");
-  const endRef = useRef<HTMLDivElement>(null);
+  /** 메시지 스크롤 박스. 스트리밍 중 자동 하단 추적에 쓴다. */
+  const scrollBoxRef = useRef<HTMLDivElement>(null);
+  /** 유저가 위로 올려 과거를 읽고 있으면 자동 추적을 멈춘다(맨 아래 근처일 때만 붙는다). */
+  const stickRef = useRef(true);
   const inputRef = useRef<HTMLInputElement>(null);
   const initedFor = useRef<string | null>(null);
   const seedRef = useRef<string | null>(null);
@@ -74,9 +78,11 @@ export default function ChatPage() {
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [uid, refreshSessions, startNewChat]);
 
+  // 메시지 변화(스트리밍 토큰 포함)마다, 유저가 맨 아래 근처에 붙어 있을 때만 바닥으로 붙인다.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, busy]);
+    const el = scrollBoxRef.current;
+    if (el && stickRef.current) el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   // 분석 페이지에서 넘어온 상담 seed를 1회 소비(마운트 시).
   useEffect(() => {
@@ -95,6 +101,7 @@ export default function ChatPage() {
   const openSession = async (s: ChatSessionMeta) => {
     setCurrentId(s.session_id);
     setLoadingHistory(true);
+    stickRef.current = true;
     try {
       const res = await apiGet<{ messages: Msg[] }>(
         `/api/v1/chat/history/${encodeURIComponent(s.session_id)}`,
@@ -126,6 +133,7 @@ export default function ChatPage() {
     if (!input.trim() || !uid || !currentId || busy) return;
     const text = input.trim();
     setInput("");
+    stickRef.current = true; // 내가 보낸 메시지라면 자동 추적 재개
     setMessages((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
     setBusy(true);
     try {
@@ -164,30 +172,34 @@ export default function ChatPage() {
     s ? new Date(s).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }) : "";
 
   return (
-    <div className="mx-auto max-w-[1200px] px-6 py-[72px]">
-      <PageTitle eyebrow="AI Advisor" title="에이전트 챗봇" subtitle="MidasAdviser · 멀티턴 · 실시간 스트리밍" />
-      <div className="flex gap-4">
+    /* 앱형 레이아웃 — NavBar(64px)를 뺀 나머지 뷰포트를 채운다. 페이지 스크롤 없음,
+       스크롤은 메시지 영역과 사이드바 목록이 각자 소유한다. */
+    <div className="mx-auto flex h-[calc(100dvh-4rem)] max-w-[1200px] flex-col px-6 pb-5 pt-5">
+      <header className="mb-4 flex items-baseline gap-3">
+        <h1 className="font-display text-xl text-fg">에이전트 챗봇</h1>
+        <span className="eyebrow">AI Advisor</span>
+        <span className="hidden font-mono-spec text-[10px] uppercase tracking-widest text-muted sm:inline">
+          MidasAdviser · 멀티턴 · 실시간 스트리밍
+        </span>
+      </header>
+      <div className="flex min-h-0 flex-1 gap-4">
         {/* 좌측 사이드바: 대화 목록 / 지식베이스 탭 */}
-        <aside className="w-64 shrink-0">
-          {/* 사이드바 탭 (Swiss Sleek Pill Segmented Control) */}
-          <div className="mb-4 flex gap-1 rounded-full border border-line bg-[var(--ink-2)] p-1">
-            {(["chats", "kb"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`flex-1 rounded-full px-3 py-1.5 text-xs font-mono-spec transition-all duration-200 ${
-                  tab === t
-                    ? "bg-accent/20 text-accent border border-accent/40 font-semibold shadow-[0_0_10px_rgba(212,175,96,0.16)]"
-                    : "text-muted hover:text-fg border border-transparent"
-                }`}
-              >
-                {t === "chats" ? "대화" : "지식베이스"}
-              </button>
-            ))}
-          </div>
+        <aside className="flex w-64 min-h-0 shrink-0 flex-col">
+          {/* 사이드바 탭 */}
+          <SegmentedTabs
+            className="mb-4"
+            tabs={[
+              { id: "chats", label: "대화" },
+              { id: "kb", label: "지식베이스" },
+            ]}
+            active={tab}
+            onChange={setTab}
+          />
 
           {tab === "kb" ? (
-            <KnowledgePanel />
+            <div className="scroll-thin min-h-0 flex-1 overflow-y-auto pr-1">
+              <KnowledgePanel />
+            </div>
           ) : (
             <>
               <button
@@ -197,7 +209,7 @@ export default function ChatPage() {
               >
                 <Plus weight="bold" size={16} />새 대화
               </button>
-              <div className="space-y-1">
+              <div className="scroll-thin min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
                 {sessions.length === 0 && (
                   <p className="px-2 text-xs text-muted">대화 기록이 없습니다.</p>
                 )}
@@ -238,14 +250,23 @@ export default function ChatPage() {
         </aside>
 
         {/* 대화 영역 */}
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col">
           {!currentId ? (
             <Card className="text-center text-muted">
               왼쪽에서 대화를 선택하거나 <b className="text-accent">+ 새 대화</b>를 시작하세요.
             </Card>
           ) : (
-            <Card className="flex h-[60vh] flex-col p-0">
-              <div className="scroll-thin flex-1 space-y-4 overflow-auto p-5">
+            <Card className="flex min-h-0 flex-1 flex-col p-0">
+              <div
+                ref={scrollBoxRef}
+                onScroll={() => {
+                  const el = scrollBoxRef.current;
+                  if (!el) return;
+                  stickRef.current =
+                    el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+                }}
+                className="scroll-thin min-h-0 flex-1 space-y-4 overflow-y-auto p-5"
+              >
                 {loadingHistory && (
                   <p className="text-center text-sm text-muted">기록 불러오는 중…</p>
                 )}
@@ -311,7 +332,6 @@ export default function ChatPage() {
                     </div>
                   </div>
                 ))}
-                <div ref={endRef} />
               </div>
               <div className="flex gap-2 border-t border-line p-3">
                 <input

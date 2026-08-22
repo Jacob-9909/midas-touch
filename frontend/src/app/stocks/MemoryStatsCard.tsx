@@ -173,7 +173,7 @@ function Tile({
   sub?: string;
   tone?: "up" | "down";
 }) {
-  const color = tone === "up" ? "text-[#58c8a0]" : tone === "down" ? "text-[#e2607b]" : "text-fg";
+  const color = tone === "up" ? "text-positive" : tone === "down" ? "text-negative" : "text-fg";
   return (
     <div className="rounded-2xl border border-line bg-[var(--ink-2)]/40 px-4 py-3">
       <div className="text-xs uppercase tracking-wider text-muted">{label}</div>

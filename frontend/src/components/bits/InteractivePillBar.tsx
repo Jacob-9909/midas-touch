@@ -24,7 +24,7 @@ export default function InteractivePillBar({
   className = "",
 }: InteractivePillBarProps) {
   return (
-    <div className={`flex flex-wrap items-center gap-2 rounded-2xl border border-line-50 bg-[#090d16]/80 p-1.5 backdrop-blur-md ${className}`}>
+    <div className={`flex flex-wrap items-center gap-2 rounded-[var(--r-md)] border border-line-50 bg-[var(--ink-2)] p-1.5 ${className}`}>
       {items.map((item) => {
         const isActive = item.id === activeId;
         return (
@@ -33,7 +33,7 @@ export default function InteractivePillBar({
               onClick={() => onChange(item.id)}
               className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-xs font-mono-spec transition-all duration-200 ${
                 isActive
-                  ? "bg-accent/20 text-accent font-semibold border border-accent/50 shadow-[0_0_14px_rgba(212,175,96,0.25)]"
+                  ? "bg-accent/20 text-accent font-semibold border border-accent/50"
                   : "text-muted hover:text-fg hover:bg-surface/80 border border-transparent"
               }`}
             >
@@ -48,7 +48,7 @@ export default function InteractivePillBar({
 
             {/* Rich Hover Explanation Tooltip */}
             {item.tooltip && (
-              <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 opacity-0 transition-all duration-200 group-hover:opacity-100 z-50 w-48 rounded-lg border border-line-50 bg-[#0c1220]/95 p-2 text-center text-[11px] text-muted shadow-lg backdrop-blur-md">
+              <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 opacity-0 transition-all duration-200 group-hover:opacity-100 z-50 w-48 rounded-lg border border-line-50 bg-[var(--ink-2)] p-2 text-center text-[11px] text-muted">
                 {item.tooltip}
               </div>
             )}

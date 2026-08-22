@@ -10,7 +10,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { hasSavedProfile } from "@/lib/my-profile";
 
-export default function ProfileNudge({ className = "" }: { className?: string }) {
+export default function ProfileNudge({
+  className = "",
+  ...rest
+}: { className?: string } & React.ComponentPropsWithoutRef<"a">) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -23,9 +26,10 @@ export default function ProfileNudge({ className = "" }: { className?: string })
   return (
     <Link
       href="/me"
-      className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm transition hover:bg-accent/15 ${className}`}
+      className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[var(--r-md)] border border-accent/40 bg-accent/10 px-4 py-3 text-sm transition hover:bg-accent/15 ${className}`}
+      {...rest}
     >
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-[#0b0f19]">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-[var(--ink)]">
         1
       </span>
       <span className="font-semibold text-accent">내 정보를 먼저 입력하세요</span>

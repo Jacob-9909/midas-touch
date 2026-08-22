@@ -379,6 +379,21 @@ export function getQuickAnalysis(ticker: string): Promise<QuickAnalysis> {
   return apiGet(`/api/v1/stocks/quick-analysis?ticker=${encodeURIComponent(ticker)}`, 60000);
 }
 
+export interface PriceHistory {
+  ticker: string;
+  period: string;
+  points: { date: string; close: number }[];
+  changePct: number;
+}
+
+/** 종가 시계열 (yfinance 실데이터). 스파크라인 등 미니 차트용. */
+export function getPriceHistory(ticker: string, period = "1mo"): Promise<PriceHistory> {
+  return apiGet(
+    `/api/v1/stocks/price-history?ticker=${encodeURIComponent(ticker)}&period=${period}`,
+    15000,
+  );
+}
+
 export function runBacktest(body: BacktestRequest): Promise<BacktestResult> {
   return apiPost("/api/v1/stocks/backtest", body);
 }

@@ -272,12 +272,12 @@ export default function SimulatorPage() {
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <ReferenceLine
                   y={targetAmount}
-                  stroke="#c7a349"
+                  stroke="var(--accent)"
                   strokeDasharray="4 4"
-                  label={{ value: "목표", position: "insideTopRight", fill: "#c7a349", fontSize: 11 }}
+                  label={{ value: "목표", position: "insideTopRight", fill: "var(--accent)", fontSize: 11 }}
                 />
-                <Line type="monotone" dataKey="a" name={labelA} stroke="#8a6a1c" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="b" name={labelB} stroke="#58c8a0" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="a" name={labelA} stroke="var(--accent)" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="b" name={labelB} stroke="var(--positive)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
             <p className="mt-3 text-[11px] leading-relaxed text-muted">

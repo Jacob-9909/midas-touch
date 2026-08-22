@@ -15,6 +15,12 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
 const NODE_COLOR = "#c7a349";
 const NODE_HI = "#ffffff";
 
+// canvas fillStyle 은 var() 를 파싱하지 못하므로 렌더 시점에 토큰 값을 실측해 치환한다.
+function tokenColor(varName: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || fallback;
+}
+
 export default function GraphView({
   data,
   highlight = [],
@@ -26,6 +32,10 @@ export default function GraphView({
   const [width, setWidth] = useState(800);
   const [selected, setSelected] = useState<GraphNode | null>(null);
   const hi = useMemo(() => new Set(highlight), [highlight]);
+  // 표면/헤어라인은 --ink-1/--line, 강조(하이라이트 노드)만 --accent.
+  const accentColor = tokenColor("--accent", NODE_COLOR);
+  const surfaceColor = tokenColor("--ink-1", NODE_HI);
+  const lineColor = tokenColor("--line", "#2a2d35");
 
   const nodeById = useMemo(() => {
     const m = new Map<string, GraphNode>();
@@ -56,13 +66,13 @@ export default function GraphView({
           // 기본 렌더(커스텀 캔버스 X)라 정지 후 재페인트가 없어 가볍다.
           nodeRelSize={4}
           nodeColor={(n: NodeObject) =>
-            hi.has(String(n.id)) ? NODE_HI : NODE_COLOR
+            hi.has(String(n.id)) ? surfaceColor : accentColor
           }
           nodeVal={(n: NodeObject) => (hi.has(String(n.id)) ? 3 : 1)}
           nodeLabel={(n: NodeObject) =>
             `${n.id} (${(n as { group?: string }).group ?? ""})`
           }
-          linkColor={() => "rgba(255,255,255,0.15)"}
+          linkColor={() => lineColor}
           linkDirectionalArrowLength={3}
           linkDirectionalArrowRelPos={1}
           // 관계명은 hover 툴팁으로만(매 프레임 캔버스 렌더 제거).
@@ -73,7 +83,7 @@ export default function GraphView({
         />
 
         {selected && (
-          <div className="absolute right-3 top-3 max-h-[480px] w-64 overflow-auto rounded-lg border border-line bg-[var(--ink-1)]/95 p-3 text-xs shadow-lg backdrop-blur">
+          <div className="absolute right-3 top-3 max-h-[480px] w-64 overflow-auto rounded-lg border border-line bg-[var(--ink-1)] p-3 text-xs">
             <div className="mb-2 flex items-start justify-between gap-2">
               <span className="text-[10px] uppercase tracking-wider text-muted">
                 {selected.group}

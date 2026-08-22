@@ -277,8 +277,8 @@ export default function MyProfilePage() {
             <div
               className={`rounded-xl border px-3 py-2 text-sm ${
                 unmet.length === 0
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                  : "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                  ? "border-positive/30 bg-positive/10 text-positive"
+                  : "border-warning/30 bg-warning/10 text-warning"
               }`}
             >
               {unmet.length === 0
@@ -289,7 +289,7 @@ export default function MyProfilePage() {
             <ul className="space-y-2">
               {checks.map((c) => (
                 <li key={c.label} className="flex gap-2 text-xs">
-                  <span className={c.ok ? "text-emerald-400" : "text-amber-400"}>
+                  <span className={c.ok ? "text-positive" : "text-warning"}>
                     {c.ok ? "✓" : "✕"}
                   </span>
                   <span className="min-w-0">

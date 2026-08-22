@@ -15,7 +15,7 @@ export function Card({
 } & Omit<ComponentPropsWithoutRef<"div">, "className" | "children">) {
   const variantStyles = {
     editorial: "glass border-line-50 shadow-soft",
-    glass: "glass border-line/60 shadow-md",
+    glass: "glass border-line/60",
     subtle: "bg-surface/30 border border-line/40 rounded-xl",
     interactive: "glass border-line-50 lift cursor-pointer",
   };
@@ -53,26 +53,10 @@ export function PageTitle({
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <h2 className="mb-3 font-mono-spec text-[10px] font-semibold uppercase tracking-[0.25em] text-accent flex items-center gap-2">
-      <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_6px_var(--accent)]" />
+      <span className="h-1.5 w-1.5 rounded-full bg-accent" />
       {children}
     </h2>
   );
-}
-
-export function StatusBadge({
-  label,
-  tone = "gold",
-}: {
-  label: string;
-  tone?: "positive" | "negative" | "gold" | "neutral";
-}) {
-  const toneClasses = {
-    positive: "status-indicator-positive",
-    negative: "status-indicator-negative",
-    gold: "status-indicator-gold",
-    neutral: "text-muted bg-surface/50 border-line/40",
-  };
-  return <span className={`status-indicator ${toneClasses[tone]}`}>{label}</span>;
 }
 
 export function Skeleton({ className = "" }: { className?: string }) {

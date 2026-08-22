@@ -11,7 +11,6 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { useTheme } from "@/lib/theme";
-import LiveSyncBadge from "@/components/bits/LiveSyncBadge";
 
 // 헤드라인은 청약(상담 + 목록조회 + 시뮬레이터 + 내 정보)이라 "core"로 앞세우고,
 // 나머지(주식분석·지식그래프)는 부가 기능이라 "engine"으로 구분선 뒤에 강등한다.
@@ -64,7 +63,7 @@ export default function NavBar() {
                 href={l.href}
                 className={`whitespace-nowrap rounded-full px-3.5 py-1 text-xs font-mono-spec transition-all duration-200 ${
                   isActive(l.href)
-                    ? "bg-accent/15 text-accent border border-accent/40 font-semibold shadow-[0_0_12px_rgba(212,175,96,0.18)]"
+                    ? "bg-accent/15 text-accent border border-accent/40 font-semibold"
                     : "text-muted hover:text-fg hover:bg-surface/60 border border-transparent"
                 } ${l.group === "engine" && !isActive(l.href) ? "opacity-60" : ""}`}
               >
@@ -77,12 +76,6 @@ export default function NavBar() {
         {/* 줄어드는 쪽은 항상 이 그룹이어야 한다
             (min-w-0 없이는 flex가 로고·링크까지 압축해 글자가 두 줄로 깨진다) */}
         <div className="relative ml-auto flex min-w-0 items-center gap-2.5">
-          {/* 최근 디자인 라이브 상태 뱃지 */}
-          <div className="hidden sm:block">
-            <LiveSyncBadge state="live" label="FIN-STREAM" latencyMs={12} lastUpdated="방금 전" />
-          </div>
-          {/* 페르소나 퀵 스위처는 제거했다 — 남의 프로필을 뒤집어쓰는 구조라
-              자기 청약 자격을 볼 수 없었다. 이제 사용자가 /me 에 직접 입력한다. */}
           {/* 테마 토글 */}
           <button
             onClick={toggle}

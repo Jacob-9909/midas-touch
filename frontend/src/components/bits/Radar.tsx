@@ -2,7 +2,6 @@
 
 // React Bits / Radar — 이식. 골드로 착색.
 // WebGL 캔버스라 전역 앰비언트와 동시에 띄우지 않는다.
-// 이 컴포넌트를 쓰는 라우트는 AmbientBackground의 WEBGL_OWNED_ROUTES에 등록되어야 한다.
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
 import { useEffect, useRef } from 'react';
 
@@ -24,8 +23,17 @@ interface RadarProps {
   mouseInfluence?: number;
 }
 
+// var(--token) 문자열을 실측 hex로 풀어준다(WebGL uniform 은 var() 를 모른다).
+function resolveColor(input: string): string {
+  if (!input.startsWith('var(')) return input;
+  const name = input.slice(4, -1).trim();
+  const fallback = '#d4af37';
+  if (typeof window === 'undefined') return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+}
+
 function hexToVec3(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
+  const h = resolveColor(hex).replace('#', '');
   return [
     parseInt(h.slice(0, 2), 16) / 255,
     parseInt(h.slice(2, 4), 16) / 255,
@@ -116,7 +124,7 @@ export default function Radar({
   sweepSpeed = 1.0,
   sweepWidth = 2.0,
   sweepLobes = 1.0,
-  color = '#d4af37',
+  color = 'var(--accent)',
   backgroundColor = '#04060a',
   falloff = 2.0,
   brightness = 1.0,
