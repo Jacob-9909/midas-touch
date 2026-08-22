@@ -1,10 +1,6 @@
 {
-<<<<<<< HEAD
-  "updatedAt": "2026-08-13T13:19:27.977Z",
-=======
-  "updatedAt": "2026-08-13T13:19:13.648Z",
->>>>>>> origin/main
+  "updatedAt": "2026-08-22T08:59:57.919Z",
   "command": "update",
-  "gitHead": "ae84e9fc21e880e35158334f9e888a291958776c",
+  "gitHead": "ef8df7dc7fb4b44b7da73b27ef32ec381565d95e",
   "model": "openai/gpt-oss-120b"
 }
