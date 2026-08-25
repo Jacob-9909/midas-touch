@@ -8,5 +8,8 @@ from ._common import latest_user_text
 
 
 def doc_rag_node(state: AgentState) -> dict:
-    result = doc_rag.invoke({"query": latest_user_text(state)})
-    return {"tool_context": [f"[doc_rag 결과]\n{result}"]}
+    try:
+        result = doc_rag.invoke({"query": latest_user_text(state)})
+        return {"tool_context": [f"[doc_rag 결과]\n{result}"]}
+    except Exception as exc:
+        return {"tool_context": [f"[doc_rag 조회 실패] {exc}"]}
