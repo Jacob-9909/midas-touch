@@ -16,9 +16,14 @@ from pydantic import BaseModel, Field
 
 from backend.app.api.auth import current_uuid, resolve_user_uuid
 from backend.app.services.agent.graph import get_agent
+from backend.app.services.auth import auth_enabled
 from backend.app.services.chat_service import ChatService
 from shared.database.repositories.checkpoints import delete_checkpoint_thread
-from shared.database.repositories.sessions import delete_chat_session, list_chat_sessions
+from shared.database.repositories.sessions import (
+    delete_chat_session,
+    get_chat_session,
+    list_chat_sessions,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["agent"])
 
@@ -69,14 +74,33 @@ def chat_stream(req: ChatRequest, auth_uuid: str | None = Depends(current_uuid))
     )
 
 
+def _require_owned_session(session_id: str, auth_uuid: str | None) -> None:
+    """세션 소유권 검사 — enforce_owner와 같은 구조(켬에서만 강제, 끔은 하위호환 통과).
+
+    - 세션 행이 없으면 404.
+    - user_uuid가 호출자와 다르면 404(403 대신 존재 자체를 숨겨 세션 열거를 막는다).
+      레거시 NULL 소유자 행도 여기 걸린다(본인 턴으로 upsert되어 소유자가 기록되기 전까지 접근 차단).
+    """
+    if not auth_enabled():
+        return
+    if not auth_uuid:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+    row = get_chat_session(session_id)
+    if row is None or row.get("user_uuid") != auth_uuid:
+        raise HTTPException(status_code=404, detail=f"세션을 찾을 수 없습니다: {session_id}")
+
+
 @router.get("/chat/sessions")
-def chat_sessions(user_uuid: str | None = None, limit: int = 50) -> dict:
+def chat_sessions(
+    user_uuid: str | None = None, limit: int = 50, auth_uuid: str | None = Depends(current_uuid)
+) -> dict:
     """대화 세션 목록을 최근 갱신순으로 반환한다(chat_sessions 테이블 단일 쿼리).
 
-    user_uuid를 주면 해당 유저의 세션만 필터링한다.
+    켬 상태에선 토큰 uuid가 쿼리 파라미터를 덮어쓴다(본인 세션만). 끔이면 요청값 그대로(없으면 전체).
     """
+    uid = resolve_user_uuid(auth_uuid, user_uuid or "")
     out: list[dict] = []
-    for row in list_chat_sessions(user_uuid=user_uuid, limit=limit):
+    for row in list_chat_sessions(user_uuid=uid or None, limit=limit):
         updated_at = row.get("updated_at")
         out.append(
             {
@@ -91,20 +115,24 @@ def chat_sessions(user_uuid: str | None = None, limit: int = 50) -> dict:
 
 
 @router.delete("/chat/sessions/{session_id}")
-def delete_session(session_id: str) -> dict:
+def delete_session(session_id: str, auth_uuid: str | None = Depends(current_uuid)) -> dict:
     """세션의 대화 기록(체크포인트)과 메타데이터(chat_sessions)를 함께 삭제한다."""
+    _require_owned_session(session_id, auth_uuid)
     deleted = delete_checkpoint_thread(session_id)
     delete_chat_session(session_id)
     return {"session_id": session_id, "deleted_checkpoints": deleted}
 
 
 @router.get("/chat/history/{session_id}")
-def chat_history(session_id: str) -> dict:
+def chat_history(
+    session_id: str, auth_uuid: str | None = Depends(current_uuid)
+) -> dict:
     """체크포인터에 저장된 세션의 대화 이력(사람이 읽는 메시지)을 복원해 반환한다.
 
     LangGraph state.values["messages"]에서 Human/AI 메시지만 추려 role/content로 직렬화.
-    존재하지 않는 세션이면 빈 목록을 반환한다.
+    존재하지 않는 세션이면 404를 반환한다.
     """
+    _require_owned_session(session_id, auth_uuid)
     agent = get_agent()
     config = {"configurable": {"thread_id": session_id}}
     state = agent.get_state(config)
