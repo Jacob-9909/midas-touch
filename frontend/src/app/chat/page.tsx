@@ -328,7 +328,7 @@ export default function ChatPage() {
                             setInput(item.prompt);
                             requestAnimationFrame(() => inputRef.current?.focus());
                           }}
-                          className="p-4 border border-line bg-[var(--ink-1)] hover:border-fg rounded-[var(--r-md)] text-left transition group"
+                          className="lift p-4 rounded-[var(--r-md)] border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] text-left transition group"
                         >
                           <div className="text-xs font-semibold text-accent group-hover:text-accent-soft">{item.title}</div>
                           <div className="text-[11px] text-muted truncate mt-0.5">&ldquo;{item.prompt}&rdquo;</div>
@@ -340,13 +340,13 @@ export default function ChatPage() {
                 {messages.map((m, i) => (
                   <div
                     key={i}
-                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                    className={`animate-rise flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-[var(--r-lg)] px-4 py-3 text-sm leading-relaxed [box-shadow:var(--shadow-soft)] ${
+                      className={`max-w-[80%] rounded-[var(--r-lg)] px-4 py-3 text-sm leading-relaxed ${
                         m.role === "user"
-                          ? "whitespace-pre-wrap rounded-br-md bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-fg"
-                          : "rounded-bl-md border border-line bg-[var(--ink-2)] text-fg"
+                          ? "whitespace-pre-wrap rounded-br-md bg-gradient-to-br from-[var(--accent)] to-[var(--accent-soft)] text-white shadow-[0_6px_20px_-8px_var(--glow)]"
+                          : "rounded-bl-md border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] text-fg backdrop-blur-md [box-shadow:var(--shadow-soft)]"
                       }`}
                     >
                       {/* 유저 입력은 평문 그대로, 어시스턴트 응답은 마크다운 렌더(평문이면 그대로 잘 나옴) */}
