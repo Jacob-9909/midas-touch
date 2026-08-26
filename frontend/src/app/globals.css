@@ -421,6 +421,23 @@ html.dark .glass {
   animation: float-y 5s ease-in-out infinite;
 }
 
+/* ── 고령층 친화 모드 — NavBar "큰 글씨" 토글(html.a11y-large-text) ──
+   html 배율 118%: Tailwind 크기가 rem 기반이라 전 페이지가 비율 그대로 확대된다.
+   body 기본값(14px px 고정)도 rem으로 되돌려 같은 배율을 타게 한다. */
+.a11y-large-text {
+  font-size: 118%;
+}
+.a11y-large-text body {
+  font-size: 0.875rem; /* = 14px × 1.18 — 상속 텍스트도 동일 배율로 확대 */
+}
+.a11y-large-text .font-display {
+  letter-spacing: -0.01em;
+}
+/* 답변 말풍선은 줄간격까지 넓혀 시니어 가독성을 보강한다 */
+.a11y-large-text [data-chat-answer] {
+  line-height: 1.75;
+}
+
 /* prefers-reduced-motion: 모든 모션 제거 */
 @media (prefers-reduced-motion: reduce) {
   *,

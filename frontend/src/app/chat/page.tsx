@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errMsg } from "@/lib/async";
-import { Plus, TrashSimple, PaperPlaneTilt } from "@phosphor-icons/react";
+import { Plus, TrashSimple, PaperPlaneTilt, SpeakerHigh, Stop } from "@phosphor-icons/react";
 import {
   apiDelete,
   apiGet,
@@ -24,12 +24,80 @@ interface Msg {
   content: string;
 }
 
+// ── 읽어주기(TTS) ── Web Speech API(speechSynthesis)는 브라우저 전역 단일 채널.
+// 소유 판정은 각 답변의 로컬 ref로 한다 — cancel()이 남의 재생을 끊으면 그 인스턴스만
+// onend를 받아 자기 버튼을 원래대로 되돌린다.
+
 // 어시스턴트 답변 렌더: 본문 마크다운 + 백엔드가 코드로 덧붙인 출처 섹션을 칩 리스트로 분리 렌더.
 function AssistantAnswer({ content }: { content: string }) {
   const { body, sources } = splitChatSources(content);
+  const [speaking, setSpeaking] = useState(false);
+  /** 이벤트 핸들러(onend)가 언마운트 후 상태를 건드리지 않게 실제 재생 소유를 ref로 이중화 */
+  const speakingRef = useRef(false);
+
+  useEffect(() => {
+    // 언마운트(대화 전환 등) 시 내가 읽는 중이었을 때만 끊는다 — 남의 재생을 건드리지 않음.
+    return () => {
+      if (speakingRef.current && typeof speechSynthesis !== "undefined") {
+        speechSynthesis.cancel();
+        speakingRef.current = false;
+      }
+    };
+  }, []);
+
+  const finishSpeak = () => {
+    if (speakingRef.current) {
+      speakingRef.current = false;
+      setSpeaking(false);
+    }
+  };
+
+  const toggleSpeak = () => {
+    if (typeof speechSynthesis === "undefined") return;
+    const synth = speechSynthesis;
+    if (speaking) {
+      speakingRef.current = false;
+      setSpeaking(false);
+      synth.cancel(); // 취소에 따른 onend는 finishSpeak 가드가 무시한다
+      return;
+    }
+    // 출처 푸터는 splitChatSources가 이미 잘라둔 본문만 읽고, 각주 [n] 마커는 발음되지 않게 제거.
+    const text = body.replace(/\[\d+\]/g, "").trim();
+    if (!text) return;
+    synth.cancel(); // 다른 답변을 읽는 중이면 끊고 교체(그 인스턴스의 onend가 자기 상태 정리)
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "ko-KR";
+    utterance.rate = 0.95; // 시니어 청취 속도 — 살짝 느리게
+    utterance.onend = finishSpeak;
+    utterance.onerror = finishSpeak;
+    speakingRef.current = true;
+    setSpeaking(true);
+    synth.speak(utterance);
+  };
+
   return (
     <>
       <Markdown>{body}</Markdown>
+      <button
+        onClick={toggleSpeak}
+        aria-label={speaking ? "읽기 정지" : "답변 읽어주기"}
+        aria-pressed={speaking}
+        className={`btn-ghost mt-3 gap-1.5 rounded-full px-3.5 ${
+          speaking ? "border-accent/40 bg-accent/15 text-accent" : ""
+        }`}
+      >
+        {speaking ? (
+          <>
+            <Stop weight="fill" size={14} />
+            정지
+          </>
+        ) : (
+          <>
+            <SpeakerHigh weight="fill" size={14} />
+            읽어주기
+          </>
+        )}
+      </button>
       {sources.length > 0 && (
         <div className="mt-3 border-t border-line pt-2">
           <p className="mb-1.5 text-[11px] font-semibold text-muted">출처</p>
@@ -343,6 +411,7 @@ export default function ChatPage() {
                     className={`animate-rise flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
+                      data-chat-answer
                       className={`max-w-[80%] rounded-[var(--r-lg)] px-4 py-3 text-sm leading-relaxed ${
                         m.role === "user"
                           ? "whitespace-pre-wrap rounded-br-md bg-gradient-to-br from-[var(--accent)] to-[var(--accent-soft)] text-white shadow-[0_6px_20px_-8px_var(--glow)]"
