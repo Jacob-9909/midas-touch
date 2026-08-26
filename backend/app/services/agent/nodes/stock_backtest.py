@@ -19,6 +19,11 @@ _LOOKBACK_DAYS = 365
 _STRATEGY = "sma_crossover"
 
 
+def _fmt_final_value(ticker: str, value: int) -> str:
+    """국내 종목(.KS/.KQ)은 원화, 그 외(미국주식 등)는 달러로 표기한다."""
+    return f"{value:,}원" if ticker.endswith((".KS", ".KQ")) else f"${value:,}"
+
+
 def stock_backtest_node(state: AgentState) -> dict:
     ticker = (state.get("ticker") or "").strip().upper()
     if not ticker:
@@ -45,7 +50,7 @@ def stock_backtest_node(state: AgentState) -> dict:
             f"- 연간 수익률: {m['annual_return'] * 100:.2f}%\n"
             f"- 최대 낙폭: {m['max_drawdown'] * 100:.2f}%\n"
             f"- 총 거래 횟수: {m['total_trades']}회\n"
-            f"- 최종 포트폴리오 가치: {m['final_value']:,}원\n"
+            f"- 최종 포트폴리오 가치: {_fmt_final_value(ticker, m['final_value'])}\n"
             "(단일 전략·기본 파라미터 기준. 상세 차트·전략비교는 '주식분석' 페이지 참고.)"
         )
         return {"tool_context": [summary]}

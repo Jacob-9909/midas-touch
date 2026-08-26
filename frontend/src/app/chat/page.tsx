@@ -13,6 +13,7 @@ import { clientId, loadProfile, profileSummary } from "@/lib/my-profile";
 import { totalCheongyakScore } from "@/lib/cheongyak-score";
 import { useToast } from "@/lib/toast";
 import { consumeChatSeed } from "@/lib/chat-seed";
+import { splitChatSources } from "@/lib/chat-sources";
 import { Card, Spinner } from "@/components/ui";
 import { Markdown } from "@/components/Markdown";
 import KnowledgePanel from "./KnowledgePanel";
@@ -21,6 +22,32 @@ import SegmentedTabs from "@/components/SegmentedTabs";
 interface Msg {
   role: "user" | "assistant";
   content: string;
+}
+
+// 어시스턴트 답변 렌더: 본문 마크다운 + 백엔드가 코드로 덧붙인 출처 섹션을 칩 리스트로 분리 렌더.
+function AssistantAnswer({ content }: { content: string }) {
+  const { body, sources } = splitChatSources(content);
+  return (
+    <>
+      <Markdown>{body}</Markdown>
+      {sources.length > 0 && (
+        <div className="mt-3 border-t border-line pt-2">
+          <p className="mb-1.5 text-[11px] font-semibold text-muted">출처</p>
+          <ul role="list" aria-label="참고 출처" className="flex flex-wrap gap-1.5">
+            {sources.map((s) => (
+              <li
+                key={s.index}
+                title={`${s.source} (${s.passageId})`}
+                className="max-w-full truncate rounded-full border border-line bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] px-2 py-0.5 text-[11px] text-muted"
+              >
+                [{s.index}] {s.source} ({s.passageId})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </>
+  );
 }
 
 export default function ChatPage() {
@@ -301,7 +328,7 @@ export default function ChatPage() {
                             setInput(item.prompt);
                             requestAnimationFrame(() => inputRef.current?.focus());
                           }}
-                          className="p-4 border border-line bg-[var(--ink-1)] hover:border-fg rounded-[var(--r-md)] text-left transition group"
+                          className="lift p-4 rounded-[var(--r-md)] border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] text-left transition group"
                         >
                           <div className="text-xs font-semibold text-accent group-hover:text-accent-soft">{item.title}</div>
                           <div className="text-[11px] text-muted truncate mt-0.5">&ldquo;{item.prompt}&rdquo;</div>
@@ -313,19 +340,19 @@ export default function ChatPage() {
                 {messages.map((m, i) => (
                   <div
                     key={i}
-                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                    className={`animate-rise flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-[var(--r-lg)] px-4 py-3 text-sm leading-relaxed [box-shadow:var(--shadow-soft)] ${
+                      className={`max-w-[80%] rounded-[var(--r-lg)] px-4 py-3 text-sm leading-relaxed ${
                         m.role === "user"
-                          ? "whitespace-pre-wrap rounded-br-md bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-fg"
-                          : "rounded-bl-md border border-line bg-[var(--ink-2)] text-fg"
+                          ? "whitespace-pre-wrap rounded-br-md bg-gradient-to-br from-[var(--accent)] to-[var(--accent-soft)] text-white shadow-[0_6px_20px_-8px_var(--glow)]"
+                          : "rounded-bl-md border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] text-fg backdrop-blur-md [box-shadow:var(--shadow-soft)]"
                       }`}
                     >
                       {/* 유저 입력은 평문 그대로, 어시스턴트 응답은 마크다운 렌더(평문이면 그대로 잘 나옴) */}
                       {m.role === "assistant" ? (
                         m.content ? (
-                          <Markdown>{m.content}</Markdown>
+                          <AssistantAnswer content={m.content} />
                         ) : busy ? (
                           <span className="font-mono-spec inline-flex items-center gap-2 text-[11px] text-muted">
                             {status && (

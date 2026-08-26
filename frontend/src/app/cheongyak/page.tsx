@@ -12,6 +12,7 @@ import {
   Compass,
 } from "@phosphor-icons/react";
 import { listCheongyak, type CheongyakKind, type CheongyakSummary } from "@/lib/api";
+import { MOCK_CHEONGYAK, withMock } from "@/lib/mock-data";
 import Link from "next/link";
 import { seedChat } from "@/lib/chat-seed";
 import { MAX_SCORE, totalCheongyakScore } from "@/lib/cheongyak-score";
@@ -22,7 +23,7 @@ import {
   type MyProfile,
 } from "@/lib/my-profile";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
-import { Card, PageTitle, Skeleton } from "@/components/ui";
+import { AnimatedNumber, Card, PageTitle, Skeleton } from "@/components/ui";
 import SegmentedTabs from "@/components/SegmentedTabs";
 import ProfileNudge from "@/components/ProfileNudge";
 import GuideTour, { type TourStep } from "@/components/GuideTour";
@@ -41,6 +42,9 @@ const TABS: { kind: CheongyakKind; label: string }[] = [
 
 // 상태 필터 (백엔드 status 값과 일치). "전체"는 미필터.
 const STATUS_FILTERS = ["전체", "접수중", "접수예정", "마감"] as const;
+
+/** 페이지 로드 시점 타임스탬프 — D-7 KPI 계산 기준(렌더 중 Date.now() 호출 금지). */
+const PAGE_LOADED_AT = Date.now();
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 const STATUS_TONE: Record<string, string> = {
@@ -258,7 +262,11 @@ export default function CheongyakPage() {
     setError(null);
     setMapRegion(null);
     /* eslint-enable react-hooks/set-state-in-effect */
-    listCheongyak(kind, 120, 120)
+    withMock(
+      listCheongyak(kind, 120, 120),
+      () => (kind === "apt" ? MOCK_CHEONGYAK : []),
+      "청약 목록",
+    )
       .then((data) => alive && setItems(data))
       .catch((e) => {
         if (!alive) return;
@@ -278,6 +286,18 @@ export default function CheongyakPage() {
       c[it.status] = (c[it.status] ?? 0) + 1;
     });
     return c;
+  }, [items]);
+
+  // 곧 마감(7일 이내 접수 종료) 공고 수 — KPI 카드용.
+  // 기준 시각은 모듈 로드 시점 스냅샷(렌더 중 impure 호출 금지).
+  const dueSoon = useMemo(() => {
+    if (!items) return null;
+    const now = PAGE_LOADED_AT;
+    const week = 7 * 24 * 3600 * 1000;
+    return items.filter((it) => {
+      const t = new Date(it.reception_end).getTime();
+      return Number.isFinite(t) && t >= now && t - now <= week;
+    }).length;
   }, [items]);
 
   // 상태 필터만 적용한 목록 — 지도 카운트와 최종 view 의 공통 기준.
@@ -350,16 +370,42 @@ export default function CheongyakPage() {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-x-12 gap-y-4 border-y border-line py-6">
+      {/* KPI 카드 — Accounting Dashboard식 큰 숫자 패키징(Neon Ledger §Components) */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          ["실시간 분양 공고", items ? `${items.length}건` : "조회중"],
-          ["접수 중 단지", items ? `${statusCounts["접수중"] ?? 0}개` : "-"],
-        ].map(([label, value]) => (
-          <div key={label}>
-            <div className="text-xs text-muted">{label}</div>
-            <div className="font-display mt-1 text-2xl tabular-nums text-fg">{value}</div>
-          </div>
+          {
+            label: "실시간 분양 공고",
+            value: items ? items.length : null,
+            suffix: "건",
+            tint: "text-fg" as const,
+          },
+          {
+            label: "접수 중 단지",
+            value: items ? (statusCounts["접수중"] ?? 0) : null,
+            suffix: "개",
+            tint: "text-accent" as const,
+          },
+          {
+            label: "7일 내 마감",
+            value: dueSoon,
+            suffix: "개",
+            tint: "text-gilt" as const,
+          },
+        ].map((k) => (
+          <Card key={k.label} variant="glass" className="p-4">
+            <div className="text-xs text-muted">{k.label}</div>
+            <div className={`font-display mt-1.5 text-[1.7rem] leading-none tabular-nums ${k.tint}`}>
+              <AnimatedNumber value={k.value} suffix={k.suffix} />
+            </div>
+          </Card>
         ))}
+        <Card variant="glass" className="border-gilt/30 p-4">
+          <div className="text-xs text-muted">내 청약가점</div>
+          <div className="font-display mt-1.5 text-[1.7rem] leading-none tabular-nums text-gilt">
+            <AnimatedNumber value={myScore} suffix="점" />
+            <span className="ml-1 font-sans text-xs font-normal text-muted">/ 84</span>
+          </div>
+        </Card>
       </div>
 
       <ProfileNudge />

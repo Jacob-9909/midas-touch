@@ -35,19 +35,18 @@ export default function NavBar() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    // 문서 §Components: 네비는 캔버스에 밀착된 평평한 바다. 유리·굴절·그림자를 걷어내고
-    // 아래쪽 1px 헤어라인으로만 본문과 나눈다(full-bleed).
-    <header className="sticky top-0 z-50 border-b border-line bg-[var(--ink)]">
-      <nav className="mx-auto flex h-16 max-w-[1200px] items-center gap-1 px-6">
+    // Neon Ledger §Components: 네비는 캔버스에서 한 단 떠 있는 글래스 필.
+    // 상단에 떠 있고 좌우 여백을 두며 blur+헤어라인+부유 섀도로 본문과 나눈다.
+    <header className="sticky top-3 z-50 px-3 sm:px-5">
+      <nav className="mx-auto flex h-14 max-w-[1200px] items-center gap-1 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_78%,transparent)] px-3 shadow-[var(--shadow-1)] backdrop-blur-xl">
         <Link
           href="/"
-          className="mr-5 flex shrink-0 items-center gap-2.5 whitespace-nowrap font-display text-xl font-normal tracking-tight"
+          className="mr-4 flex shrink-0 items-center gap-2.5 whitespace-nowrap pl-2 font-display text-lg tracking-tight"
         >
-          {/* 브랜드 스탬프 — 문서 §Colors에서 어센트는 '드물게 찍는 도장'이다.
-              발광·흐르는 하이라이트는 걷어내고 글리프에만 골드를 남긴다. */}
-          <ShieldChevron weight="fill" className="text-accent" size={20} />
+          {/* 브랜드 스탬프 — 골드 글리프는 Midas 도장으로 유지 */}
+          <ShieldChevron weight="fill" className="text-gilt" size={20} />
           <span className="font-semibold tracking-tight">Midas Touch</span>
-          <span className="hidden font-mono-spec text-[9px] uppercase tracking-widest text-muted border border-line/60 px-1.5 py-0.5 rounded sm:inline-block">
+          <span className="hidden rounded-full border border-line/60 px-1.5 py-0.5 font-mono-spec text-[9px] uppercase tracking-widest text-muted sm:inline-block">
             Console
           </span>
         </Link>
@@ -99,13 +98,13 @@ export default function NavBar() {
 
       {/* 모바일 메뉴 */}
       {open && (
-        <div className="border-t border-line px-4 py-2 md:hidden bg-[var(--ink-1)]">
+        <div className="mx-auto mt-2 max-w-[1200px] rounded-2xl border border-line bg-[color-mix(in_srgb,var(--ink-1)_92%,transparent)] px-3 py-2 shadow-[var(--shadow-2)] backdrop-blur-xl md:hidden">
           {LINKS.map((l) => (
             <Link
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className={`block rounded px-3 py-2 text-xs font-medium transition-colors ${
+              className={`block rounded-full px-4 py-2.5 text-sm font-medium transition-colors ${
                 isActive(l.href)
                   ? "bg-accent/15 text-accent font-semibold"
                   : "text-muted hover:text-fg"

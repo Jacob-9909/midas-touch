@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import re
+
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from ..llm import build_chat_model
@@ -25,10 +27,13 @@ _INTENT_PROMPT = """당신은 한국인 자산관리 AI의 라우터입니다. �
 - stock_backtest: 사용자가 특정 종목의 과거 성과/백테스트를 물을 때(예: "애플 백테스트 해줘", "테슬라 1년 수익률"). 이때 ticker도 함께 채우십시오.
 - stock_quick: 사용자가 특정 종목의 '현재' 기술적 지표/상태를 물을 때(예: "엔비디아 지금 어때?", "삼성전자 RSI 알려줘", "테슬라 기술적 분석"). 과거 시뮬레이션이 아니라 현 시점 지표(RSI·MACD·이동평균 등) 진단. 이때 ticker도 함께 채우십시오.
 - cheongyak_lookup: 최근/예정 청약(분양) 공고를 물을 때(예: "요즘 청약 뭐 있어?", "분양 공고 알려줘").
+- tax_calculator: 세금 **직접 계산**(결정론적 코드 계산) — "주택 양도세 얼마야", "집 팔면 비과세 돼?", "해외주식 양도세 계산해줘", "이자·배당 세금 얼마"처럼 세액 산출이 목적이면 반드시 **우선** 고르십시오. tax_and_market_lookup은 세법 규칙 '조회'용이라 계산 목적에는 쓰지 않습니다(계산 + 근거 조회가 모두 필요한 복합 질문이면 둘 다 고르십시오).
+- fraud_check: 받은 문자·메신저·링크(URL)가 사기성인지 검증 — "이 문자 사기 아니지?", "이 링크 믿어도 돼?"처럼 투자 권유·수익 보장·선입금 요구·기관 사칭이 의심되는 메시지 확인을 물을 때.
 
 복합 질문이면 필요한 도구를 여러 개 고르십시오. 단순 인사·잡담 등 데이터가 필요 없는 질문이면
 아무 도구도 고르지 마십시오. 내부 DB(persona_rag/graph_rag/doc_rag/tax_and_market_lookup)로 충분하면
 라이브 도구(product_research/news_research/nts_law_research/stock_backtest/stock_quick/cheongyak_lookup)는 굳이 고르지 마십시오.
+**세금 '계산' 질문은 tax_calculator가 우선입니다** — tax_and_market_lookup은 규칙 조회용으로 구분하십시오.
 
 tax_and_market_lookup을 골랐고 질문이 특정 자산 종류(예: 주식·채권·예금·부동산)에 한정되면,
 asset_types에 해당 자산 종류명을 적으십시오(세법 조회를 그 자산으로 좁힘). 자산을 특정하지 않은
@@ -47,6 +52,15 @@ _SMALLTALK_TOKENS = (
     "안녕", "반가", "반갑", "고마", "감사", "수고", "하이", "ㅎㅇ", "잘 지내", "좋은 아침",
     "hello", "hi", "thanks",
 )
+
+# 폴백 ticker 추출 시 티커로 오인하기 쉬운 금융 약어 블랙리스트(.KS/.KQ 접미사는 예외).
+_TICKER_BLACKLIST = frozenset({
+    "RSI", "MACD", "MA", "SMA", "EMA", "VWAP", "EPS", "PER", "PBR", "ROE",
+    "ROA", "BPS", "GDP", "CPI", "FX", "ETF", "IPO", "KRW", "USD", "EUR",
+    "JPY", "NASDAQ", "NYSE", "SP500", "KOSPI", "KOSDAQ",
+})
+# 영문 티커(선택적 .KS/.KQ 접미사) 또는 국내 6자리 종목코드.
+_TICKER_PATTERN = re.compile(r"\b([A-Za-z]{1,5}(?:\.KS|\.KQ)?|\d{6}(?:\.KS|\.KQ)?)\b")
 
 
 def _is_smalltalk(text: str) -> bool:
@@ -84,6 +98,12 @@ def _keyword_route(text: str) -> list[str]:
         route.append("doc_rag")
     if any(k in text for k in ("세율", "세금", "절세", "공제", "환율", "금리", "시세", "시장", "지표")):
         route.append("tax_and_market_lookup")
+    # 결정론적 계산기 — 세액 '산출'이 목적인 질문(조회용 tax_and_market_lookup과 구분)
+    if any(k in text for k in ("계산", "얼마야", "얼마나 내", "비과세")):
+        route.append("tax_calculator")
+    # 사기 메시지 검증
+    if any(k in text for k in ("사기", "피싱", "스미싱", "믿어도 되", "괜찮을까", "의심")):
+        route.append("fraud_check")
     # 라이브 웹 리서치(현재 금리/상품·금리 동향·국세청 해석)
     if any(k in text for k in ("예금", "적금", "연금저축", "국채", "상품", "가입", "이율", "우대")):
         route.append("product_research")
@@ -121,6 +141,8 @@ def classify_intent(state: AgentState) -> dict:
                 "stock_backtest",
                 "stock_quick",
                 "cheongyak_lookup",
+                "tax_calculator",
+                "fraud_check",
             ]
         ] = Field(default_factory=list)
         asset_types: list[str] = Field(
@@ -157,10 +179,12 @@ def classify_intent(state: AgentState) -> dict:
     except Exception:  # 분류 실패 시 키워드 폴백
         tools = _keyword_route(user_text)
         if "stock_backtest" in tools or "stock_quick" in tools:
-            import re
-            m = re.search(r"\b([A-Za-z]{1,5}|\d{6}(?:\.KS|\.KQ)?)\b", user_text)
-            if m:
-                ticker = m.group(1).upper()
+            for m in _TICKER_PATTERN.finditer(user_text):
+                cand = m.group(1).upper()
+                # .KS/.KQ 접미사는 명시적 종목 지정으로 보고 블랙리스트와 무관하게 허용.
+                if cand.endswith((".KS", ".KQ")) or cand not in _TICKER_BLACKLIST:
+                    ticker = cand
+                    break
         if "tax_and_market_lookup" in tools:
             found_types = []
             for at in ("주식", "채권", "부동산", "예금", "가상자산", "연금"):

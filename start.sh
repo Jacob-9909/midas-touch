@@ -82,10 +82,43 @@ ensure_db() {
     || echo "⚠️  DB 컨테이너 기동 실패 — 이름 확인 필요(docker ps -a)"
 }
 
+# ── 스키마 부트스트랩 게이트 (fresh DB 보호, 멱등) ──────────────────
+# alembic 초기 리비전(d93ff1c5811e)은 drop-only라 빈 DB에서 upgrade가 폭발한다.
+# users 테이블 부재를 fresh DB 신호로 보고 postgres_schema.sql 선적재 후 head로 스탬프.
+# DB 미기동·psql 부재 시에도 앱 기동은 막지 않는다(warn-only).
+ensure_schema() {
+  command -v psql >/dev/null 2>&1 || { echo "⚠️  psql 없음 — 스키마 점검 생략"; return 0; }
+  local url="${DATABASE_URL:-}"
+  if [ -z "$url" ]; then
+    url="$(grep -E '^DATABASE_URL=' .env 2>/dev/null | head -1 | cut -d= -f2- | tr -d "\"'" || true)"
+  fi
+  [ -z "$url" ] && { echo "⚠️  DATABASE_URL 미설정 — 스키마 점검 생략"; return 0; }
+  local exists=""
+  for _ in 1 2 3; do
+    exists="$(psql "$url" -tAc "SELECT to_regclass('public.users')" 2>/dev/null || true)"
+    [ "$exists" = "users" ] && break
+    sleep 2
+  done
+  if [ "$exists" = "users" ]; then
+    echo "🗄️  스키마 확인(public.users 존재)"
+    return 0
+  fi
+  echo "📦 fresh DB 감지 — postgres_schema.sql 부트스트랩 + alembic stamp head 시도…"
+  if psql "$url" -v ON_ERROR_STOP=1 -qf shared/database/schema/postgres_schema.sql; then
+    uv run alembic stamp head \
+      && echo "✅ 스키마 부트스트랩 완료(head 스탬프)" \
+      || echo "⚠️  alembic stamp 실패 — 수동 실행 필요: uv run alembic stamp head" >&2
+  else
+    echo "⚠️  스키마 부트스트랩 실패(DB 미기동·접속 실패?) — 앱은 계속 기동하며 수동 확인 필요:" >&2
+    echo "    psql \"\$DATABASE_URL\" -f shared/database/schema/postgres_schema.sql && uv run alembic stamp head" >&2
+  fi
+}
+
 case "$MODE" in
   backend)
     command -v uv >/dev/null 2>&1 || { echo "❌ uv 미설치" >&2; exit 1; }
     ensure_db
+    ensure_schema
     run_backend
     ;;
   frontend)
@@ -102,6 +135,7 @@ case "$MODE" in
     echo "────────────────────────────────────────────"
     trap 'echo; echo "🛑 종료 중…"; kill 0 2>/dev/null' INT TERM EXIT
     ensure_db
+    ensure_schema
     run_backend &
     run_frontend &
     wait

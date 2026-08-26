@@ -58,16 +58,23 @@ def nts_law_research_node(state: AgentState) -> dict:
     except ValueError as exc:
         return {"tool_context": [f"[nts_law_research 미수행] {exc}"]}
 
-    # 도출된 키워드를 wealth의 spec 리졸버에 그대로 전달(비면 내부 폴백 사용).
-    specs = resolve_nts_law_search_specs({"nts_law_api_queries": _derive_queries(state)})
+    try:
+        # 도출된 키워드를 wealth의 spec 리졸버에 그대로 전달(비면 내부 폴백 사용).
+        specs = resolve_nts_law_search_specs({"nts_law_api_queries": _derive_queries(state)})
 
-    def one(section: tuple[str, str]) -> str:
-        label, query = section
-        return f"### {label}: {query}\n{nts_cgm_search_once(query, display=8)}"
+        def one(section: tuple[str, str]) -> str:
+            label, query = section
+            return f"### {label}: {query}\n{nts_cgm_search_once(query, display=8)}"
 
-    with ThreadPoolExecutor(max_workers=max(1, len(specs))) as pool:
-        sections = list(pool.map(one, specs))
+        with ThreadPoolExecutor(max_workers=max(1, len(specs))) as pool:
+            sections = list(pool.map(one, specs))
 
-    header = "국세청 법령해석 '목록' 스니펫(유권해석 아님). 세액·요건은 국세청·홈택스 확인."
-    notes = (header + "\n\n" + "\n\n".join(sections))[:18_000]
+        header = "국세청 법령해석 '목록' 스니펫(유권해석 아님). 세액·요건은 국세청·홈택스 확인."
+        notes = (header + "\n\n" + "\n\n".join(sections))[:18_000]
+    except Exception as exc:
+        # chromium 미설치 등 라이브 검색 실패가 그래프 superstep까지 번지지 않게 흡수한다.
+        return {
+            "tool_context": [f"[nts_law_research 미수행] 국세청 법령해석 검색 실패: {exc}"]
+        }
+
     return {"tool_context": [f"[nts_law_research·국세청 법령해석]\n{notes}"]}

@@ -53,6 +53,18 @@ def list_chat_sessions(user_uuid: str | None = None, limit: int = 50) -> list[di
         return fetchall_dicts(cursor)
 
 
+def get_chat_session(session_id: str) -> dict | None:
+    """단일 세션 메타데이터 행을 반환한다. 없으면 None(소유권 검사용)."""
+    with db_cursor() as (_, cursor):
+        cursor.execute(
+            "SELECT session_id, user_uuid, title, message_count, updated_at"
+            " FROM chat_sessions WHERE session_id = %s",
+            [session_id],
+        )
+        rows = fetchall_dicts(cursor)
+        return rows[0] if rows else None
+
+
 def delete_chat_session(session_id: str) -> int:
     """세션 메타데이터 행을 삭제한다. 삭제된 행 수 반환."""
     with db_cursor() as (_, cursor):

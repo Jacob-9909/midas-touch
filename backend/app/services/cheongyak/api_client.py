@@ -5,12 +5,12 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import requests
 
-from shared.utils.timez import today_kst
+from shared.utils.timez import KST, today_kst
 
 _BASE_DETAIL = "https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1"
 _BASE_CMPET = "https://api.odcloud.kr/api/ApplyhomeInfoCmpetRtSvc/v1"
@@ -148,6 +148,15 @@ def _row_to_summary(row: dict) -> dict:
     }
 
 
+def _announcement_ts(date_str: str | None) -> float:
+    """공고일 정렬용 timestamp. YYYYMMDD·YYYY-MM-DD 모두 허용, 빈값/파싱 실패는 -inf(가장 오래된 취급)."""
+    s = (date_str or "").strip().replace("-", "")
+    try:
+        return datetime.strptime(s, "%Y%m%d").replace(tzinfo=KST).timestamp()
+    except ValueError:
+        return float("-inf")
+
+
 def fetch_recent_apt(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     """Fetch APT 분양정보 for recent + upcoming announcements."""
     today = today_kst()
@@ -164,9 +173,9 @@ def fetch_recent_apt(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     )
     rows = data.get("data", [])
     results = [_row_to_summary(r) for r in rows]
-    # Sort: 접수중 first, then 접수예정, then 마감; within group by date desc
+    # Sort: 접수중 first, then 접수예정, then 마감; 같은 상태 그룹 내에선 공고일 내림차순(최신 먼저)
     status_order = {"접수중": 0, "접수예정": 1, "일정미정": 2, "마감": 3}
-    results.sort(key=lambda r: (status_order.get(r["status"], 9), -(r.get("announcement_date") or "").__len__(), r.get("announcement_date", "")))
+    results.sort(key=lambda r: (status_order.get(r["status"], 9), -_announcement_ts(r.get("announcement_date"))))
     return results
 
 

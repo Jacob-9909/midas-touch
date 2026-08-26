@@ -50,6 +50,11 @@ def persona_rag(query: str, top_k: int = 3) -> str:
     return _format_twin_context(twin_profiles)
 
 
+def _fmt_amount(value: Any) -> str:
+    """DB 필드가 None이어도 포맷이 터지지 않게 금액을 문자열로 만든다."""
+    return f"{value:,}" if value is not None else "N/A"
+
+
 def _format_twin_context(twin_profiles: list[dict[str, Any]]) -> str:
     """검색된 트윈 페르소나를 LLM 프롬프트용 정제 텍스트 블록으로 포맷한다."""
     lines: list[str] = ["### 유사 성향 투자자 페르소나 군집 (벤치마킹용, Users Database)"]
@@ -59,16 +64,16 @@ def _format_twin_context(twin_profiles: list[dict[str, Any]]) -> str:
 
     for idx, p in enumerate(twin_profiles):
         lines.append(f" [유사 투자자 {idx + 1}]")
-        lines.append(f"  - 유사도: {p.get('similarity', 0.0):.4f}")
+        lines.append(f"  - 유사도: {(p.get('similarity') or 0.0):.4f}")
         lines.append(f"  - 나이/성별/직업: {p.get('age')}세 / {p.get('sex')} / {p.get('occupation')}")
         lines.append(f"  - 가족 구성/주거: {p.get('family_type')} / {p.get('housing_type')} ({p.get('district')})")
         lines.append(
-            f"  - 자산 총액: {p.get('total_amount'):,} 원 "
-            f"(월 수입: {p.get('monthly_income'):,} 원 / 월 가용 투자액: {p.get('monthly_investable'):,} 원)"
+            f"  - 자산 총액: {_fmt_amount(p.get('total_amount'))} 원 "
+            f"(월 수입: {_fmt_amount(p.get('monthly_income'))} 원 / 월 가용 투자액: {_fmt_amount(p.get('monthly_investable'))} 원)"
         )
         lines.append(
-            f"  - 자산 상세 배분: 주식 {p.get('stock_amount'):,} 원 / 채권 {p.get('bond_amount'):,} 원 "
-            f"/ 예적금 {p.get('deposit_amount'):,} 원 / 부동산 {p.get('real_estate_amount'):,} 원"
+            f"  - 자산 상세 배분: 주식 {_fmt_amount(p.get('stock_amount'))} 원 / 채권 {_fmt_amount(p.get('bond_amount'))} 원 "
+            f"/ 예적금 {_fmt_amount(p.get('deposit_amount'))} 원 / 부동산 {_fmt_amount(p.get('real_estate_amount'))} 원"
         )
         lines.append(
             f"  - 투자 성향 (1-10): 공격성 {p.get('aggressiveness')} / 금융 이해도 {p.get('financial_literacy')}"

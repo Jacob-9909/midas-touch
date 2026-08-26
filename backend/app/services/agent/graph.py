@@ -26,6 +26,7 @@ from .nodes import (
     classify_intent,
     dispatch,
     doc_rag_node,
+    fraud_check_node,
     graph_rag_node,
     news_research_node,
     nts_law_research_node,
@@ -34,6 +35,7 @@ from .nodes import (
     stock_backtest_node,
     stock_quick_node,
     synthesize_node,
+    tax_calculator_node,
     tax_lookup_node,
 )
 from .state import AgentState
@@ -56,6 +58,9 @@ def build_agent(checkpointer):
     builder.add_node("stock_backtest", stock_backtest_node)
     builder.add_node("stock_quick", stock_quick_node)
     builder.add_node("cheongyak_lookup", cheongyak_lookup_node)
+    # 결정론적 계산·검증 노드(LLM이 계산하지 않는 세금 계산기, 사기 메시지 휴리스틱 검증)
+    builder.add_node("tax_calculator", tax_calculator_node)
+    builder.add_node("fraud_check", fraud_check_node)
     builder.add_node("synthesize", synthesize_node)
 
     builder.add_edge(START, "intent")

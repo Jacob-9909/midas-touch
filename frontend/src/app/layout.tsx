@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import "pretendard/dist/web/variable/pretendardvariable.css";
 import { ThemeProvider, themeInitScript } from "@/lib/theme";
@@ -8,12 +8,17 @@ import NavBar from "@/components/NavBar";
 import SiteFooter from "@/components/SiteFooter";
 import { UserProvider } from "@/lib/user-context";
 
-// 문서 §Typography: 본문·버튼·캡션은 Inter 400/600. 디스플레이도 Aeonik Pro 대체로
-// Inter 를 쓰되(문서가 지정한 대체 경로) 500 weight + 음수 자간으로 조인다.
+// 본문·버튼·캡션은 Inter 400/600. 디스플레이는 Space Grotesk — 기하학적 그로테스크로
+// 랜딩 헤드라인의 톤을 끌어올린다(Neon Ledger §Typography).
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
 });
 // 숫자 정렬용 모노는 유지한다 — 금액·가점·개월수가 표에서 자릿수를 맞춰야 한다.
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -32,7 +37,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className={`${inter.variable} ${geistMono.variable} min-h-full`}>
+      <body className={`${inter.variable} ${spaceGrotesk.variable} ${geistMono.variable} min-h-full`}>
         <ThemeProvider>
           <ToastProvider>
             <UserProvider>

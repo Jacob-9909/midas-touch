@@ -66,10 +66,9 @@ class TestChatRoutes(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIsInstance(r.json().get("sessions"), list)
 
-    def test_history_unknown_session_empty(self) -> None:
+    def test_history_unknown_session_404(self) -> None:
         r = client.get("/api/v1/chat/history/__no_such_session__")
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.json().get("messages"), [])
+        self.assertEqual(r.status_code, 404)
 
     def test_chat_accepts_optional_profile(self) -> None:
         """user_uuid 는 이제 회원 DB 키가 아니라 브라우저 익명 키다.
