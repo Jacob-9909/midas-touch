@@ -110,6 +110,10 @@ def split_sale_and_acquisition(text: str, amounts: list[int]) -> tuple[int | Non
             return sale, acq
     if len(amounts) >= 2:
         return amounts[0], amounts[1]
+    # 동사 힌트로 특정된 금액이 있으면 위치 폴백보다 힌트를 우선한다.
+    # (예: "5억에 산 집을 팔면?" → 취득가 5억 확정, 양도가액만 되묻기)
+    if sale is not None or acq is not None:
+        return sale, acq
     if amounts:
         return amounts[0], None
     return None, None
