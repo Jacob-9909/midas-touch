@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { FileText, SealCheck } from "@phosphor-icons/react";
+import { FileText, SealCheck, ShieldWarning } from "@phosphor-icons/react";
 import { AnimatedNumber, Card } from "@/components/ui";
 import MiniSparkline from "@/components/bits/MiniSparkline";
 import TiltCard from "@/components/TiltCard";
@@ -100,6 +100,13 @@ export default function HeroShowcase() {
       >
         <span className="h-1.5 w-1.5 rounded-full bg-positive" />
         실시간 공고 연동
+      </div>
+      {/* 부유 배지 2 — 사기 검증 탑재 신호(좌하단, 위상차 애니메이션) */}
+      <div
+        className="float-slow absolute -bottom-4 -left-4 flex items-center gap-1.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_85%,transparent)] px-3 py-1.5 text-[11px] font-semibold text-fg shadow-[var(--shadow-1)] backdrop-blur-md [animation-delay:1.6s]"
+      >
+        <ShieldWarning weight="fill" size={13} className="text-gilt" />
+        사기 문자 검증 탑재
       </div>
     </div>
   );
