@@ -21,13 +21,19 @@ export function splitChatSources(
 
   const lines = content.slice(headerAt + SOURCES_HEADER.length).split("\n");
   const sources: ChatSource[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const m = SOURCE_ITEM_RE.exec(lines[i]);
-    if (!m || Number(m[1]) !== i + 1) {
+  // 헤더 직후 개행(빈 줄)은 건너뛴다 — 백엔드 푸터가 "출처:\n[1] ..." 형식이라
+  // split 결과 첫 요소가 빈 문자열이 되며, 이를 걸러내지 않으면 칩이 한 번도
+  // 렌더되지 않는 버그(기존)였다.
+  let expectedIndex = 1;
+  for (const line of lines) {
+    if (line.trim() === "") continue;
+    const m = SOURCE_ITEM_RE.exec(line);
+    if (!m || Number(m[1]) !== expectedIndex) {
       // 항목이 아니거나 번호가 연속하지 않으면 우리 형식이 아니다 — 원문 그대로 렌더.
       return { body: content, sources: [] };
     }
     sources.push({ index: Number(m[1]), source: m[2], passageId: m[3] });
+    expectedIndex += 1;
   }
   return { body: content.slice(0, headerAt), sources };
 }
