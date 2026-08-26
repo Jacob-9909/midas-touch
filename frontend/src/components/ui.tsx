@@ -63,13 +63,14 @@ export function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`skeleton ${className}`} />;
 }
 
-/** 회전 스피너. 크기·색은 className으로 (예: "h-4 w-4 text-accent"). border-current를 쓴다. */
+/** 회전 스피너. 크기·색은 className으로 (예: "h-4 w-4 text-accent"). border-current를 쓴다.
+ *  700ms — 실제 로딩 시간이 같아도 빨리 도는 스피너가 더 빨리 로드된 '느낌'을 준다. */
 export function Spinner({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <span
       role="status"
       aria-label="로딩 중"
-      className={`inline-block shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent ${className}`}
+      className={`inline-block shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent [animation-duration:700ms] ${className}`}
     />
   );
 }

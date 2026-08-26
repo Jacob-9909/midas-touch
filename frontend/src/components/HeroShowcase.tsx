@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useState } from "react";
 import { FileText, SealCheck, ShieldWarning } from "@phosphor-icons/react";
 import { AnimatedNumber, Card } from "@/components/ui";
 import MiniSparkline from "@/components/bits/MiniSparkline";
@@ -12,11 +12,22 @@ import TiltCard from "@/components/TiltCard";
 const SPARK = [38, 42, 40, 47, 52, 50, 58, 63, 61, 70, 76];
 
 export default function HeroShowcase() {
-  const ringRef = useRef<SVGCircleElement>(null);
-
   // SVG 진행 링 — r=54, 둘레 ≈ 339.3. 74/84 ≈ 88%.
   const CIRC = 2 * Math.PI * 54;
   const pct = 74 / 84;
+  const DRAWN_OFFSET = CIRC * (1 - pct);
+
+  // 링 드로잉 — 빈 링(오프셋 = 둘레)에서 목표치까지 한 번 그려진다.
+  // 첫 로드의 레어 순간이라 delight 예산이 허용되는 구간.
+  const [offset, setOffset] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const raf = requestAnimationFrame(() => setOffset(DRAWN_OFFSET));
+    return () => cancelAnimationFrame(raf);
+  }, [DRAWN_OFFSET]);
+
+  const dashoffset = offset ?? CIRC;
 
   return (
     <div className="relative mx-auto w-full max-w-[420px] select-none" aria-hidden>
@@ -28,7 +39,6 @@ export default function HeroShowcase() {
               <svg viewBox="0 0 128 128" className="h-full w-full -rotate-90">
                 <circle cx="64" cy="64" r="54" fill="none" stroke="var(--line)" strokeWidth="10" />
                 <circle
-                  ref={ringRef}
                   cx="64"
                   cy="64"
                   r="54"
@@ -37,7 +47,7 @@ export default function HeroShowcase() {
                   strokeWidth="10"
                   strokeLinecap="round"
                   strokeDasharray={CIRC}
-                  strokeDashoffset={CIRC * (1 - pct)}
+                  strokeDashoffset={dashoffset}
                   style={{ transition: "stroke-dashoffset 1.4s var(--ease-soft)" }}
                 />
                 <defs>

@@ -141,7 +141,7 @@ export default function GuideTour({
     <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label="사용 가이드">
       {/* 딤·스포트라이트 레이어 — 단계 전환 때 통째로 페이드한다. */}
       <div
-        className={`pointer-events-none absolute inset-0 transition-opacity duration-300 ease-out ${
+        className={`pointer-events-none absolute inset-0 transition-opacity duration-200 ease-out ${
           shown ? "opacity-100" : "opacity-0"
         }`}
       >
@@ -170,7 +170,7 @@ export default function GuideTour({
       />
 
       <div
-        className={`absolute w-[320px] rounded-[var(--r-lg)] border border-accent/40 bg-[var(--ink-1)] p-4 transition-all duration-300 ease-out ${
+        className={`absolute w-[320px] rounded-[var(--r-lg)] border border-accent/40 bg-[var(--ink-1)] p-4 transition-[opacity,transform] duration-200 ease-out ${
           shown && rect ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
         }`}
         style={{ top: cardTop, left: cardLeft }}

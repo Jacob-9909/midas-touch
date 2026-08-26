@@ -37,7 +37,7 @@ export default function SegmentedTabs<T extends string>({
             role="tab"
             aria-selected={is}
             onClick={() => onChange(t.id)}
-            className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--r-pill)] border px-3 py-1.5 font-mono-spec text-xs transition-colors duration-150 ${
+            className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--r-pill)] border px-3 py-1.5 font-mono-spec text-xs transition-colors duration-200 ${
               is
                 ? "border-accent/40 bg-accent/15 font-semibold text-accent"
                 : "border-transparent text-muted hover:bg-surface hover:text-fg"

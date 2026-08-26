@@ -181,13 +181,20 @@ html.dark .glass {
   font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.01em;
+  /* press 피드백은 100~160ms — 눌렀다는 응답은 즉각적이어야 한다 */
   transition:
     background 0.15s var(--ease-soft),
     border-color 0.15s ease,
     box-shadow 0.2s var(--ease-soft),
     color 0.15s ease,
     opacity 0.15s ease,
-    transform 0.15s var(--ease-soft);
+    transform 0.12s var(--ease-out);
+}
+/* 키보드 포커스 링 — 필드(.field:focus)와 같은 인디고 링으로 통일 */
+.btn-accent:focus-visible,
+.btn-ghost:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .btn-accent {
@@ -196,12 +203,16 @@ html.dark .glass {
   border: none;
   box-shadow: 0 0 0 0 transparent;
 }
-.btn-accent:hover:not(:disabled) {
-  box-shadow: 0 6px 24px -6px var(--glow);
-  transform: translateY(-1px);
+/* 호버 이동은 포인팅 디바이스에서만 — 터치 탭에 false hover가 발생한다 */
+@media (hover: hover) and (pointer: fine) {
+  .btn-accent:hover:not(:disabled) {
+    box-shadow: 0 6px 24px -6px var(--glow);
+    transform: translateY(-1px);
+  }
 }
-.btn-accent:active:not(:disabled) {
-  transform: translateY(0);
+.btn-accent:active:not(:disabled),
+.btn-ghost:active:not(:disabled) {
+  transform: scale(0.97); /* press 피드백 — 인터페이스가 입력을 듣고 있다는 확인 */
 }
 .btn-accent:disabled {
   opacity: 0.35;
@@ -212,9 +223,11 @@ html.dark .glass {
   color: var(--fg);
   border: 1px solid var(--line);
 }
-.btn-ghost:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-  background: var(--surface);
+@media (hover: hover) and (pointer: fine) {
+  .btn-ghost:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    background: var(--surface);
+  }
 }
 .btn-ghost:disabled {
   opacity: 0.4;
@@ -278,20 +291,10 @@ html.dark .glass {
   }
 }
 
-/* 토스트 진입 애니메이션 */
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-.toast-enter {
-  animation: toast-in 0.28s var(--ease-soft);
-}
+/* 토스트·드롭다운·모달 등 조건부 렌더 요소의 진입은 각 컴포넌트에서
+   Tailwind v4 `starting:` 변형(@starting-style) + transition 으로 처리한다.
+   keyframes는 재트리거 시 0부터 다시 시작하지만, transition은 현재 값에서
+   리타깃되므로 빠르게 연속 호출되는 UI(toast)에 유리하다. */
 
 /* 페이드/슬라이드 인 (콘텐츠) */
 @keyframes rise {
@@ -308,6 +311,22 @@ html.dark .glass {
   animation: rise 0.55s var(--ease-soft) both;
 }
 
+/* 채팅 말풍선 진입 — 대화당 매번 재생되는 고빈도 모션이라
+   콘텐츠 진입(animate-rise)보다 짧고 작게: 220ms · 6px · ease-out */
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.msg-in {
+  animation: msg-in 0.22s var(--ease-out) both;
+}
+
 /* 가는 스크롤바 */
 .scroll-thin::-webkit-scrollbar {
   width: 8px;
@@ -321,7 +340,8 @@ html.dark .glass {
   background: var(--stone);
 }
 
-/* 카드 호버 — 표면·테두리 + 부유 섀도로 반응한다. */
+/* 카드 호버 — 표면·테두리 + 부유 섀도로 반응한다.
+   이동(transform)은 포인팅 디바이스 한정 — 터치 탭의 false hover 방지. */
 .lift {
   transition:
     background 0.15s var(--ease-soft),
@@ -329,11 +349,13 @@ html.dark .glass {
     box-shadow 0.25s var(--ease-soft),
     transform 0.25s var(--ease-soft);
 }
-.lift:hover {
-  background: var(--surface);
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
-  box-shadow: var(--shadow-2);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .lift:hover {
+    background: var(--surface);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+    box-shadow: var(--shadow-2);
+    transform: translateY(-2px);
+  }
 }
 
 /* 스트리밍 응답 커서 */

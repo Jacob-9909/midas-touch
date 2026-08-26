@@ -106,7 +106,9 @@ export default function TickerAutocomplete({ value, onChange, onSubmit }: Ticker
       </div>
 
       {open && results.length > 0 && (
-        <ul className="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-line bg-[var(--ink-1)] py-1 [box-shadow:var(--shadow-float)]">
+        /* 입력(트리거) 위쪽에서 scale-in — origin-top. 150ms ease-out.
+           starting:(@starting-style)로 마운트 프레임부터 전이가 잡힌다. */
+        <ul className="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-line bg-[var(--ink-1)] py-1 [box-shadow:var(--shadow-float)] origin-top transition duration-150 ease-out starting:opacity-0 starting:scale-[0.98] starting:-translate-y-1">
           {results.map((r, i) => (
             <li key={`${r.symbol}-${i}`}>
               <button

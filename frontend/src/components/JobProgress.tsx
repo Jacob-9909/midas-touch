@@ -74,11 +74,13 @@ export default function JobProgress({
           {job.status} · {job.progress}%
         </span>
       </div>
+      {/* fill은 scaleX(transform)로만 움직인다 — width 전이는 매 프레임 layout을 다시 계산한다.
+          트랙의 overflow-hidden + square 끝이 pill 모양을 유지하므로 scale 왜곡이 보이지 않는다. */}
       <div className="h-2 w-full overflow-hidden rounded-full border border-line">
         <div
-          className="h-full transition-all duration-500"
+          className="h-full w-full origin-left transition-transform duration-300 ease-out"
           style={{
-            width: `${job.progress}%`,
+            transform: `scaleX(${Math.min(100, Math.max(0, job.progress)) / 100})`,
             background:
               job.status === "failed"
                 ? "var(--negative)"

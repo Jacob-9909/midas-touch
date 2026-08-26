@@ -64,7 +64,7 @@ export default function NavBar() {
               )}
               <Link
                 href={l.href}
-                className={`whitespace-nowrap rounded-full px-3.5 py-1 text-xs font-mono-spec transition-all duration-200 ${
+                className={`whitespace-nowrap rounded-full px-3.5 py-1 text-xs font-mono-spec transition-colors duration-200 ${
                   isActive(l.href)
                     ? "bg-accent/15 text-accent border border-accent/40 font-semibold"
                     : "text-muted hover:text-fg hover:bg-surface/60 border border-transparent"
@@ -114,9 +114,9 @@ export default function NavBar() {
         </div>
       </nav>
 
-      {/* 모바일 메뉴 */}
+      {/* 모바일 메뉴 — 트리거(햄버거) 아래에서 살짝 내려오는 150ms 진입 */}
       {open && (
-        <div className="mx-auto mt-2 max-w-[1200px] rounded-2xl border border-line bg-[color-mix(in_srgb,var(--ink-1)_92%,transparent)] px-3 py-2 shadow-[var(--shadow-2)] backdrop-blur-xl md:hidden">
+        <div className="mx-auto mt-2 max-w-[1200px] rounded-2xl border border-line bg-[color-mix(in_srgb,var(--ink-1)_92%,transparent)] px-3 py-2 shadow-[var(--shadow-2)] backdrop-blur-xl md:hidden origin-top transition duration-150 ease-out starting:opacity-0 starting:-translate-y-1">
           {LINKS.map((l) => (
             <Link
               key={l.href}

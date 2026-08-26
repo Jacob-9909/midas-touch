@@ -240,10 +240,12 @@ function RsiGauge({ value, signal }: { value: number; signal: string }) {
     <div className="rounded-2xl border border-line bg-[var(--ink-2)]/40 p-4">
       <div className="mb-2 text-xs uppercase tracking-wider text-muted">RSI (14)</div>
       <div className={`font-display text-2xl font-bold ${color}`}>{value}</div>
-      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--ink-3)]">
+      {/* --ink-3 토큰은 정의되지 않아 배경이 렌더되지 않던 버그 — ink-2로 교정.
+          fill은 scaleX(transform) 전이 — width 애니메이션의 layout 스래싱 제거. */}
+      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--ink-2)]">
         <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${barPct}%`, background: barColor }}
+          className="h-full w-full origin-left transition-transform duration-300 ease-out"
+          style={{ transform: `scaleX(${barPct / 100})`, background: barColor }}
         />
       </div>
       <div className="mt-1.5 flex justify-between text-[10px] text-muted">

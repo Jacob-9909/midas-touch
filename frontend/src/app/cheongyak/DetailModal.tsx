@@ -207,6 +207,15 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // 열려 있는 동안 배경 스크롤 잠금 — 뒤쪽 페이지가 함께 굴러가면 포커스가 이탈한다.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   useEffect(() => {
     let alive = true;
     /* eslint-disable-next-line react-hooks/set-state-in-effect -- kind/item 변경 시 로딩 리셋 후 재요청 */
@@ -257,11 +266,19 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={item.house_nm || "청약 공고 상세"}
+      className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
+      {/* 딤 — 모달보다 짧게 페이드 인 (200ms ease-out) */}
+      <div className="absolute inset-0 bg-black/50 transition-opacity duration-200 ease-out starting:opacity-0" />
       <div
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-[var(--r-xl)] border border-line bg-[var(--ink-1)] p-5 [box-shadow:var(--shadow-float)] sm:rounded-[var(--r-xl)] sm:p-6"
+        /* 패널 진입 — 모달은 트리거에 고정되지 않으므로 origin은 center가 맞다(스킬 예외 규칙).
+           모바일 bottom-sheet는 아래에서(spring 대신 240ms ease-out), 데스크톱은 제자리 scale-in.
+           scale(0)이 아니라 0.96 + opacity — 실세계엔 무에서 유가 없다. */
+        className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-[var(--r-xl)] border border-line bg-[var(--ink-1)] p-5 [box-shadow:var(--shadow-float)] transition-[opacity,transform] duration-[240ms] ease-[var(--ease-soft)] starting:translate-y-6 starting:scale-[0.98] starting:opacity-0 sm:rounded-[var(--r-xl)] sm:p-6 sm:starting:translate-y-0 sm:starting:scale-[0.96]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}

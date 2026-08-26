@@ -59,7 +59,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div
               key={t.id}
-              className="toast-enter pointer-events-auto flex items-center gap-3 px-5 py-3 text-xs sm:text-sm font-mono-spec bg-[var(--ink-2)] border border-line text-fg rounded-[var(--r-md)] transition-all duration-300 animate-rise border-l-4 border-l-accent"
+              /* 진입은 @starting-style(Tailwind starting:) + transition — 토스트는
+                 연속으로 추가되는 요소라 keyframes 재시작보다 리타깃되는 transition이
+                 매끄럽다. 상단 고정이라 위(트리거 방향)에서 살짝 내려온다. */
+              className="pointer-events-auto flex items-center gap-3 px-5 py-3 text-xs sm:text-sm font-mono-spec bg-[var(--ink-2)] border border-line text-fg rounded-[var(--r-md)] origin-top border-l-4 border-l-accent transition duration-200 ease-out starting:opacity-0 starting:-translate-y-2 starting:scale-[0.98]"
             >
               <Icon
                 weight="fill"

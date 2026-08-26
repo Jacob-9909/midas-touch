@@ -434,7 +434,7 @@ function ChatClient() {
                 {messages.map((m, i) => (
                   <div
                     key={i}
-                    className={`animate-rise flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                    className={`msg-in flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
                       data-chat-answer
