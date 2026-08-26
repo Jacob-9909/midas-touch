@@ -30,12 +30,12 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-sm flex-col justify-center">
-      <div className="rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-7">
+      <div className="glass p-7 shadow-[var(--shadow-2)]">
         <div className="mb-6 flex items-center gap-2.5">
           <ShieldChevron
             weight="fill"
             size={22}
-            className="text-accent"
+            className="text-gilt"
           />
           <h1 className="font-display text-xl font-semibold tracking-tight">Midas Touch 로그인</h1>
         </div>
@@ -49,7 +49,7 @@ export default function LoginPage() {
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-line/70 bg-surface/50 px-3 py-2 text-sm text-fg outline-none focus:border-accent/60"
+              className="w-full rounded-[var(--r-sm)] border border-line bg-[var(--ink-2)] px-3 py-2 text-sm text-fg outline-none transition focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)]"
             />
           </label>
 
@@ -61,12 +61,12 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-line/70 bg-surface/50 px-3 py-2 text-sm text-fg outline-none focus:border-accent/60"
+              className="w-full rounded-[var(--r-sm)] border border-line bg-[var(--ink-2)] px-3 py-2 text-sm text-fg outline-none transition focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)]"
             />
           </label>
 
           {error && (
-            <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+            <p className="rounded-[var(--r-sm)] border border-negative/40 bg-negative/10 px-3 py-2 text-xs text-negative">
               {error}
             </p>
           )}
@@ -74,7 +74,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg border border-accent/50 bg-accent/15 px-3 py-2 text-sm font-semibold text-accent transition hover:bg-accent/25 disabled:opacity-50"
+            className="btn-accent w-full"
           >
             {busy ? "로그인 중…" : "로그인"}
           </button>

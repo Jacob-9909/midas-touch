@@ -1,9 +1,24 @@
 import Link from "next/link";
-import { ChatsCircle, Coins, ChartLineUp } from "@phosphor-icons/react/dist/ssr";
+import {
+  ChatsCircle,
+  Coins,
+  ChartLineUp,
+  ShieldWarning,
+  Scroll,
+  SealCheck,
+} from "@phosphor-icons/react/dist/ssr";
 import ProfileNudge from "@/components/ProfileNudge";
 import LandingGuide from "@/components/LandingGuide";
 import HeroShowcase from "@/components/HeroShowcase";
 import TiltCard from "@/components/TiltCard";
+
+/** 3대 AI 피해 차단 배지 — 기획서 태그라인(피싱·환각 세법·허위 조언)의 제품면 증거.
+ *  실제 탑재된 기능만 표기한다(과장 금지 원칙). */
+const TRUST_BADGES = [
+  { icon: ShieldWarning, label: "사기 문자 검증", tone: "text-gilt" },
+  { icon: Scroll, label: "근거 조문 첨부", tone: "text-accent" },
+  { icon: SealCheck, label: "예측 자가 채점", tone: "text-positive" },
+] as const;
 
 /** 랜딩(`/`)은 대시보드 겸 관문 — 콘솔의 정체성을 요약하고 여정으로 보낸다.
  *
@@ -78,6 +93,22 @@ export default function HomePage() {
               <Link href="/chat" className="btn-ghost">
                 청약 상담 먼저 보기
               </Link>
+            </div>
+
+            {/* 신뢰 스트립 — "3대 AI 피해 차단" 서사의 제품면 증거(기획서 태그라인 정합) */}
+            <div className="mt-7 flex flex-wrap items-center gap-x-2 gap-y-2 text-xs text-muted">
+              <span className="font-mono-spec text-[10px] font-semibold uppercase tracking-[0.18em] text-stone">
+                AI 피해 차단
+              </span>
+              {TRUST_BADGES.map((b) => (
+                <span
+                  key={b.label}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] px-3 py-1.5 backdrop-blur-sm"
+                >
+                  <b.icon weight="fill" size={13} className={b.tone} />
+                  {b.label}
+                </span>
+              ))}
             </div>
           </div>
 
