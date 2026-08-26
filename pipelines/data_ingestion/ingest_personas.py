@@ -99,7 +99,9 @@ def main() -> None:
     print("\n3. 통합 한국어 임베딩 모델(BAAI/bge-m3) 로드 중...")
     print("   (Hugging Face에서 최초 1회 다운로드가 진행되므로 네트워크 상황에 따라 시간이 소요될 수 있습니다.)")
     try:
-        model = SentenceTransformer("BAAI/bge-m3")
+        # 백엔드 tools/_embedding.py의 AGENT_EMBEDDING_MODEL과 같은 패턴 — 로컬 경로 지정 가능.
+        # (hub 1.x httpx 클라이언트 버그 회색 지역에서 오프라인 재현성 확보용)
+        model = SentenceTransformer(os.environ.get("EMBEDDING_MODEL_PATH", "BAAI/bge-m3"))
         print("   bge-m3 모델 로드 성공. (임베딩 차원: 1024)")
     except Exception as e:
         print(f"❌ bge-m3 임베딩 모델 로드 실패: {e}")
