@@ -36,6 +36,20 @@ _CAUTION_MESSAGE = (
 )
 _BENIGN_MESSAGE = "코스피 지수 오늘 얼마야?"
 
+# 2026 금융 AI Challenge 실측 회귀 샘플 — 보이스피싱 상위 유형 미탐지("확인필요") 갭 검증용.
+_FAMILY_IMPERSONATION_MESSAGE = (
+    "엄마 나 사고났어. 경찰서에 있는데 지금 당장 300만원 이체해줘. 전화하지 마세요."
+)
+_LOAN_BINGJIP_MESSAGE = "저신용자·무직도 가능! 즉시대출 승인. 수수료 먼저 입금하시면 바로 송금드립니다."
+_CRYPTO_LEADING_ROOM_MESSAGE = "비트코인 선물 리딩방 입장하세요. USDT 입금 후 수익 10배 보장합니다."
+_REFUND_IMPERSONATION_MESSAGE = (
+    "[국세청] 2025년 환급금 1,240,000원이 확정되었습니다. "
+    "오늘까지 아래 링크에서 계좌를 입력하세요."
+)
+_PARTTIME_DEPOSIT_MESSAGE = "재택 부업 모집. 간단한 좋아요 작업으로 일당 15만원. 시작 전 보증금 5만원 필요합니다."
+_CUSTOMS_NAME_THEFT_MESSAGE = "[국제우편] 세관 통관 중 명의도용 의심. 경찰 수사 협조를 위해 계좌 확인이 필요합니다."
+_OFFICIAL_DOMAIN_MESSAGE = "네이버 메인 페이지가 잘 안 열려요. https://www.naver.com 여기서 로그아웃했다가 다시 해보세요."
+
 
 class TestFraudScanVerdicts(unittest.TestCase):
     def test_danger_message_multi_category(self) -> None:
@@ -142,6 +156,149 @@ class TestFraudCheckToolAndNode(unittest.TestCase):
         with mock.patch.dict(os.environ, env, clear=True):
             note = web_enrichment(_DANGER_MESSAGE)
         self.assertIn("웹 검색 보강 생략", note)
+
+
+class TestFraudScanVoicePhishingRegression(unittest.TestCase):
+    """실측 회귀: 보이스피싱 상위 유형 6종이 기존에는 '확인필요'로 미탐지되었다."""
+
+    def test_family_impersonation_is_danger(self) -> None:
+        """지인 호칭 + 사고 + 이체 요구 + 은폐 지시 → 가족·지인 사칭 위험."""
+        report = scan_message(_FAMILY_IMPERSONATION_MESSAGE)
+        self.assertEqual(report.verdict, "위험")
+        self.assertIn("가족·지인 사칭", {s.category for s in report.signals})
+
+    def test_loan_bingjip_scam_is_danger(self) -> None:
+        """저신용 타깃 + 즉시대출 + 수수료 선입금 → 대출 빙집 위험."""
+        report = scan_message(_LOAN_BINGJIP_MESSAGE)
+        self.assertEqual(report.verdict, "위험")
+        self.assertIn("대출 빙집 사기", {s.category for s in report.signals})
+
+    def test_crypto_leading_room_is_danger(self) -> None:
+        """리딩방 + USDT 입금 + 10배 보장 → 가상자산 리딩방 위험."""
+        report = scan_message(_CRYPTO_LEADING_ROOM_MESSAGE)
+        self.assertEqual(report.verdict, "위험")
+        self.assertIn("가상자산 리딩방", {s.category for s in report.signals})
+
+    def test_refund_impersonation_is_danger(self) -> None:
+        """국세청 환급금 + 오늘까지 링크 계좌 입력 → 환급·지원금 사칭 위험(60 이상)."""
+        report = scan_message(_REFUND_IMPERSONATION_MESSAGE)
+        self.assertGreaterEqual(report.total_score, VERDICT_DANGER_MIN)
+        self.assertEqual(report.verdict, "위험")
+        self.assertIn("환급·지원금 사칭", {s.category for s in report.signals})
+
+    def test_parttime_deposit_scam_is_danger(self) -> None:
+        """재택 부업 모집 + 시작 전 보증금 → 알바·부업 보증금 사기 위험."""
+        report = scan_message(_PARTTIME_DEPOSIT_MESSAGE)
+        self.assertEqual(report.verdict, "위험")
+        self.assertIn("알바·부업 보증금 사기", {s.category for s in report.signals})
+        # 보증금 토큰은 선입금 요구 카테고리와 독립 가산된다.
+        self.assertIn("선입금 요구", {s.category for s in report.signals})
+
+    def test_customs_name_theft_stays_at_least_caution(self) -> None:
+        """세관 통관 + 명의도용 + 경찰 수사 협조 → 정부기관 사칭 주의 이상."""
+        report = scan_message(_CUSTOMS_NAME_THEFT_MESSAGE)
+        self.assertGreaterEqual(report.total_score, VERDICT_CAUTION_MIN)
+        self.assertLess(report.total_score, VERDICT_DANGER_MIN)
+        self.assertIn("정부기관 사칭 의심", {s.category for s in report.signals})
+
+
+# 2026-08 실측 평가(scripts/evaluate_fraud_detection.py, n=32)에서 미탐지였던 FN 5건 원문 —
+# 어휘 갭 해소 회귀 검증용. 이 샘플은 verdict=="위험"을 유지해야 한다.
+_FN_SURGERY_MOM_MESSAGE = (
+    "엄마 나 폰 액정 깨져서 친구 폰으로 문자한다. 오늘 오후까지 수술비 200만원이 급하게 필요해. "
+    "기존 번호는 연결이 안 되니 일단 계좌로 입금해주면 저녁에 전화할게. http://bit.ly/mom-help"
+)
+_FN_SON_TEMP_NUMBER_MESSAGE = (
+    "[아들] 휴대폰 분실로 임시번호 사용 중. 회사 보증보험 해지 처리에 150만원 선입금이 "
+    "필요하다고 한다. 내일까지 꼭 보내줘. 자세한 건 카톡으로 설명할게."
+)
+_FN_ACQUAINTANCE_BORROW_MESSAGE = (
+    "저번에 밥 산 거 기억하지? 급하게 80만원만 빌려줘, 카드값 때문에 오늘까지만 필요해. "
+    "번호 바꿨어. 먼저 송금해주면 이번 주 안에 정확히 갚을게."
+)
+_FN_SAMEDAY_LOAN_MESSAGE = (
+    "[당일대출] 서류 없이 신청 즉시 500만원 입금. 신용등록·연체 이력 전부 가능. 조건 확인 후 "
+    "수수료 먼저 입금해 주세요. 상담 http://t.ly/xYz9"
+)
+_FN_CYBER_POLICE_SAFE_ACCOUNT_MESSAGE = (
+    "[경찰청 사이버수사과] 귀하 명의 불법 통장 적발로 자금 환수 절차가 진행 중입니다. "
+    "금융감독원 지정 안전계좌로 즉시 입금하지 않으면 계좌 동결 및 압류됩니다."
+)
+
+
+class TestFraudScanEvalFnRegression(unittest.TestCase):
+    """실측 평가 FN 5건 회귀 — 어휘 갭 해소 후에도 전부 '위험'으로 탐지되어야 한다."""
+
+    def test_mom_surgery_transfer_is_danger(self) -> None:
+        """엄마 호칭 + 수술비·폰 액정 긴급 + 입금해주면 → 가족·지인 사칭 위험."""
+        report = scan_message(_FN_SURGERY_MOM_MESSAGE)
+        self.assertEqual(report.verdict, "위험")
+        self.assertIn("가족·지인 사칭", {s.category for s in report.signals})
+
+    def test_son_lost_phone_temp_number_is_danger(self) -> None:
+        """아들 호칭 + 휴대폰 분실·임시번호 + 선입금 요구 → 가족·지인 사칭 위험."""
+        report = scan_message(_FN_SON_TEMP_NUMBER_MESSAGE)
+        self.assertEqual(report.verdict, "위험")
+        self.assertIn("가족·지인 사칭", {s.category for s in report.signals})
+
+    def test_acquaintance_borrow_with_number_change_is_danger(self) -> None:
+        """호칭이 없어도 급전 요구(빌려줘) + 번호 변경 결합으로 지인 사칭 위험."""
+        report = scan_message(_FN_ACQUAINTANCE_BORROW_MESSAGE)
+        self.assertEqual(report.verdict, "위험")
+        self.assertIn("가족·지인 사칭", {s.category for s in report.signals})
+
+    def test_same_day_loan_no_docs_is_danger(self) -> None:
+        """당일대출·서류 없이·신청 즉시 문구 → 대출 빙집 위험."""
+        report = scan_message(_FN_SAMEDAY_LOAN_MESSAGE)
+        self.assertEqual(report.verdict, "위험")
+        self.assertIn("대출 빙집 사기", {s.category for s in report.signals})
+
+    def test_police_safe_account_threat_is_danger(self) -> None:
+        """경찰청 사칭 + 안전계좌 입금 압박 → 정부기관 사칭 위험."""
+        report = scan_message(_FN_CYBER_POLICE_SAFE_ACCOUNT_MESSAGE)
+        self.assertEqual(report.verdict, "위험")
+        self.assertIn("정부기관 사칭 의심", {s.category for s in report.signals})
+
+    def test_borrow_request_without_contact_change_stays_low(self) -> None:
+        """급전 요구 동사 단독은 조합이 아니므로 위험 판정하지 않는다(오탐 방지 가드)."""
+        report = scan_message("급하게 10만원만 빌려줘, 주말까지 갚을게.")
+        self.assertLess(report.total_score, VERDICT_DANGER_MIN)
+
+
+class TestOfficialDomainRelief(unittest.TestCase):
+    def test_all_official_hosts_get_relief_and_stay_unjudged(self) -> None:
+        """공식 도메인만 있으면 URL 안심 감쇠 1회와 함께 확인필요를 유지한다."""
+        report = scan_message(_OFFICIAL_DOMAIN_MESSAGE)
+        relief = [s for s in report.signals if s.category == "URL 안심"]
+        self.assertEqual(len(relief), 1)
+        self.assertEqual(relief[0].score, -10)
+        self.assertEqual(report.total_score, 0)
+        self.assertEqual(report.verdict, "확인필요")
+
+    def test_relief_not_given_when_non_official_host_present(self) -> None:
+        """공식 도메인과 짧은링크가 섞이면 감쇠 없이 짧은링크 플래그만 부여된다."""
+        report = scan_message("공식 공지 https://www.naver.com 요약본은 https://bit.ly/abc 참조")
+        self.assertFalse(any(s.category == "URL 안심" for s in report.signals))
+        self.assertTrue(any("짧은 링크" in s.detail for s in report.signals))
+
+
+class TestDeterministicActionGuides(unittest.TestCase):
+    def test_family_guide_rendered_with_report_numbers(self) -> None:
+        """가족사칭 적중 시 결정론 행동 요령(1332 지급정지 안내)이 말미에 붙는다."""
+        body = format_report(scan_message(_FAMILY_IMPERSONATION_MESSAGE))
+        self.assertIn("### 권장 행동 요령", body)
+        self.assertIn("1332", body)
+
+    def test_guides_merge_without_duplication(self) -> None:
+        """복수 카테고리 적중 시 각 요령이 한 번씩만 출력된다."""
+        body = format_report(scan_message(_CRYPTO_LEADING_ROOM_MESSAGE))
+        self.assertEqual(body.count("### 권장 행동 요령"), 1)
+        self.assertIn("리딩방 수익 보장은 전부 사기입니다", body)
+
+    def test_no_guide_section_without_matched_category(self) -> None:
+        """매칭된 카테고리가 없으면 행동 요령 섹션 자체를 출력하지 않는다."""
+        body = format_report(scan_message(_BENIGN_MESSAGE))
+        self.assertNotIn("권장 행동 요령", body)
 
 
 if __name__ == "__main__":

@@ -9,8 +9,10 @@ import {
   Sun,
   List,
   X,
+  TextAa,
 } from "@phosphor-icons/react";
 import { useTheme } from "@/lib/theme";
+import { useAccessibility } from "@/lib/accessibility";
 
 // 헤드라인은 청약(상담 + 목록조회 + 시뮬레이터 + 내 정보)이라 "core"로 앞세우고,
 // 나머지(주식분석·지식그래프)는 부가 기능이라 "engine"으로 구분선 뒤에 강등한다.
@@ -29,6 +31,7 @@ const LINKS = [
 export default function NavBar() {
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
+  const { largeText, toggleLargeText } = useAccessibility();
   const [open, setOpen] = useState(false);
 
   const isActive = (href: string) =>
@@ -82,6 +85,20 @@ export default function NavBar() {
             className="btn-ghost btn-icon shrink-0"
           >
             {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
+          </button>
+
+          {/* 고령층 친화 — 큰 글씨 모드. 켜지면 액션 컬러로 상태를 보여준다. */}
+          <button
+            onClick={toggleLargeText}
+            aria-pressed={largeText}
+            aria-label="큰 글씨 모드"
+            title="큰 글씨"
+            className={`btn-ghost shrink-0 gap-1.5 rounded-full px-3 ${
+              largeText ? "border-accent/40 bg-accent/15 text-accent" : ""
+            }`}
+          >
+            <TextAa weight={largeText ? "fill" : "regular"} size={15} />
+            <span className="hidden whitespace-nowrap sm:inline">큰 글씨</span>
           </button>
 
           {/* 모바일 햄버거 */}
