@@ -1,20 +1,17 @@
 @import "tailwindcss";
 
 /* ────────────────────────────────────────────────
-   디자인 토큰 — "Bullion Terminal"
-   근거: docs 내 리서치(Linear/Vercel/Mercury 벤치마크) + 코드베이스 감사.
-   이 앱의 실체는 데이터 콘솔(가점표·백테스트·시뮬레이터·그래프)이므로
-   근흑색 콘솔 캔버스를 주력으로 하고, 골드(#D4AF37)는 Midas 정체성을
-   "달성·목표·주 CTA" 신호로만 찍는다. 시맨틱 색(상승/하락/경고)은
-   골드와 분리해 별도 토큰으로만 쓴다.
+   디자인 토큰 — "Neon Ledger"
+   근거: 레퍼런스 3종(Finantech X · Homies 3D · Accounting Dashboard) 추출값 기반 재설계.
+   Bullion Terminal의 무채색 미니멀(그림자·발광 금지, r=6 콘솔)에서 벗어나
+   극흑 캔버스 위에 인디고(액션)·앰버 골드(Midas 정체성)를 얹는 모던 핀테크 체계.
 
-   라이트 모드는 보조 크림 원장(Mercury 계열)으로 같은 토큰 이름을 유지 —
-   토큰 값 교체만으로 전환되게 한다.
-
-   원칙:
-   - 깊이는 그림자가 아니라 표면 명도 사다리(canvas→card→hover)로 만든다.
-   - radius: 버튼·입력 6px / 카드 8px / 패널·모달 12px / 배지 pill.
-   - 숫자는 항상 tabular-nums, 표에서 우측 정렬.
+   - 캔버스는 Finantech 계열 극흑(#0a0a10) — 순흑보다 한 단 띄워 피로를 줄인다.
+   - 액션/포커스는 일렉트릭 인디고(Homies #4a42e7 계열), Midas 골드는
+     앰버(#faad13)로 전격화해 도장 포인트로만 찍는다.
+   - 깊이는 표면 명도 + 은은한 컬러 글로우 섀도로 함께 만든다.
+   - radius: 입력 12 / 카드·패널 20 / 버튼 pill — 큰 라운드 = 젊은 신호.
+   - 숫자는 항상 tabular-nums, 표에서 우측 정렬(유지).
    ──────────────────────────────────────────────── */
 @theme inline {
   --color-ink: var(--ink);
@@ -31,19 +28,21 @@
   --color-negative: var(--negative);
   --color-warning: var(--warning);
   --font-sans: var(--font-inter), "Pretendard Variable", Pretendard, system-ui, sans-serif;
-  --font-display: var(--font-inter), "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  --font-display: var(--font-space), "Pretendard Variable", Pretendard, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  /* Tailwind 원시 radius 클래스를 스케일에 맞춘다 — 페이지마다 흩어진
-     rounded-xl/2xl 카드가 자동으로 패널 규격(12px)에 수렴한다. */
-  --radius-2xl: 12px;
+  /* 흩어진 rounded-xl/2xl 카드가 패널 규격(20px)에 수렴하도록 원시 스케일 교체 */
+  --radius-xl: 20px;
+  --radius-2xl: 20px;
+  --shadow-soft: var(--shadow-1);
+  --shadow-float: var(--shadow-2);
 }
 
 :root {
-  /* radius 스케일 — 버튼·입력 6 / 카드 8 / 패널·모달 12 / 배지 pill */
-  --r-sm: 6px;
-  --r-md: 8px;
-  --r-lg: 12px;
-  --r-xl: 16px;
+  /* radius 스케일 — 입력 12 / 카드·패널 20 / 모달 24 / 버튼·배지 pill */
+  --r-sm: 12px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 24px;
   --r-pill: 9999px;
   /* 세로 리듬 — 데이터 화면 72px, 랜딩 밴드 104~120px */
   --s-block: 80px;
@@ -53,55 +52,53 @@
   --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ── 다크 콘솔 (기본) — Bullion Terminal
-   순흑 대신 근흑(#101116)을 쓴다 — 장시간 상주하는 콘솔이라 완전 검정은
-   진동·피로를 부른다. 카드는 캔버스보다 두 단 위로 떠서 깊이를 만든다. */
+/* ── 다크 (기본) — Neon Ledger ── */
 html.dark {
-  --ink: #101116;            /* 캔버스 base */
-  --ink-2: #17181e;          /* 인셋·입력 배경 */
-  --ink-1: #1d1f26;          /* 카드 표면 */
-  --surface: #262933;        /* hover/inset lift */
-  --line: #32353f;           /* 헤어라인 */
-  --line-subtle: rgba(255, 255, 255, 0.06);
-  --fg: #e8e9ec;
-  --muted: #8b8f99;
-  --stone: #6f737d;
-  --accent: #d4af37;         /* 골드 — 목표·달성·주 CTA 전용 */
-  --accent-soft: #e3c25c;
-  --gilt: var(--accent);
-  --gilt-soft: var(--accent-soft);
-  --positive: #3fb68b;
-  --negative: #e5484d;
-  --warning: #e08a3c;
-  --glow: transparent;
-  --specular: transparent;
-  --shadow-soft: none;
-  --shadow-float: none;
+  --ink: #0a0a10;             /* 캔버스 base */
+  --ink-2: #11111a;           /* 인셋·입력 배경 */
+  --ink-1: #15151f;           /* 카드 표면 */
+  --surface: #1d1d2a;         /* hover/inset lift */
+  --line: #262637;            /* 헤어라인 */
+  --line-subtle: rgba(255, 255, 255, 0.07);
+  --fg: #eceef4;
+  --muted: #9094a8;
+  --stone: #6d7186;
+  --accent: #6c5cff;          /* 일렉트릭 인디고 — 액션·포커스·링크 */
+  --accent-soft: #8b7dff;
+  --gilt: #faad13;            /* 앰버 골드 — Midas 도장 포인트 */
+  --gilt-soft: #ffc83d;
+  --positive: #05c168;
+  --negative: #ff4d67;
+  --warning: #ff8a3d;
+  --glow: rgba(108, 92, 255, 0.35);
+  --specular: rgba(255, 255, 255, 0.06);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 32px -12px rgba(108, 92, 255, 0.12);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.4), 0 16px 48px -12px rgba(108, 92, 255, 0.25);
   color-scheme: dark;
 }
 
-/* ── 라이트 크림 원장 (보조) ── */
+/* ── 라이트 (보조) — 쿨 뉴트럴 원장(Accounting Dashboard 계열) ── */
 html.light {
-  --ink: #faf7f0;            /* 웜 크림 캔버스 */
-  --ink-2: #f7f4ed;          /* 인셋·입력 배경 */
-  --ink-1: #ffffff;          /* 카드 표면 */
-  --surface: #f2eee5;        /* hover/subtle */
-  --line: #e3ded2;
-  --line-subtle: rgba(38, 36, 31, 0.07);
-  --fg: #26241f;
-  --muted: #6e6a5e;
-  --stone: #8a857a;
-  --accent: #a67c00;         /* 다크 골드 — 크림 위 대비 확보용 */
-  --accent-soft: #8f6900;
-  --gilt: var(--accent);
-  --gilt-soft: var(--accent-soft);
-  --positive: #1f6f54;
-  --negative: #b33830;
-  --warning: #9a6a1f;
-  --glow: transparent;
-  --specular: transparent;
-  --shadow-soft: none;
-  --shadow-float: none;
+  --ink: #f6f7fb;             /* 쿨 그레이 캔버스 */
+  --ink-2: #eef0f6;           /* 인셋·입력 배경 */
+  --ink-1: #ffffff;           /* 카드 표면 */
+  --surface: #eceef5;         /* hover/subtle */
+  --line: #dfe2ec;
+  --line-subtle: rgba(23, 25, 45, 0.08);
+  --fg: #191b2a;
+  --muted: #5d6172;
+  --stone: #878b9c;
+  --accent: #5546e8;          /* 다크 인디고 — 밝은 배경 대비용 */
+  --accent-soft: #4433d4;
+  --gilt: #d98e00;            /* 진한 앰버 — 화이트 위 대비 확보 */
+  --gilt-soft: #b87a00;
+  --positive: #11845b;
+  --negative: #dc2f52;
+  --warning: #d97300;
+  --glow: rgba(85, 70, 232, 0.22);
+  --specular: rgba(255, 255, 255, 0.7);
+  --shadow-1: 0 1px 2px rgba(23, 25, 45, 0.06), 0 8px 28px -12px rgba(85, 70, 232, 0.14);
+  --shadow-2: 0 2px 8px rgba(23, 25, 45, 0.08), 0 18px 44px -12px rgba(85, 70, 232, 0.22);
   color-scheme: light;
 }
 
@@ -121,11 +118,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 디스플레이 타이포 — weight 500 · lineHeight 1.0 · 음수 자간.
-   콘솔 제목은 과하지 않게: clamp 상한을 낮게 유지한다. */
+/* 디스플레이 타이포 — Space Grotesk. 기하학적 그로테스크로 랜딩 헤드라인의
+   톤을 끌어올린다(Neue Machina 대체). weight 600 · lineHeight 1.05 · 음수 자간. */
 .font-display {
   font-family: var(--font-display), system-ui, sans-serif;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.05;
   letter-spacing: -0.02em;
 }
@@ -136,61 +133,75 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* 아이브로우 태그 — 모노 캡션 */
+/* 아이브로우 태그 — 모노 캡션, 인디고 틴트 */
 .eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
   border-radius: var(--r-pill);
-  border: 1px solid var(--line);
-  background: transparent;
-  padding: 0.25rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  padding: 0.25rem 0.75rem;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--accent-soft);
+}
+html.light .eyebrow {
+  color: var(--accent);
 }
 
-/* 콘텐츠 카드 — 헤어라인 + 표면 명도로만 층을 만든다.
-   클래스명은 .glass 그대로 둔다(다수 파일이 쓰고 있음). 유리 효과는 없다. */
+/* 콘텐츠 카드 — 반투명 표면 + 헤어라인. 클래스명은 .glass 유지(다수 파일 의존).
+   다크에서만 미세 블러 글라스를 얹고 라이트는 솔리드 화면을 유지한다. */
 .glass {
   position: relative;
   background: var(--ink-1);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+}
+html.dark .glass {
+  background: color-mix(in srgb, var(--ink-1) 88%, transparent);
+  backdrop-filter: blur(12px);
 }
 
-/* 버튼 — 6px 라운드(터미널 규격), 최소 높이 48px, 그림자 없음.
-   .btn-accent 가 주 CTA(캔버스 반전), .btn-ghost 는 외곽선.
-   배지·탭은 pill을 유지한다. */
+/* 버튼 — pill 라운드, 최소 높이 46px.
+   .btn-accent 가 주 CTA(인디고 그라디언트 + 호버 글로우),
+   .btn-ghost 는 외곽선. 배지·탭도 pill. */
 .btn-accent,
 .btn-ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 48px;
-  padding: 0.75rem 1.5rem;
-  /* 라벨 없는 아이콘 버튼은 이 규격을 벗어나야 한다 — .btn-icon 을 함께 쓴다. */
-  border-radius: var(--r-sm);
+  min-height: 46px;
+  padding: 0.65rem 1.4rem;
+  border-radius: var(--r-pill);
   font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   transition:
     background 0.15s var(--ease-soft),
     border-color 0.15s ease,
+    box-shadow 0.2s var(--ease-soft),
     color 0.15s ease,
-    opacity 0.15s ease;
+    opacity 0.15s ease,
+    transform 0.15s var(--ease-soft);
 }
 
 .btn-accent {
-  background: var(--fg);
-  color: var(--ink);
-  border: 1px solid var(--fg);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 0 0 0 transparent;
 }
 .btn-accent:hover:not(:disabled) {
-  opacity: 0.85;
+  box-shadow: 0 6px 24px -6px var(--glow);
+  transform: translateY(-1px);
+}
+.btn-accent:active:not(:disabled) {
+  transform: translateY(0);
 }
 .btn-accent:disabled {
   opacity: 0.35;
@@ -202,7 +213,7 @@ body {
   border: 1px solid var(--line);
 }
 .btn-ghost:hover:not(:disabled) {
-  border-color: var(--muted);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
   background: var(--surface);
 }
 .btn-ghost:disabled {
@@ -215,10 +226,10 @@ body {
   padding: 0;
   width: 40px;
   height: 40px;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
 }
 
-/* 입력 필드 — 인셋 표면 + 헤어라인, 포커스는 골드 테두리 한 단. */
+/* 입력 필드 — 인셋 표면 + 헤어라인, 포커스는 인디고 링. */
 .field {
   background: var(--ink-2);
   border: 1px solid var(--line);
@@ -229,17 +240,17 @@ body {
   outline: none;
   transition:
     border-color 0.15s ease,
-    box-shadow 0.15s var(--ease-soft);
+    box-shadow 0.2s var(--ease-soft);
 }
 .field::placeholder {
   color: var(--stone);
 }
 .field:focus {
   border-color: var(--accent);
-  box-shadow: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
-/* 스켈레톤 시머 — 중립 표면 명도로만 깜빡인다(골드 발광 금지). */
+/* 스켈레톤 시머 — 중립 표면 명도로 깜빡인다. */
 .skeleton {
   position: relative;
   overflow: hidden;
@@ -251,7 +262,6 @@ body {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  /* 전경색 기반 — 다크에선 밝게, 라이트 크림에서는 어둡게 지나간다. */
   background: linear-gradient(
     90deg,
     transparent,
@@ -311,15 +321,19 @@ body {
   background: var(--stone);
 }
 
-/* 카드 호버 — 그림자 없이 표면 명도와 테두리로만 반응한다. */
+/* 카드 호버 — 표면·테두리 + 부유 섀도로 반응한다. */
 .lift {
   transition:
     background 0.15s var(--ease-soft),
-    border-color 0.15s ease;
+    border-color 0.15s ease,
+    box-shadow 0.25s var(--ease-soft),
+    transform 0.25s var(--ease-soft);
 }
 .lift:hover {
   background: var(--surface);
-  border-color: var(--muted);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
 }
 
 /* 스트리밍 응답 커서 */
@@ -343,11 +357,54 @@ body {
   border-color: color-mix(in srgb, var(--line) 50%, transparent);
 }
 
-/* 캔버스에서 반 단 위 떠 있는 표면 — 히어로 밴드처럼 섹션에 미묘한 구분감을 줄 때.
-   전경색을 섞는 방식이라 하드코딩 없이 양쪽 테마 모두에서 자동으로 맞물린다
-   (라이트: 크림이 살짝 깊어짐 / 다크: 캔버스보다 살짝 떠 보임). */
+/* 캔버스에서 반 단 위 떠 있는 표면 — 히어로 밴드 등 섹션 구분용. */
 .surface-raised {
   background: color-mix(in srgb, var(--fg) 4.5%, var(--ink));
+}
+
+/* ── Neon Ledger 전용 유틸 ── */
+
+/* 그라디언트 텍스트 — 인디고→앰버. 히어로 헤드라인 강조 어절에만 쓴다. */
+.grad-text {
+  background: linear-gradient(
+    100deg,
+    var(--accent-soft) 10%,
+    var(--accent) 38%,
+    var(--gilt) 82%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 섹션 상단 페이드 — Finantech식 "배경이 어둠으로 스며드는" 밴드 경계. */
+.band-fade-top {
+  mask-image: linear-gradient(to bottom, transparent, black 18%);
+}
+
+/* 은은한 오로라 블롭 — 히어로 배경 장식. position 컨테이너 필요. */
+.aurora::before,
+.aurora::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 42vw;
+  max-width: 560px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(96px);
+  pointer-events: none;
+}
+.aurora::before {
+  top: -18%;
+  left: -8%;
+  background: radial-gradient(circle, var(--glow), transparent 68%);
+}
+.aurora::after {
+  top: 4%;
+  right: -12%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--gilt) 30%, transparent), transparent 68%);
+  opacity: 0.55;
 }
 
 /* prefers-reduced-motion: 모든 모션 제거 */
