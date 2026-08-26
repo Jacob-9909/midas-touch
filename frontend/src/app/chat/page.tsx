@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { errMsg } from "@/lib/async";
 import { Plus, TrashSimple, PaperPlaneTilt, SpeakerHigh, Stop } from "@phosphor-icons/react";
 import {
@@ -61,8 +62,12 @@ function AssistantAnswer({ content }: { content: string }) {
       synth.cancel(); // 취소에 따른 onend는 finishSpeak 가드가 무시한다
       return;
     }
-    // 출처 푸터는 splitChatSources가 이미 잘라둔 본문만 읽고, 각주 [n] 마커는 발음되지 않게 제거.
-    const text = body.replace(/\[\d+\]/g, "").trim();
+    // 읽어줄 텍스트 정제: 푸터 전체(방어 증명 🛡 섹션·출처)는 첫 단독 --- 줄부터
+    // 이어지므로 그 앞 본문만 남기고, 각주 [n] 마커도 발음되지 않게 제거한다.
+    const fenceAt = body.search(/^---\s*$/m);
+    const text = (fenceAt === -1 ? body : body.slice(0, fenceAt))
+      .replace(/\[\d+\]/g, "")
+      .trim();
     if (!text) return;
     synth.cancel(); // 다른 답변을 읽는 중이면 끊고 교체(그 인스턴스의 onend가 자기 상태 정리)
     const utterance = new SpeechSynthesisUtterance(text);
@@ -118,7 +123,7 @@ function AssistantAnswer({ content }: { content: string }) {
   );
 }
 
-export default function ChatPage() {
+function ChatClient() {
   // 로그인이 없으므로 세션은 이 브라우저의 익명 id 로 묶고, "누구인가"는
   // /me 에 직접 입력한 내 정보를 첫 턴에 요약해 보내는 것으로 대신한다.
   const [uid, setUid] = useState<string | null>(null);
@@ -138,11 +143,24 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const initedFor = useRef<string | null>(null);
   const seedRef = useRef<string | null>(null);
+  /** ?prefill= 로 넘어온 공격 프롬프트(/security → 챗 실험). 1회 소비용 ref. */
+  const prefillRef = useRef<string | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 브라우저 식별자 복원
     setUid(clientId());
   }, []);
+
+  // /security 등에서 ?prefill= 로 넘어온 프롬프트를 받아두고 URL을 정리한다.
+  // 파라미터가 주소에 남으면 새로고침마다 프리필이 반복되므로 즉시 replace(스크롤 없음).
+  useEffect(() => {
+    const prefill = searchParams.get("prefill");
+    if (!prefill) return;
+    prefillRef.current = prefill;
+    router.replace("/chat", { scroll: false });
+  }, [searchParams, router]);
 
   const refreshSessions = useCallback(async () => {
     try {
@@ -189,6 +207,15 @@ export default function ChatPage() {
     if (seedRef.current && uid && currentId) {
       setInput(seedRef.current);
       seedRef.current = null;
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [uid, currentId]);
+
+  // URL prefill도 동일하게 — 입력창에 채우고 포커스(1회 소비).
+  useEffect(() => {
+    if (prefillRef.current && uid && currentId) {
+      setInput(prefillRef.current);
+      prefillRef.current = null;
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [uid, currentId]);
@@ -469,5 +496,15 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// useSearchParams는 프리렌더 경로에서 Suspense 경계를 요구한다(Next 권장 패턴) —
+// 경계 안의 챗 본문만 클라이언트 렌더로 전환하고 나머지는 그대로 유지한다.
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="h-[calc(100dvh-4rem)]" />}>
+      <ChatClient />
+    </Suspense>
   );
 }
