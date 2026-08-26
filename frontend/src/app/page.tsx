@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ChatsCircle, Coins, ChartLineUp } from "@phosphor-icons/react/dist/ssr";
 import ProfileNudge from "@/components/ProfileNudge";
 import LandingGuide from "@/components/LandingGuide";
+import HeroShowcase from "@/components/HeroShowcase";
+import TiltCard from "@/components/TiltCard";
 
 /** 랜딩(`/`)은 대시보드 겸 관문 — 콘솔의 정체성을 요약하고 여정으로 보낸다.
  *
@@ -48,34 +50,39 @@ export default function HomePage() {
         data-tour="hero"
         className="aurora surface-raised relative overflow-hidden border-b border-line"
       >
-        <div className="mx-auto max-w-[1200px] px-6 py-[88px] sm:py-[104px]">
-          <div className="flex items-center justify-between gap-4">
-            <span className="eyebrow">청년 자산형성 콘솔</span>
-            <LandingGuide />
-          </div>
-          <h1 className="font-display mt-10 max-w-[22ch] text-[clamp(2.25rem,5vw,3.75rem)]">
-            무주택 사회초년생을 위한
-            <br />
-            청약·자금마련 <span className="grad-text">AI 콘솔</span>
-          </h1>
-          <p className="mt-7 max-w-[58ch] leading-[1.6] text-muted">
-            흩어진 청약 조건과 자금 계획을 한자리에서 정리합니다. 내 조건에 어떤 청약 유형이
-            적용되는지 세법·청약 조문 근거와 함께 설명하고, 실제 공고의 당첨가점과 내 가점을
-            나란히 놓고, 목표금액까지 몇 개월 걸리는지 시뮬레이션합니다.
-          </p>
-          <p className="mt-3 max-w-[58ch] text-xs leading-relaxed text-muted">
-            판단을 대신하지 않고 근거를 정리해 보여주는 정보 제공 서비스이며, 투자·세무 자문이 아닙니다.
-          </p>
+        <div className="mx-auto grid max-w-[1200px] items-center gap-14 px-6 py-[88px] sm:py-[104px] lg:grid-cols-[1.15fr_1fr]">
+          <div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="eyebrow">청년 자산형성 콘솔</span>
+              <LandingGuide />
+            </div>
+            <h1 className="font-display mt-10 max-w-[22ch] text-[clamp(2.25rem,5vw,3.75rem)]">
+              무주택 사회초년생을 위한
+              <br />
+              청약·자금마련 <span className="grad-text">AI 콘솔</span>
+            </h1>
+            <p className="mt-7 max-w-[58ch] leading-[1.6] text-muted">
+              흩어진 청약 조건과 자금 계획을 한자리에서 정리합니다. 내 조건에 어떤 청약 유형이
+              적용되는지 세법·청약 조문 근거와 함께 설명하고, 실제 공고의 당첨가점과 내 가점을
+              나란히 놓고, 목표금액까지 몇 개월 걸리는지 시뮬레이션합니다.
+            </p>
+            <p className="mt-3 max-w-[58ch] text-xs leading-relaxed text-muted">
+              판단을 대신하지 않고 근거를 정리해 보여주는 정보 제공 서비스이며, 투자·세무 자문이 아닙니다.
+            </p>
 
-          {/* 주 CTA — fg 반전 pill로 화면에서 가장 밝은(라이트에선 가장 어두운) 픽셀이 된다. */}
-          <div className="mt-9 flex flex-wrap items-center gap-3">
-            <Link href="/me" className="btn-accent">
-              내 정보 입력하고 시작하기
-            </Link>
-            <Link href="/chat" className="btn-ghost">
-              청약 상담 먼저 보기
-            </Link>
+            {/* 주 CTA — 인디고 그라디언트 pill */}
+            <div className="mt-9 flex flex-wrap items-center gap-3">
+              <Link href="/me" className="btn-accent">
+                내 정보 입력하고 시작하기
+              </Link>
+              <Link href="/chat" className="btn-ghost">
+                청약 상담 먼저 보기
+              </Link>
+            </div>
           </div>
+
+          {/* 우측 — 서비스를 미리 보여주는 글래스 위젯 클러스터(3D 틸트) */}
+          <HeroShowcase />
         </div>
       </section>
 
@@ -89,25 +96,23 @@ export default function HomePage() {
 
         <div className="mt-10 grid gap-[1px] overflow-hidden rounded-[var(--r-lg)] border border-line bg-line sm:grid-cols-3">
           {JOURNEY.map((s) => (
-            <Link
-              key={s.title}
-              href={s.href}
-              className="lift group flex flex-col bg-[var(--ink-1)] p-6"
-            >
-              <div className="flex items-center justify-between border-b border-line pb-3">
-                <span className="font-mono-spec text-[10px] font-semibold tracking-widest text-gilt">
-                  {s.step}
+            <TiltCard key={s.title} max={4} className="bg-[var(--ink-1)]">
+              <Link href={s.href} className="lift group flex h-full flex-col p-6">
+                <div className="flex items-center justify-between border-b border-line pb-3">
+                  <span className="font-mono-spec text-[10px] font-semibold tracking-widest text-gilt">
+                    {s.step}
+                  </span>
+                  <span className="text-muted">
+                    <s.icon size={18} weight="duotone" />
+                  </span>
+                </div>
+                <h3 className="font-display mt-5 text-xl text-fg">{s.title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-muted">{s.body}</p>
+                <span className="mt-auto pt-5 text-sm font-semibold text-fg transition-colors group-hover:text-accent">
+                  시작하기 →
                 </span>
-                <span className="text-muted">
-                  <s.icon size={18} weight="duotone" />
-                </span>
-              </div>
-              <h3 className="font-display mt-5 text-xl text-fg">{s.title}</h3>
-              <p className="mt-2 text-xs leading-relaxed text-muted">{s.body}</p>
-              <span className="mt-auto pt-5 text-sm font-semibold text-fg transition-colors group-hover:text-accent">
-                시작하기 →
-              </span>
-            </Link>
+              </Link>
+            </TiltCard>
           ))}
         </div>
       </section>

@@ -48,6 +48,7 @@ import {
   type OutlookHorizon,
 } from "@/lib/api";
 import { clientId } from "@/lib/my-profile";
+import { mockPriceHistory, mockQuickAnalysis, withMock } from "@/lib/mock-data";
 import { seedChat } from "@/lib/chat-seed";
 import MiniSparkline from "@/components/bits/MiniSparkline";
 import SpecularMetricCard from "@/components/bits/SpecularMetricCard";
@@ -397,10 +398,10 @@ export default function StocksPage() {
     setQaBusy(true);
     setQa(null);
     try {
-      const res = await getQuickAnalysis(symbol);
+      const res = await withMock(getQuickAnalysis(symbol), () => mockQuickAnalysis(symbol), "퀵분석");
       setQa(res);
-      // 가격 헤더의 스파크라인용 실제 종가 시계열(최근 1개월). 실패해도 분석 자체는 유효하므로 조용히 무시.
-      getPriceHistory(symbol, "1mo")
+      // 가격 헤더의 스파크라인용 실제 종가 시계열(최근 1개월). 백엔드 미기동이면 목데이터로 프리뷰.
+      withMock(getPriceHistory(symbol, "1mo"), () => mockPriceHistory(symbol, "1mo"), "가격 히스토리")
         .then((h: PriceHistory) => setSeries(h.points.map((p) => p.close)))
         .catch(() => setSeries([]));
     } catch (e) {

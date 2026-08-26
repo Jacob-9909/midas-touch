@@ -407,6 +407,20 @@ html.dark .glass {
   opacity: 0.55;
 }
 
+/* 부유 배지 — 위젯 주변을 떠다니는 라이브 신호 */
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+.float-slow {
+  animation: float-y 5s ease-in-out infinite;
+}
+
 /* prefers-reduced-motion: 모든 모션 제거 */
 @media (prefers-reduced-motion: reduce) {
   *,

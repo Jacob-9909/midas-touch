@@ -12,6 +12,7 @@ import {
   type QueryResponse,
 } from "@/lib/api";
 import { Card, PageTitle } from "@/components/ui";
+import { MOCK_GRAPH, withMock } from "@/lib/mock-data";
 import { useToast } from "@/lib/toast";
 import JobProgress from "@/components/JobProgress";
 import GraphView from "@/components/GraphView";
@@ -63,7 +64,11 @@ export default function GraphPage() {
   const loadSnapshot = async () => {
     setSnapLoading(true);
     try {
-      const s = await apiGet<GraphSnapshot>("/api/v1/graph/snapshot?limit=150");
+      const s = await withMock(
+        apiGet<GraphSnapshot>("/api/v1/graph/snapshot?limit=150"),
+        MOCK_GRAPH,
+        "그래프 스냅샷",
+      );
       setSnapshot(s);
       if (s.nodes.length === 0) toast("그래프가 비어 있습니다. 먼저 빌드하세요.", "info");
     } catch (e) {

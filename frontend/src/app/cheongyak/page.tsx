@@ -12,6 +12,7 @@ import {
   Compass,
 } from "@phosphor-icons/react";
 import { listCheongyak, type CheongyakKind, type CheongyakSummary } from "@/lib/api";
+import { MOCK_CHEONGYAK, withMock } from "@/lib/mock-data";
 import Link from "next/link";
 import { seedChat } from "@/lib/chat-seed";
 import { MAX_SCORE, totalCheongyakScore } from "@/lib/cheongyak-score";
@@ -258,7 +259,11 @@ export default function CheongyakPage() {
     setError(null);
     setMapRegion(null);
     /* eslint-enable react-hooks/set-state-in-effect */
-    listCheongyak(kind, 120, 120)
+    withMock(
+      listCheongyak(kind, 120, 120),
+      () => (kind === "apt" ? MOCK_CHEONGYAK : []),
+      "청약 목록",
+    )
       .then((data) => alive && setItems(data))
       .catch((e) => {
         if (!alive) return;
