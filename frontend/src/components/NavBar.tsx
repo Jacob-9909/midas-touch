@@ -18,6 +18,7 @@ import { useAccessibility } from "@/lib/accessibility";
 // 나머지(주식분석·지식그래프)는 부가 기능이라 "engine"으로 구분선 뒤에 강등한다.
 const LINKS = [
   { href: "/chat", label: "에이전트 챗봇", group: "core" },
+  { href: "/security", label: "보안", group: "core" },
   { href: "/cheongyak", label: "청약", group: "core" },
   { href: "/simulator", label: "자금마련 시뮬레이터", group: "core" },
   { href: "/me", label: "내 정보", group: "core" },
