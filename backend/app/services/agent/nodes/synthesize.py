@@ -9,6 +9,7 @@ from langchain_core.messages import AIMessage, SystemMessage
 from ..llm import build_chat_model
 from ..prompts import SYSTEM_PROMPT
 from ..state import AgentState
+from ._common import TOOL_NODES
 
 # doc_rag 결과 블록(tools/doc_rag._format_passages)의 발췌 헤더에서 출처를 뽑는 정규식.
 # 예: "[발췌 2] 출처: 국세청 주식과 세금 / passage_id: a1b2c3 (유사도 0.8123)"
@@ -19,6 +20,9 @@ _CITATION_RE = re.compile(
 
 # 답변 말미에 코드가 직접 붙이는 출처 섹션 헤더(프론트엔드가 이 형식으로 감지한다).
 _SOURCES_HEADER = "출처:"
+
+# 방어 증명 섹션 헤더 — 5겹 방어를 매 답변 말미에 사용자에게 증명한다.
+_DEFENSE_HEADER = "🛡 방어 증명"
 
 
 def _doc_rag_sources(contexts: list[str]) -> list[tuple[str, str]]:
@@ -54,6 +58,35 @@ def _sources_footer(sources: list[tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def _defense_footer(route: list[str] | None, source_count: int) -> str:
+    """방어 증명 섹션을 LLM 개입 없이 결정론적으로 조립한다(근거 유무와 무관하게 항상 출력).
+
+    도구 화이트리스트·grounding·출처 강제·결정론 계산·저온 생성의 5겹 방어 상태를 답변마다
+    증명해, 후가공 없이도 응답이 견고하게 만들어졌음을 사용자가 검증할 수 있게 한다.
+
+    route는 intent의 원시 판정이 섞일 수 있으므로 routing.dispatch와 동일한 화이트리스트
+    필터를 여기서 재적용한다 — "화이트리스트 통과" 문장이 항상 사실이게 유지하기 위함이다.
+    """
+    executed = [t for t in (route or []) if t in TOOL_NODES]
+    lines = [
+        "---",
+        _DEFENSE_HEADER,
+        "- 검색 도구(화이트리스트 통과): " + (", ".join(executed) if executed else "미사용"),
+        (
+            f"- 근거 문서: {source_count}건 인용(하단 출처)"
+            if source_count > 0
+            else "- 근거 문서: 없음 — grounding 모드로 응답"
+        ),
+        (
+            "- 수치 계산: 결정론 계산기 사용(LLM 개입 없음)"
+            if "tax_calculator" in executed
+            else "- 수치 계산: LLM 작문(수치는 컨텍스트 근거로만 제한)"
+        ),
+        "- 응답 안정화: grounding 지시 상시 삽입 + 저온 생성(temp 0.3)",
+    ]
+    return "\n".join(lines)
+
+
 def synthesize_node(state: AgentState) -> dict:
     system_parts = [SYSTEM_PROMPT]
 
@@ -83,7 +116,12 @@ def synthesize_node(state: AgentState) -> dict:
 
     # LLM이 출처를 지어내지 않도록, doc_rag 근거가 있으면 출처 섹션을 코드가 직접 덧붙인다.
     sources = _doc_rag_sources(contexts)
+    base = reply.content if isinstance(reply.content, str) else str(reply.content)
+    # 방어 증명은 근거 유무와 무관하게 항상 붙여 grounding 모드임을 증명한다. 최종 순서는
+    # 본문 → 방어 증명 → 출처로 엄수한다 — chat-sources.ts가 '출처:' 헤더 이후만 파싱하므로
+    # 출처 블록이 반드시 답변 말미에 위치해야 한다.
+    parts = [base, _defense_footer(state.get("route"), len(sources))]
     if sources:
-        base = reply.content if isinstance(reply.content, str) else str(reply.content)
-        reply.content = f"{base}\n\n{_sources_footer(sources)}"
+        parts.append(_sources_footer(sources))
+    reply.content = "\n\n".join(parts)
     return {"messages": [reply]}
