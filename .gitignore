@@ -24,6 +24,9 @@ data/
 *.xlsx
 *.parquet
 
+# 로컬 다운로드 모델 가중치 (bge-m3 등 — 대용량 바이너리, 재다운로드 가능)
+models/
+
 # Runtime output / logs
 logs/
 output/
