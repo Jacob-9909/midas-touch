@@ -1113,15 +1113,16 @@ export default function StocksPage() {
                         name="전략"
                         stroke="var(--accent)"
                         dot={false}
-                        strokeWidth={2}
+                        strokeWidth={2.5}
                       />
                       <Line
                         type="monotone"
                         dataKey="cumulative_returns"
                         name="매수후보유"
-                        stroke="#9aa3b5"
+                        stroke="var(--stone)"
                         dot={false}
                         strokeWidth={1.5}
+                        strokeDasharray="6 4"
                       />
                     </LineChart>
                   </ResponsiveContainer>

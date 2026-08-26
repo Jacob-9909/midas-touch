@@ -60,7 +60,7 @@ const TOUR: TourStep[] = [
 ];
 
 const input =
-  "w-full rounded-xl border border-line bg-[var(--ink-2)]/50 px-3 py-2 text-sm text-fg outline-none focus:border-accent font-mono-spec tabular-nums";
+  "w-full rounded-[var(--r-sm)] border border-line bg-[var(--ink-2)] px-3 py-2 text-sm text-fg outline-none transition focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)] font-mono-spec tabular-nums";
 const field = "flex flex-col gap-1.5";
 const labelText = "text-xs text-muted";
 

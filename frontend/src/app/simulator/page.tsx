@@ -32,7 +32,7 @@ import {
 } from "@/lib/simulate";
 
 const inputClass =
-  "rounded-xl border border-line bg-[var(--ink-2)]/50 px-3 py-2 text-sm text-fg outline-none focus:border-accent";
+  "rounded-[var(--r-sm)] border border-line bg-[var(--ink-2)] px-3 py-2 text-sm text-fg outline-none transition focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)]";
 const labelClass = "flex flex-col gap-1.5";
 const labelTextClass = "text-xs text-muted";
 const TOOLTIP_STYLE = {
@@ -287,8 +287,8 @@ export default function SimulatorPage() {
           <Card data-tour="result">
             <SectionLabel>도달 시점 비교</SectionLabel>
             <div className="mb-4 grid grid-cols-2 gap-4">
-              <ResultTile label={labelA} months={reachA} />
-              <ResultTile label={labelB} months={reachB} />
+              <ResultTile label={labelA} months={reachA} tone="var(--accent)" />
+              <ResultTile label={labelB} months={reachB} tone="var(--gilt)" />
             </div>
             {diffMonths !== null && diffMonths !== 0 && (
               <p className="mb-4 text-sm text-fg">
@@ -320,12 +320,13 @@ export default function SimulatorPage() {
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <ReferenceLine
                   y={targetAmount}
-                  stroke="var(--accent)"
+                  stroke="var(--gilt)"
                   strokeDasharray="4 4"
-                  label={{ value: "목표", position: "insideTopRight", fill: "var(--accent)", fontSize: 11 }}
+                  label={{ value: "목표", position: "insideTopRight", fill: "var(--gilt)", fontSize: 11 }}
                 />
-                <Line type="monotone" dataKey="a" name={labelA} stroke="var(--accent)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="b" name={labelB} stroke="var(--positive)" strokeWidth={2} dot={false} />
+                {/* 시리즈 색은 인디고(A)·앰버(B) 듀오 — 비교 대상에 상승/하락 의미를 쓰지 않는다 */}
+                <Line type="monotone" dataKey="a" name={labelA} stroke="var(--accent)" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="b" name={labelB} stroke="var(--gilt)" strokeWidth={2.5} dot={false} />
               </LineChart>
             </ResponsiveContainer>
             <p className="mt-3 text-[11px] leading-relaxed text-muted">
@@ -339,11 +340,25 @@ export default function SimulatorPage() {
   );
 }
 
-function ResultTile({ label, months }: { label: string; months: number | null }) {
+function ResultTile({
+  label,
+  months,
+  tone,
+}: {
+  label: string;
+  months: number | null;
+  tone: string;
+}) {
   return (
-    <div className="rounded-xl border border-line/60 bg-surface/30 p-4">
-      <div className="mb-1 truncate text-xs text-muted">{label}</div>
-      <div className="font-mono-spec text-2xl font-semibold text-fg">
+    <div className="relative overflow-hidden rounded-[var(--r-md)] border border-line/60 bg-surface/30 p-4">
+      {/* 시리즈 색 인디케이터 — 차트 선과 같은 색으로 어떤 타일인지 즉시 읽히게 */}
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-[3px]"
+        style={{ background: tone }}
+      />
+      <div className="mb-1 truncate pl-2 text-xs text-muted">{label}</div>
+      <div className="font-mono-spec pl-2 text-2xl font-semibold text-fg">
         {months === null ? "20년 내 미도달" : months === 0 ? "이미 충족" : `${months}개월`}
       </div>
     </div>

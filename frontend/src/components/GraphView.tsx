@@ -12,8 +12,9 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   loading: () => <p className="text-sm text-muted">그래프 로딩 중…</p>,
 });
 
-const NODE_COLOR = "#c7a349";
-const NODE_HI = "#ffffff";
+// 폴백색 — 실제로는 렌더 시 토큰(--accent 등)을 실측해 쓴다. 인디고/앰버 듀오 유지.
+const NODE_COLOR = "#6c5cff";
+const NODE_HI = "#faad13";
 
 // canvas fillStyle 은 var() 를 파싱하지 못하므로 렌더 시점에 토큰 값을 실측해 치환한다.
 function tokenColor(varName: string, fallback: string): string {
