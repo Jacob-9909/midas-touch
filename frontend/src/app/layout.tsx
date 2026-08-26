@@ -25,9 +25,9 @@ const spaceGrotesk = Space_Grotesk({
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Midas Touch · 청약·자금마련 AI 콘솔",
+  title: "Midas Touch · AI 금융 보안 비서",
   description:
-    "무주택 사회초년생을 위한 청약 상담·청약가점 계산·자금마련 타임라인 시뮬레이터. GraphRAG 근거 기반 정보 제공 서비스(투자·세무 자문 아님).",
+    "피싱·환각·틀린 세법 답변을 한 번에 잡는 AI 금융 보안 비서. 사기 문자 검증·연령별 행동 요령, 법령 근거 기반 결정론 세금 계산, 청약·자산 상담을 하나의 대화로. 정보 제공 서비스(투자·세무 자문 아님).",
 };
 
 export default function RootLayout({

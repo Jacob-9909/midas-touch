@@ -68,18 +68,19 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-[1200px] items-center gap-14 px-6 py-[88px] sm:py-[104px] lg:grid-cols-[1.15fr_1fr]">
           <div>
             <div className="flex items-center justify-between gap-4">
-              <span className="eyebrow">청년 자산형성 콘솔</span>
+              <span className="eyebrow">AI 금융 보안 비서 · 금융소비자 보호</span>
               <LandingGuide />
             </div>
-            <h1 className="font-display mt-10 max-w-[22ch] text-[clamp(2.25rem,5vw,3.75rem)]">
-              무주택 사회초년생을 위한
+            <h1 className="font-display mt-10 max-w-[24ch] text-[clamp(2.25rem,5vw,3.75rem)]">
+              피싱·환각·틀린 세법 답변
               <br />
-              청약·자금마련 <span className="grad-text">AI 콘솔</span>
+              한 번에 잡는 <span className="grad-text">AI 보안 비서</span>
             </h1>
             <p className="mt-7 max-w-[58ch] leading-[1.6] text-muted">
-              흩어진 청약 조건과 자금 계획을 한자리에서 정리합니다. 내 조건에 어떤 청약 유형이
-              적용되는지 세법·청약 조문 근거와 함께 설명하고, 실제 공고의 당첨가점과 내 가점을
-              나란히 놓고, 목표금액까지 몇 개월 걸리는지 시뮬레이션합니다.
+              사기 문자를 붙여넣으면 판정 근거와 나에게 맞는 행동 요령을 알려주고, 세금은
+              법령 근거와 함께 코드가 직접 계산하며, 청약·자산 상담은 모든 답변의 출처를
+              공개합니다. 매 답변 말미의 방어 증명 카드가 이 AI가 왜 믿을 수 있는지
+              증명합니다.
             </p>
             <p className="mt-3 max-w-[58ch] text-xs leading-relaxed text-muted">
               판단을 대신하지 않고 근거를 정리해 보여주는 정보 제공 서비스이며, 투자·세무 자문이 아닙니다.
@@ -90,8 +91,11 @@ export default function HomePage() {
               <Link href="/me" className="btn-accent">
                 내 정보 입력하고 시작하기
               </Link>
-              <Link href="/chat" className="btn-ghost">
-                청약 상담 먼저 보기
+              <Link
+                href={`/chat?prefill=${encodeURIComponent("이 문자 사기야? 엄마 나 사고났어. 경찰서에 있는데 지금 당장 300만원 이체해줘. 전화하지 마세요.")}`}
+                className="btn-ghost"
+              >
+                사기 검증 먼저 체험하기
               </Link>
             </div>
 
