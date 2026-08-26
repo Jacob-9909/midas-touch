@@ -55,3 +55,7 @@ docs/submission/
 
 # Local ops scripts / daemon logs (not part of the repo)
 scripts/
+
+# Claude Code tooling artifacts
+.agents/
+skills-lock.json
