@@ -221,6 +221,42 @@ class TestApiFlow(unittest.TestCase):
         res = self.client.post("/api/v1/tax-rates/apply", json={"proposed": bad})
         self.assertEqual(res.status_code, 400)
 
+    def test_text_file_upload(self) -> None:
+        res = self.client.post(
+            "/api/v1/tax-rates/extract/upload",
+            files={"file": ("amend.txt", _SAMPLE_AMENDMENT.encode("utf-8"), "text/plain")},
+            data={"year": "2026", "use_llm": "false"},
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(
+            any(d["field"] == "foreign_stock_national_rate" for d in res.json()["diff"])
+        )
+
+    def test_pdf_upload_uses_parser(self) -> None:
+        # 실제 PDF·파서 라이브러리 없이, PDF→텍스트 추출 지점만 주입해 배선을 검증한다.
+        from backend.app.api import tax_rates as tr
+
+        original = tr._pdf_to_text
+        tr._pdf_to_text = lambda _raw: _SAMPLE_AMENDMENT
+        try:
+            res = self.client.post(
+                "/api/v1/tax-rates/extract/upload",
+                files={"file": ("amend.pdf", b"%PDF-1.4 fake", "application/pdf")},
+                data={"year": "2026", "use_llm": "false"},
+            )
+        finally:
+            tr._pdf_to_text = original
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json()["can_apply"])
+
+    def test_unsupported_suffix_rejected(self) -> None:
+        res = self.client.post(
+            "/api/v1/tax-rates/extract/upload",
+            files={"file": ("amend.docx", b"x", "application/octet-stream")},
+            data={"year": "2026"},
+        )
+        self.assertEqual(res.status_code, 400)
+
 
 if __name__ == "__main__":
     unittest.main()

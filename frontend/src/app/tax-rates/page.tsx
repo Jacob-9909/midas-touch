@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowRight, CheckCircle, Warning, Sparkle } from "@phosphor-icons/react";
+import { useRef, useState } from "react";
+import { ArrowRight, CheckCircle, Warning, Sparkle, FilePdf } from "@phosphor-icons/react";
 import {
   applyRates,
   extractRates,
+  extractRatesUpload,
   type RateApplyResult,
   type RateDiffRow,
   type RateExtractResult,
@@ -46,6 +47,7 @@ export default function TaxRatesPage() {
   const [applied, setApplied] = useState<RateApplyResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function onExtract() {
     setBusy(true);
@@ -58,6 +60,21 @@ export default function TaxRatesPage() {
       setError(e instanceof Error ? e.message : "추출에 실패했습니다.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onUpload(file: File) {
+    setBusy(true);
+    setError(null);
+    setApplied(null);
+    setResult(null);
+    try {
+      setResult(await extractRatesUpload(file, year, false));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "파일 추출에 실패했습니다.");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -79,7 +96,7 @@ export default function TaxRatesPage() {
       <PageTitle
         eyebrow="결정론 계산기 · 개정 대응"
         title="세율 개정안 인입"
-        subtitle="개정안을 넣으면 시스템이 세율을 추출하고 현행과 비교합니다. 승인해야만 레지스트리에 반영되며, 세액 산술은 승인 뒤에도 코드가 합니다 — LLM은 추출만, 계산은 하지 않습니다."
+        subtitle="개정안을 붙여넣거나 PDF로 올리면 시스템이 세율을 추출하고 현행과 비교합니다. 승인해야만 레지스트리에 반영되며, 세액 산술은 승인 뒤에도 코드가 합니다 — LLM은 추출만, 계산은 하지 않습니다."
       />
 
       {/* ── 입력 ── */}
@@ -109,7 +126,31 @@ export default function TaxRatesPage() {
             <Sparkle size={16} weight="fill" />
             {busy && !applied ? "추출 중…" : "세율 추출"}
           </button>
+
+          <span className="text-xs text-muted">또는</span>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf,.txt,.md"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onUpload(f);
+            }}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={busy}
+            className="btn-ghost inline-flex items-center gap-2 disabled:opacity-50"
+          >
+            <FilePdf size={16} />
+            개정안 파일 업로드
+          </button>
         </div>
+        <p className="text-xs text-muted">
+          PDF·TXT·MD 지원. PDF는 서버가 표까지 텍스트로 추출해 같은 파이프라인을 탑니다.
+        </p>
       </Card>
 
       {error && (

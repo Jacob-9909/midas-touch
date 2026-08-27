@@ -700,3 +700,21 @@ export function applyRates(proposed: ProposedRateSet): Promise<RateApplyResult> 
 export function getCurrentRates(year = "2026"): Promise<RateCurrent> {
   return apiGet(`/api/v1/tax-rates/current?year=${encodeURIComponent(year)}`);
 }
+
+/** 개정안 파일(PDF·TXT·MD)을 업로드해 추출한다. PDF는 서버가 파서로 텍스트를 뽑아 동일 파이프라인을 탄다. */
+export async function extractRatesUpload(
+  file: File,
+  year = "2026",
+  useLlm = false,
+): Promise<RateExtractResult> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("year", year);
+  form.append("use_llm", String(useLlm));
+  const res = await fetch(`${API_BASE}/api/v1/tax-rates/extract/upload`, {
+    method: "POST",
+    body: form,
+    headers: authHeaders(),
+  });
+  return handle<RateExtractResult>(res);
+}
