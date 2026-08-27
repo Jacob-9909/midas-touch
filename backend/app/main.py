@@ -20,6 +20,7 @@ from backend.app.api.graph import router as graph_router
 from backend.app.api.query import router as query_router
 from backend.app.api.research import router as research_router
 from backend.app.api.stocks import router as stocks_router
+from backend.app.api.tax_rates import router as tax_rates_router
 from backend.app.api.users import router as users_router
 from shared.database.connector import get_connection
 
@@ -209,6 +210,7 @@ app.include_router(query_router)
 app.include_router(stocks_router)
 app.include_router(cheongyak_router)
 app.include_router(research_router)
+app.include_router(tax_rates_router)
 
 
 @app.get("/")

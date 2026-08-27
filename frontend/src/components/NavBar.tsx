@@ -26,6 +26,7 @@ const LINKS = [
   // 좌측 Midas Touch 로고가 이미 "/" 로 가므로 중복 항목을 뺐다.
   { href: "/stocks", label: "주식분석", group: "engine" },
   { href: "/graph", label: "지식그래프", group: "engine" },
+  { href: "/tax-rates", label: "세율 갱신", group: "engine" },
 ] as const;
 
 

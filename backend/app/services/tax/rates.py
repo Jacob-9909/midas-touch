@@ -120,5 +120,14 @@ DEFAULT_YEAR = "2025"
 
 
 def get_rates(year: str = DEFAULT_YEAR) -> TaxRateSet:
-    """귀속연도에 해당하는 세율 세트를 돌려준다. 미등록 연도는 기본 세트로 폴백한다."""
+    """귀속연도에 해당하는 세율 세트를 돌려준다.
+
+    우선순위: 승인된 오버레이(rate_overlay) > 하드코딩 기본 세트 > DEFAULT_YEAR 폴백.
+    오버레이는 승인된 개정안만 반영되므로, 승인 전에는 기본 세트 동작이 유지된다.
+    """
+    from .rate_overlay import build_overlaid_set  # 지연 import — 순환 참조 회피
+
+    overlaid = build_overlaid_set(year)
+    if overlaid is not None:
+        return overlaid
     return RATE_REGISTRY.get(year, RATE_REGISTRY[DEFAULT_YEAR])
