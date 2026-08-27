@@ -123,10 +123,10 @@ export default function NavBar() {
 
   return (
     <header className="sticky top-3 z-50 px-3 sm:px-5">
-      <nav className="mx-auto flex min-h-14 max-w-[1200px] items-center gap-1 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_82%,transparent)] px-3 py-1.5 shadow-[var(--shadow-1)] backdrop-blur-xl">
+      <nav className="mx-auto flex min-h-14 max-w-[1280px] w-full items-center justify-between gap-2 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_82%,transparent)] px-3.5 py-1.5 shadow-[var(--shadow-1)] backdrop-blur-xl">
         <Link
           href="/"
-          className="mr-3 flex shrink-0 items-center gap-2 whitespace-nowrap pl-2 font-display text-base sm:text-lg tracking-tight"
+          className="mr-3 flex shrink-0 items-center gap-2 whitespace-nowrap pl-1 font-display text-base sm:text-lg tracking-tight"
         >
           <ShieldChevron weight="fill" className="text-gilt shrink-0" size={20} />
           <span className="font-semibold tracking-tight">Midas Touch</span>
@@ -136,7 +136,7 @@ export default function NavBar() {
         </Link>
 
         {/* 데스크톱 링크 (화면 넓을 때) */}
-        <div className="hidden shrink-0 items-center gap-0.5 lg:flex">
+        <div className="hidden shrink-0 items-center gap-0.5 xl:flex">
           {LINKS.map((l, i) => (
             <span key={l.href} className="flex items-center">
               {i > 0 && LINKS[i - 1].group !== l.group && (
@@ -144,7 +144,7 @@ export default function NavBar() {
               )}
               <Link
                 href={l.href}
-                className={`whitespace-nowrap rounded-full px-2.5 xl:px-3 py-1 text-xs font-mono-spec transition-colors duration-200 ${
+                className={`whitespace-nowrap rounded-full px-2.5 2xl:px-3 py-1 text-xs font-mono-spec transition-colors duration-200 ${
                   isActive(l.href)
                     ? "bg-accent/15 text-accent border border-accent/40 font-semibold"
                     : "text-muted hover:text-fg hover:bg-surface/60 border border-transparent"
@@ -157,16 +157,15 @@ export default function NavBar() {
         </div>
 
         {/* 우측 컨트롤 영역 */}
-        <div className="relative ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="relative ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
           {/* 빠른 실행 (⌘K) */}
           <button
             onClick={() => setCommandOpen(true)}
             aria-label="빠른 실행 및 검색 (단축키 ⌘K)"
             title="빠른 실행 (⌘K)"
-            className="btn-ghost shrink-0 gap-1.5 rounded-full px-2 sm:px-3 text-muted hover:text-fg border border-line/60"
+            className="btn-ghost shrink-0 gap-1.5 rounded-full px-2.5 py-1 text-muted hover:text-fg border border-line/60 h-9"
           >
-            <MagnifyingGlass size={14} className="text-accent" weight="bold" />
-            <span className="hidden whitespace-nowrap sm:inline text-xs font-mono-spec">빠른 실행</span>
+            <MagnifyingGlass size={15} className="text-accent" weight="bold" />
             <kbd className="hidden sm:inline-flex items-center rounded border border-line bg-surface/80 px-1 font-mono-spec text-[9px] text-muted">
               ⌘K
             </kbd>
@@ -176,7 +175,7 @@ export default function NavBar() {
           <button
             onClick={toggle}
             aria-label="테마 전환"
-            className="btn-ghost btn-icon shrink-0"
+            className="btn-ghost btn-icon shrink-0 h-9 w-9"
           >
             {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
           </button>
@@ -186,27 +185,26 @@ export default function NavBar() {
             onClick={toggleLargeText}
             aria-pressed={largeText}
             aria-label="큰 글씨 모드"
-            title="큰 글씨"
-            className={`btn-ghost shrink-0 gap-1.5 rounded-full px-2.5 sm:px-3 ${
+            title={largeText ? "큰 글씨 모드 끄기" : "큰 글씨 모드 켜기"}
+            className={`btn-ghost shrink-0 gap-1.5 rounded-full px-2.5 py-1 h-9 ${
               largeText ? "border-accent/40 bg-accent/15 text-accent" : ""
             }`}
           >
-            <TextAa weight={largeText ? "fill" : "regular"} size={15} />
-            <span className="hidden whitespace-nowrap sm:inline text-xs font-medium">큰 글씨</span>
+            <TextAa weight={largeText ? "fill" : "regular"} size={16} />
+            <span className="hidden 2xl:inline text-xs font-medium">큰 글씨</span>
           </button>
 
-          {/* 전체 메뉴 허브 버튼 (모바일 및 데스크톱 공용) */}
+          {/* 전체 메뉴 허브 버튼 */}
           <button
             onClick={() => setOpen((o) => !o)}
             aria-label="전체 메뉴 및 서비스 허브 열기"
             aria-expanded={open}
             title="전체 메뉴"
-            className={`btn-ghost shrink-0 gap-1.5 rounded-full px-2.5 sm:px-3 ${
+            className={`btn-ghost btn-icon shrink-0 h-9 w-9 ${
               open ? "border-accent/50 bg-accent/20 text-accent" : ""
             }`}
           >
             {open ? <X size={16} /> : <List size={16} />}
-            <span className="hidden sm:inline text-xs font-medium">전체 메뉴</span>
           </button>
         </div>
       </nav>
