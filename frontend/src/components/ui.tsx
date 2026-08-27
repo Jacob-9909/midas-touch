@@ -40,11 +40,11 @@ export function PageTitle({
     // 골드 세로바와 발광은 뺐다 — 어센트는 도장처럼 드물게만 찍는다.
     <div className="mb-12 space-y-5">
       {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-      <h1 className="font-display max-w-[18ch] text-[clamp(2.5rem,6vw,3.75rem)] text-fg">
+      <h1 className="font-display max-w-3xl text-[clamp(2.25rem,5.5vw,3.75rem)] text-fg break-keep">
         {title}
       </h1>
       {subtitle && (
-        <p className="max-w-[62ch] text-[1.0625rem] leading-[1.56] text-muted">{subtitle}</p>
+        <p className="max-w-3xl text-[1.0625rem] leading-[1.56] text-muted break-keep">{subtitle}</p>
       )}
     </div>
   );

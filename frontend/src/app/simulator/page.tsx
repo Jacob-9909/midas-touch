@@ -15,12 +15,16 @@ import {
 } from "recharts";
 import {
   Compass,
+  ShareNetwork,
+  Check,
+  Lightning,
 } from "@phosphor-icons/react";
 import { Card, PageTitle, SectionLabel, fmtKRW, fmtKRWShort } from "@/components/ui";
 import { MoneyInput } from "@/components/MoneyInput";
 import ProfileNudge from "@/components/ProfileNudge";
 import GuideTour, { type TourStep } from "@/components/GuideTour";
 import { loadProfile } from "@/lib/my-profile";
+import { useToast } from "@/lib/toast";
 import {
   AREA_LABELS,
   DEPOSIT_SOURCE_NOTE,
@@ -31,8 +35,7 @@ import {
   type Region,
 } from "@/lib/simulate";
 
-const inputClass =
-  "rounded-[var(--r-sm)] border border-line bg-[var(--ink-2)] px-3 py-2 text-sm text-fg outline-none transition focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)]";
+const inputClass = "field px-3 py-2 text-sm";
 const labelClass = "flex flex-col gap-1.5";
 const labelTextClass = "text-xs text-muted";
 const TOOLTIP_STYLE = {
@@ -83,6 +86,9 @@ export default function SimulatorPage() {
   const [labelB, setLabelB] = useState("청년도약계좌 등 정책상품");
   const [rateB, setRateB] = useState(6.0);
 
+  const toast = useToast();
+  const [shared, setShared] = useState(false);
+
   // 가이드 재실행용. undefined 면 GuideTour 가 첫 방문 여부로 스스로 판단한다.
   const [tourOpen, setTourOpen] = useState<boolean | undefined>(undefined);
 
@@ -91,19 +97,54 @@ export default function SimulatorPage() {
   // 이용해 마운트 시 한 번 window.location에서 직접 읽는다.
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- 마운트 시 외부 상태(URL 쿼리·localStorage) 복원 */
-    // /me 에 입력해 둔 자금 상황을 초기값으로 깐다. 여기서 값을 바꿔도 프로필은 안 건드린다
-    // (시뮬레이터는 "만약에" 를 굴려보는 곳이라, 굴려본 값이 내 정보를 덮으면 안 된다).
     const me = loadProfile();
     setCurrentAssets(me.currentAssets);
     setMonthlySaving(me.monthlySaving);
 
-    const target = Number(new URLSearchParams(window.location.search).get("target"));
+    const sp = new URLSearchParams(window.location.search);
+    const target = Number(sp.get("target"));
     if (target > 0) {
       setTargetMode("custom");
       setCustomTarget(target);
     }
+    const a = Number(sp.get("assets"));
+    if (a > 0) setCurrentAssets(a);
+    const s = Number(sp.get("saving"));
+    if (s > 0) setMonthlySaving(s);
+    const rA = Number(sp.get("rateA"));
+    if (rA > 0) setRateA(rA);
+    const rB = Number(sp.get("rateB"));
+    if (rB > 0) setRateB(rB);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
+
+  const copyShareLink = async () => {
+    try {
+      const params = new URLSearchParams();
+      params.set("target", String(targetAmount));
+      params.set("assets", String(currentAssets));
+      params.set("saving", String(monthlySaving));
+      params.set("rateA", String(rateA));
+      params.set("rateB", String(rateB));
+      const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+      await navigator.clipboard.writeText(url);
+      setShared(true);
+      toast("시뮬레이션 조건 공유 링크가 클립보드에 복사되었습니다.", "success");
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      toast("링크 복사에 실패했습니다.", "error");
+    }
+  };
+
+  const applyPreset = (assets: number, saving: number, target: number, rA = 3.5, rB = 6.0) => {
+    setCurrentAssets(assets);
+    setMonthlySaving(saving);
+    setTargetMode("custom");
+    setCustomTarget(target);
+    setRateA(rA);
+    setRateB(rB);
+    toast("프리셋 조건이 적용되었습니다.", "info");
+  };
 
   const targetAmount = targetMode === "deposit" ? depositRequirement(region, area) : customTarget;
 
@@ -128,19 +169,68 @@ export default function SimulatorPage() {
         open={tourOpen}
         onClose={() => setTourOpen(undefined)}
       />
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <PageTitle
           title="자금마련 타임라인 시뮬레이터"
           eyebrow="Fund Timeline"
           subtitle="청약 목표금액까지 지금 저축 계획으로 얼마나 걸리는지, 상품을 바꾸면 얼마나 당겨지는지 시뮬레이션합니다. 정보 제공 목적의 시뮬레이션이며 투자·저축 자문이 아닙니다."
         />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={copyShareLink}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--r-pill)] border border-line bg-surface/50 px-3.5 py-2 text-xs font-semibold text-fg transition-colors hover:border-accent"
+          >
+            {shared ? (
+              <Check size={14} className="text-positive" weight="bold" />
+            ) : (
+              <ShareNetwork size={14} className="text-accent" />
+            )}
+            {shared ? "링크 복사됨" : "결과 링크 공유"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTourOpen(true)}
+            className="inline-flex shrink-0 items-center gap-2 rounded-[var(--r-pill)] border border-accent/50 bg-accent/12 px-4 py-2 text-xs font-semibold text-accent transition-colors duration-150 hover:border-accent hover:bg-accent/20"
+          >
+            <Compass size={15} weight="bold" />
+            사용 가이드
+          </button>
+        </div>
+      </div>
+
+      {/* ── ⚡ 3초 퀵 프리셋 스트립 ── */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-[var(--ink-1)] p-3 shadow-soft">
+        <span className="flex items-center gap-1 font-mono-spec text-[11px] font-semibold text-accent uppercase tracking-wider pl-1">
+          <Lightning weight="fill" size={13} /> 3초 퀵 프리셋:
+        </span>
         <button
           type="button"
-          onClick={() => setTourOpen(true)}
-          className="inline-flex shrink-0 items-center gap-2 rounded-[var(--r-pill)] border border-accent/50 bg-accent/12 px-4 py-2 text-xs font-semibold text-accent transition-colors duration-150 hover:border-accent hover:bg-accent/20"
+          onClick={() => applyPreset(20_000_000, 600_000, 40_000_000)}
+          className="btn-ghost text-xs px-3 py-1 rounded-full text-fg/90 hover:text-accent border-line/60"
         >
-          <Compass size={15} weight="bold" />
-          사용 가이드
+          🐣 사회초년생 (자산 2천 · 월 60만 ➔ 계약금 4천만)
+        </button>
+        <button
+          type="button"
+          onClick={() => applyPreset(50_000_000, 1_500_000, 100_000_000)}
+          className="btn-ghost text-xs px-3 py-1 rounded-full text-fg/90 hover:text-accent border-line/60"
+        >
+          💍 신혼부부 (자산 5천 · 월 150만 ➔ 1억 목표)
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setTargetMode("deposit");
+            setRegion("seoul_busan");
+            setArea("85");
+            setCurrentAssets(1_500_000);
+            setMonthlySaving(300_000);
+            toast("서울 85㎡ 예치금 프리셋이 적용되었습니다.", "info");
+          }}
+          className="btn-ghost text-xs px-3 py-1 rounded-full text-fg/90 hover:text-accent border-line/60"
+        >
+          🏠 서울 85㎡ 청약 예치금 (300만)
         </button>
       </div>
 
@@ -357,8 +447,8 @@ function ResultTile({
         className="absolute inset-y-0 left-0 w-[3px]"
         style={{ background: tone }}
       />
-      <div className="mb-1 truncate pl-2 text-xs text-muted">{label}</div>
-      <div className="font-mono-spec pl-2 text-2xl font-semibold text-fg">
+      <div className="mb-1 pl-2 text-xs text-muted break-keep leading-tight line-clamp-2">{label}</div>
+      <div className="font-mono-spec pl-2 text-xl sm:text-2xl font-semibold text-fg break-keep">
         {months === null ? "20년 내 미도달" : months === 0 ? "이미 충족" : `${months}개월`}
       </div>
     </div>

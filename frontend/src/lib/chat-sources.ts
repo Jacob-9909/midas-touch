@@ -1,9 +1,10 @@
-// 챗 assistant 답변 말미의 "출처" 섹션 감지/분리 헬퍼.
-// 백엔드 synthesize 노드(nodes/synthesize.py)가 LLM 호출과 무관하게 코드로 덧붙이는 형식:
-//   "\n\n---\n출처:\n[1] <source> (<passage_id>)\n[2] ..."
-// LLM 본문의 우연한 일치를 걸러내기 위해 구분선 바로 다음 '출처:' 헤더와
-// [1]부터 시작해 1씩 늘어나는 연속 항목으로만 이루어진 꼬리를 출처 섹션으로 인정한다.
+// 챗 assistant 답변 말미의 "방어 증명" 및 "출처" 섹션 감지/분리 헬퍼.
+// 백엔드 synthesize 노드(nodes/synthesize.py)가 생성하는 형식:
+//   <본문>
+//   \n---\n🛡 방어 증명:\n- 검색 도구...
+//   \n---\n출처:\n[1] <source> (<passage_id>)...
 
+const DEFENSE_HEADER = "\n---\n🛡 방어 증명:";
 const SOURCES_HEADER = "\n---\n출처:";
 const SOURCE_ITEM_RE = /^\[(\d+)\] (.+) \((.+)\)$/;
 
@@ -13,27 +14,82 @@ export interface ChatSource {
   passageId: string;
 }
 
+export interface DefenseAudit {
+  rawItems: string[];
+  tools: string;
+  hasDeterministicMath: boolean;
+  hasGrounding: boolean;
+  isLowTemp: boolean;
+}
+
+export interface ParsedChatOutput {
+  body: string;
+  defense: DefenseAudit | null;
+  sources: ChatSource[];
+}
+
 export function splitChatSources(
   content: string,
-): { body: string; sources: ChatSource[] } {
-  const headerAt = content.lastIndexOf(SOURCES_HEADER);
-  if (headerAt === -1) return { body: content, sources: [] };
+): ParsedChatOutput {
+  let text = content;
+  let sources: ChatSource[] = [];
+  let defense: DefenseAudit | null = null;
 
-  const lines = content.slice(headerAt + SOURCES_HEADER.length).split("\n");
-  const sources: ChatSource[] = [];
-  // 헤더 직후 개행(빈 줄)은 건너뛴다 — 백엔드 푸터가 "출처:\n[1] ..." 형식이라
-  // split 결과 첫 요소가 빈 문자열이 되며, 이를 걸러내지 않으면 칩이 한 번도
-  // 렌더되지 않는 버그(기존)였다.
-  let expectedIndex = 1;
-  for (const line of lines) {
-    if (line.trim() === "") continue;
-    const m = SOURCE_ITEM_RE.exec(line);
-    if (!m || Number(m[1]) !== expectedIndex) {
-      // 항목이 아니거나 번호가 연속하지 않으면 우리 형식이 아니다 — 원문 그대로 렌더.
-      return { body: content, sources: [] };
+  // 1. 출처 파싱
+  const sourcesAt = text.lastIndexOf(SOURCES_HEADER);
+  if (sourcesAt !== -1) {
+    const rawSources = text.slice(sourcesAt + SOURCES_HEADER.length).split("\n");
+    const parsedSources: ChatSource[] = [];
+    let expectedIndex = 1;
+    let valid = true;
+
+    for (const line of rawSources) {
+      if (line.trim() === "") continue;
+      const m = SOURCE_ITEM_RE.exec(line.trim());
+      if (!m || Number(m[1]) !== expectedIndex) {
+        valid = false;
+        break;
+      }
+      parsedSources.push({ index: Number(m[1]), source: m[2], passageId: m[3] });
+      expectedIndex += 1;
     }
-    sources.push({ index: Number(m[1]), source: m[2], passageId: m[3] });
-    expectedIndex += 1;
+
+    if (valid && parsedSources.length > 0) {
+      sources = parsedSources;
+      text = text.slice(0, sourcesAt);
+    }
   }
-  return { body: content.slice(0, headerAt), sources };
+
+  // 2. 방어 증명 파싱
+  const defenseAt = text.lastIndexOf(DEFENSE_HEADER);
+  if (defenseAt !== -1) {
+    const rawDefense = text.slice(defenseAt + DEFENSE_HEADER.length).split("\n");
+    const items: string[] = [];
+
+    for (const line of rawDefense) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (trimmed.startsWith("- ")) {
+        items.push(trimmed.slice(2));
+      }
+    }
+
+    if (items.length > 0) {
+      const rawText = items.join("\n");
+      const toolMatch = items.find((i) => i.includes("검색 도구"));
+      const tools = toolMatch ? toolMatch.split(":")[1]?.trim() ?? "미사용" : "미사용";
+
+      defense = {
+        rawItems: items,
+        tools,
+        hasDeterministicMath: rawText.includes("결정론 계산기"),
+        hasGrounding: rawText.includes("grounding") || rawText.includes("근거 문서"),
+        isLowTemp: rawText.includes("저온 생성") || rawText.includes("temp"),
+      };
+      text = text.slice(0, defenseAt);
+    }
+  }
+
+  return { body: text.trim(), defense, sources };
 }
+

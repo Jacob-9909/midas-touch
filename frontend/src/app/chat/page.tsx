@@ -3,7 +3,19 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { errMsg } from "@/lib/async";
-import { Plus, TrashSimple, PaperPlaneTilt, SpeakerHigh, Stop } from "@phosphor-icons/react";
+import {
+  Plus,
+  TrashSimple,
+  PaperPlaneTilt,
+  SpeakerHigh,
+  Stop,
+  SidebarSimple,
+  X,
+  ShieldCheck,
+  CheckCircle,
+  Copy,
+  Check,
+} from "@phosphor-icons/react";
 import {
   apiDelete,
   apiGet,
@@ -29,10 +41,12 @@ interface Msg {
 // 소유 판정은 각 답변의 로컬 ref로 한다 — cancel()이 남의 재생을 끊으면 그 인스턴스만
 // onend를 받아 자기 버튼을 원래대로 되돌린다.
 
-// 어시스턴트 답변 렌더: 본문 마크다운 + 백엔드가 코드로 덧붙인 출처 섹션을 칩 리스트로 분리 렌더.
+// 어시스턴트 답변 렌더: 본문 마크다운 + 실시간 5겹 방어 검증 증명서 + 출처 칩 리스트.
 function AssistantAnswer({ content }: { content: string }) {
-  const { body, sources } = splitChatSources(content);
+  const { body, defense, sources } = splitChatSources(content);
   const [speaking, setSpeaking] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const toast = useToast();
   /** 이벤트 핸들러(onend)가 언마운트 후 상태를 건드리지 않게 실제 재생 소유를 ref로 이중화 */
   const speakingRef = useRef(false);
 
@@ -53,26 +67,35 @@ function AssistantAnswer({ content }: { content: string }) {
     }
   };
 
+  const copyAnswer = async () => {
+    try {
+      await navigator.clipboard.writeText(body);
+      setCopied(true);
+      toast("답변이 복사되었습니다.", "success");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast("복사에 실패했습니다.", "error");
+    }
+  };
+
   const toggleSpeak = () => {
     if (typeof speechSynthesis === "undefined") return;
     const synth = speechSynthesis;
     if (speaking) {
       speakingRef.current = false;
       setSpeaking(false);
-      synth.cancel(); // 취소에 따른 onend는 finishSpeak 가드가 무시한다
+      synth.cancel();
       return;
     }
-    // 읽어줄 텍스트 정제: 푸터 전체(방어 증명 🛡 섹션·출처)는 첫 단독 --- 줄부터
-    // 이어지므로 그 앞 본문만 남기고, 각주 [n] 마커도 발음되지 않게 제거한다.
     const fenceAt = body.search(/^---\s*$/m);
     const text = (fenceAt === -1 ? body : body.slice(0, fenceAt))
       .replace(/\[\d+\]/g, "")
       .trim();
     if (!text) return;
-    synth.cancel(); // 다른 답변을 읽는 중이면 끊고 교체(그 인스턴스의 onend가 자기 상태 정리)
+    synth.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "ko-KR";
-    utterance.rate = 0.95; // 시니어 청취 속도 — 살짝 느리게
+    utterance.rate = 0.95;
     utterance.onend = finishSpeak;
     utterance.onerror = finishSpeak;
     speakingRef.current = true;
@@ -83,35 +106,56 @@ function AssistantAnswer({ content }: { content: string }) {
   return (
     <>
       <Markdown>{body}</Markdown>
-      <button
-        onClick={toggleSpeak}
-        aria-label={speaking ? "읽기 정지" : "답변 읽어주기"}
-        aria-pressed={speaking}
-        className={`btn-ghost mt-3 gap-1.5 rounded-full px-3.5 ${
-          speaking ? "border-accent/40 bg-accent/15 text-accent" : ""
-        }`}
-      >
-        {speaking ? (
-          <>
-            <Stop weight="fill" size={14} />
-            정지
-          </>
-        ) : (
-          <>
-            <SpeakerHigh weight="fill" size={14} />
-            읽어주기
-          </>
-        )}
-      </button>
+
+      {/* ── 🛡️ 실시간 5겹 보안 검증 증명서 (Audit Verified Trace) ── */}
+      {defense && (
+        <div className="mt-3.5 rounded-xl border border-line bg-[color-mix(in_srgb,var(--ink-2)_65%,transparent)] p-3 text-xs">
+          <div className="flex items-center justify-between gap-2 border-b border-line/50 pb-2">
+            <div className="flex items-center gap-1.5 font-semibold text-positive">
+              <ShieldCheck weight="fill" size={16} className="text-positive shrink-0" />
+              <span>실시간 5겹 보안 검증 완료</span>
+            </div>
+            <span className="rounded-full bg-positive/10 border border-positive/25 px-2 py-0.5 font-mono-spec text-[10px] font-semibold text-positive tracking-wide">
+              AUDIT VERIFIED
+            </span>
+          </div>
+          <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+            <div className="flex items-center gap-1.5 text-muted">
+              <CheckCircle weight="fill" size={13} className="text-positive shrink-0" />
+              <span>검색 도구: <strong className="font-mono-spec text-fg">{defense.tools}</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted">
+              <CheckCircle weight="fill" size={13} className="text-positive shrink-0" />
+              <span>
+                {defense.hasDeterministicMath ? (
+                  <span>수치 계산: <strong className="text-fg">결정론 코드 (LLM 개입 0%)</strong></span>
+                ) : (
+                  <span>수치 계산: <span className="text-fg">컨텍스트 접지 작문</span></span>
+                )}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted">
+              <CheckCircle weight="fill" size={13} className="text-positive shrink-0" />
+              <span>근거 접지: <span className="text-fg">{sources.length > 0 ? `${sources.length}건 인용` : "Grounding 지시 상시 유지"}</span></span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted">
+              <CheckCircle weight="fill" size={13} className="text-positive shrink-0" />
+              <span>안정화: <span className="text-fg">저온 생성 (temp 0.3)</span></span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 출처 칩 ── */}
       {sources.length > 0 && (
-        <div className="mt-3 border-t border-line pt-2">
-          <p className="mb-1.5 text-[11px] font-semibold text-muted">출처</p>
+        <div className="mt-3 border-t border-line/60 pt-2">
+          <p className="mb-1.5 text-[11px] font-semibold text-muted">인용 출처 ({sources.length}건)</p>
           <ul role="list" aria-label="참고 출처" className="flex flex-wrap gap-1.5">
             {sources.map((s) => (
               <li
                 key={s.index}
                 title={`${s.source} (${s.passageId})`}
-                className="max-w-full truncate rounded-full border border-line bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] px-2 py-0.5 text-[11px] text-muted"
+                className="max-w-full truncate rounded-full border border-accent/20 bg-accent/10 px-2.5 py-0.5 text-[11px] text-fg/90"
               >
                 [{s.index}] {s.source} ({s.passageId})
               </li>
@@ -119,6 +163,47 @@ function AssistantAnswer({ content }: { content: string }) {
           </ul>
         </div>
       )}
+
+      {/* ── 액션 툴바: 읽어주기 + 답변 복사 ── */}
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          onClick={toggleSpeak}
+          aria-label={speaking ? "읽기 정지" : "답변 읽어주기"}
+          aria-pressed={speaking}
+          className={`btn-ghost gap-1.5 rounded-full px-3 py-1 text-xs ${
+            speaking ? "border-accent/40 bg-accent/15 text-accent" : ""
+          }`}
+        >
+          {speaking ? (
+            <>
+              <Stop weight="fill" size={13} />
+              정지
+            </>
+          ) : (
+            <>
+              <SpeakerHigh weight="fill" size={13} />
+              읽어주기
+            </>
+          )}
+        </button>
+        <button
+          onClick={copyAnswer}
+          aria-label="답변 복사"
+          className="btn-ghost gap-1.5 rounded-full px-3 py-1 text-xs text-muted hover:text-fg"
+        >
+          {copied ? (
+            <>
+              <Check weight="bold" size={13} className="text-positive" />
+              복사됨
+            </>
+          ) : (
+            <>
+              <Copy size={13} />
+              답변 복사
+            </>
+          )}
+        </button>
+      </div>
     </>
   );
 }
@@ -136,6 +221,7 @@ function ChatClient() {
   const [status, setStatus] = useState(""); // 스트리밍 대기 구간 진행상태(도구 수집 등)
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [tab, setTab] = useState<"chats" | "kb">("chats");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   /** 메시지 스크롤 박스. 스트리밍 중 자동 하단 추적에 쓴다. */
   const scrollBoxRef = useRef<HTMLDivElement>(null);
   /** 유저가 위로 올려 과거를 읽고 있으면 자동 추적을 멈춘다(맨 아래 근처일 때만 붙는다). */
@@ -176,6 +262,7 @@ function ChatClient() {
 
   const startNewChat = useCallback(() => {
     if (!uid) return;
+    setMobileSidebarOpen(false);
     setCurrentId(`${uid}-${Date.now()}`);
     setMessages([]);
   }, [uid]);
@@ -221,6 +308,7 @@ function ChatClient() {
   }, [uid, currentId]);
 
   const openSession = async (s: ChatSessionMeta) => {
+    setMobileSidebarOpen(false);
     setCurrentId(s.session_id);
     setLoadingHistory(true);
     stickRef.current = true;
@@ -251,9 +339,9 @@ function ChatClient() {
     }
   };
 
-  const send = async () => {
-    if (!input.trim() || !uid || !currentId || busy) return;
-    const text = input.trim();
+  const send = async (explicitText?: string | React.MouseEvent) => {
+    const text = (typeof explicitText === "string" ? explicitText : input).trim();
+    if (!text || !uid || !currentId || busy) return;
     setInput("");
     stickRef.current = true; // 내가 보낸 메시지라면 자동 추적 재개
     setMessages((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
@@ -296,82 +384,123 @@ function ChatClient() {
   const fmtDate = (s: string | null) =>
     s ? new Date(s).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }) : "";
 
+  const sidebarContent = (
+    <>
+      <SegmentedTabs
+        className="mb-4"
+        tabs={[
+          { id: "chats", label: "대화" },
+          { id: "kb", label: "지식베이스" },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
+
+      {tab === "kb" ? (
+        <div className="scroll-thin min-h-0 flex-1 overflow-y-auto pr-1">
+          <KnowledgePanel />
+        </div>
+      ) : (
+        <>
+          <button
+            onClick={startNewChat}
+            disabled={!uid}
+            className="btn-ghost mb-3 w-full text-sm"
+          >
+            <Plus weight="bold" size={16} />새 대화
+          </button>
+          <div className="scroll-thin min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+            {sessions.length === 0 && (
+              <p className="px-2 text-xs text-muted">대화 기록이 없습니다.</p>
+            )}
+            {sessions.map((s) => {
+              const active = s.session_id === currentId;
+              return (
+                <div
+                  key={s.session_id}
+                  className={`group flex items-center gap-1 rounded-lg px-2 py-2 text-sm transition ${
+                    active
+                      ? "bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]"
+                      : "hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)]"
+                  }`}
+                >
+                  <button
+                    onClick={() => openSession(s)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <div className="truncate text-fg">{s.title}</div>
+                    <div className="truncate text-[10px] text-muted">
+                      {fmtDate(s.updated_at)} · {s.message_count}개 메시지
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => deleteSession(s.session_id)}
+                    className="flex h-6 w-6 items-center justify-center rounded-md text-muted opacity-0 transition hover:text-negative group-hover:opacity-100"
+                    aria-label="대화 삭제"
+                    title="삭제"
+                  >
+                    <TrashSimple size={15} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </>
+  );
+
   return (
     /* 앱형 레이아웃 — NavBar(64px)를 뺀 나머지 뷰포트를 채운다. 페이지 스크롤 없음,
        스크롤은 메시지 영역과 사이드바 목록이 각자 소유한다. */
-    <div className="mx-auto flex h-[calc(100dvh-4rem)] max-w-[1200px] flex-col px-6 pb-5 pt-5">
-      <header className="mb-4 flex items-baseline gap-3">
-        <h1 className="font-display text-xl text-fg">에이전트 챗봇</h1>
-        <span className="eyebrow">AI Advisor</span>
-        <span className="hidden font-mono-spec text-[10px] uppercase tracking-widest text-muted sm:inline">
-          MidasAdviser · 멀티턴 · 실시간 스트리밍
-        </span>
+    <div className="mx-auto flex h-[calc(100dvh-5.25rem)] max-w-[1200px] flex-col px-3 sm:px-6 pb-3 sm:pb-4 pt-2 sm:pt-3">
+      <header className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-baseline gap-2.5 min-w-0">
+          <h1 className="font-display text-lg sm:text-xl text-fg shrink-0">에이전트 챗봇</h1>
+          <span className="eyebrow hidden sm:inline-flex">AI Advisor</span>
+          <span className="hidden font-mono-spec text-[10px] uppercase tracking-widest text-muted md:inline truncate">
+            MidasAdviser · 멀티턴 · 실시간 스트리밍
+          </span>
+        </div>
+        <button
+          onClick={() => setMobileSidebarOpen((v) => !v)}
+          aria-label="대화 목록 및 지식베이스 열기"
+          className="md:hidden btn-ghost flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-mono-spec shrink-0"
+        >
+          <SidebarSimple size={15} />
+          <span>{tab === "chats" ? "대화 목록" : "지식베이스"}</span>
+        </button>
       </header>
-      <div className="flex min-h-0 flex-1 gap-4">
-        {/* 좌측 사이드바: 대화 목록 / 지식베이스 탭 */}
-        <aside className="flex w-64 min-h-0 shrink-0 flex-col">
-          {/* 사이드바 탭 */}
-          <SegmentedTabs
-            className="mb-4"
-            tabs={[
-              { id: "chats", label: "대화" },
-              { id: "kb", label: "지식베이스" },
-            ]}
-            active={tab}
-            onChange={setTab}
-          />
 
-          {tab === "kb" ? (
-            <div className="scroll-thin min-h-0 flex-1 overflow-y-auto pr-1">
-              <KnowledgePanel />
-            </div>
-          ) : (
-            <>
+      {/* 모바일 사이드바 드로어 */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden" role="dialog" aria-modal="true" aria-label="대화 메뉴">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <aside className="relative z-10 flex w-72 max-w-[85vw] flex-col border-r border-line bg-[var(--ink-1)] p-4 shadow-[var(--shadow-2)] animate-rise">
+            <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
+              <span className="font-display text-sm font-semibold text-fg">대화 및 지식베이스</span>
               <button
-                onClick={startNewChat}
-                disabled={!uid}
-                className="btn-ghost mb-3 w-full text-sm"
+                onClick={() => setMobileSidebarOpen(false)}
+                className="btn-ghost btn-icon h-7 w-7 shrink-0"
+                aria-label="사이드바 닫기"
               >
-                <Plus weight="bold" size={16} />새 대화
+                <X size={15} />
               </button>
-              <div className="scroll-thin min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-                {sessions.length === 0 && (
-                  <p className="px-2 text-xs text-muted">대화 기록이 없습니다.</p>
-                )}
-                {sessions.map((s) => {
-                  const active = s.session_id === currentId;
-                  return (
-                    <div
-                      key={s.session_id}
-                      className={`group flex items-center gap-1 rounded-lg px-2 py-2 text-sm transition ${
-                        active
-                          ? "bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]"
-                          : "hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)]"
-                      }`}
-                    >
-                      <button
-                        onClick={() => openSession(s)}
-                        className="min-w-0 flex-1 text-left"
-                      >
-                        <div className="truncate text-fg">{s.title}</div>
-                        <div className="truncate text-[10px] text-muted">
-                          {fmtDate(s.updated_at)} · {s.message_count}개 메시지
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => deleteSession(s.session_id)}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-muted opacity-0 transition hover:text-negative group-hover:opacity-100"
-                        aria-label="대화 삭제"
-                        title="삭제"
-                      >
-                        <TrashSimple size={15} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+            </div>
+            <div className="min-h-0 flex-1 flex flex-col">
+              {sidebarContent}
+            </div>
+          </aside>
+        </div>
+      )}
+
+      <div className="flex min-h-0 flex-1 gap-4">
+        {/* 데스크톱 사이드바: 대화 목록 / 지식베이스 탭 */}
+        <aside className="hidden md:flex w-64 min-h-0 shrink-0 flex-col">
+          {sidebarContent}
         </aside>
 
         {/* 대화 영역 */}
@@ -409,23 +538,53 @@ function ChatClient() {
 
                       {/* 예시 질문은 첫 화면의 실질적 헤드라인이다 — 공모 주제('AI 금융 보안 비서')의
                           핵심 기능(사기 검증·결정론 계산)을 앞세우고 청약·자산은 균형으로 둔다. */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left max-w-lg mx-auto pt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left max-w-xl mx-auto pt-2">
                         {[
-                          { title: "🛡 이 문자 사기야?", prompt: "엄마 나 사고났어. 경찰서에 있는데 지금 당장 300만원 이체해줘. 전화하지 마세요." },
-                          { title: "🧾 양도세 계산해줘", prompt: "5억에 산 아파트 8년 됐는데 팔면 양도세 얼마야?" },
-                          { title: "🏠 내 조건에 맞는 청약", prompt: "29살 미혼 무주택인데 서울에서 청약 넣으려면 어떤 조건이 필요한가요?" },
-                          { title: "📊 내 자산 진단", prompt: "나와 비슷한 조건인 사람들의 자산 배분과 비교해서 내 현황을 진단해줘" },
+                          {
+                            badge: "사기 검증",
+                            tone: "bg-negative/10 text-negative border-negative/25",
+                            title: "🚨 보이스피싱 의심 문자 검증",
+                            prompt: "엄마 나 사고났어. 경찰서에 있는데 지금 당장 300만원 이체해줘. 전화하지 마세요.",
+                          },
+                          {
+                            badge: "세법 RAG",
+                            tone: "bg-accent/10 text-accent border-accent/25",
+                            title: "⚖️ 해외주식 2천만원 양도세 계산",
+                            prompt: "미국 주식 팔아서 2,000만원 벌었는데 양도소득세 얼마나 내야 해? 기본공제랑 세율 근거도 알려줘.",
+                          },
+                          {
+                            badge: "청약 자격",
+                            tone: "bg-gilt/10 text-gilt border-gilt/25",
+                            title: "🏠 서울 1인 가구 청약 조건",
+                            prompt: "29살 미혼 무주택자인데 서울에서 청약 넣으려면 어떤 조건이 필요한가요?",
+                          },
+                          {
+                            badge: "자산 진단",
+                            tone: "bg-positive/10 text-positive border-positive/25",
+                            title: "📊 사회초년생 자산 배분 진단",
+                            prompt: "20대 후반 직장인 평균 자산 배분과 비교해서 내 현황(예적금 2천만, 월 60만 저축)을 진단해줘.",
+                          },
                         ].map((item, idx) => (
                         <button
                           key={idx}
-                          onClick={() => {
-                            setInput(item.prompt);
-                            requestAnimationFrame(() => inputRef.current?.focus());
-                          }}
-                          className="lift p-4 rounded-[var(--r-md)] border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] text-left transition group"
+                          disabled={busy}
+                          onClick={() => send(item.prompt)}
+                          className="lift p-4 rounded-[var(--r-md)] border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] text-left transition group hover:border-accent/40 active:scale-[0.98]"
                         >
-                          <div className="text-xs font-semibold text-accent group-hover:text-accent-soft">{item.title}</div>
-                          <div className="text-[11px] text-muted truncate mt-0.5">&ldquo;{item.prompt}&rdquo;</div>
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <span className="text-xs font-semibold text-fg group-hover:text-accent transition-colors">
+                              {item.title}
+                            </span>
+                            <span className={`shrink-0 rounded-full border px-2 py-0.5 font-mono-spec text-[9px] font-semibold ${item.tone}`}>
+                              {item.badge}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-muted line-clamp-2 leading-relaxed">
+                            &ldquo;{item.prompt}&rdquo;
+                          </div>
+                          <div className="mt-2 text-[10px] font-semibold text-accent opacity-80 group-hover:opacity-100 flex items-center gap-1">
+                            클릭하여 바로 질문하기 →
+                          </div>
                         </button>
                       ))}
                     </div>

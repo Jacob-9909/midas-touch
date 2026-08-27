@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { X, ChatCircleText, ChartLineUp } from "@phosphor-icons/react";
 import {
@@ -200,11 +200,47 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
       ? `접수 마감 후 공개되는 정보입니다. (현재 상태: ${item.status})`
       : `이 공고는 ${what} 데이터가 제공되지 않습니다.`;
 
-  // ESC 닫기
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const prevFocusRef = useRef<HTMLElement | null>(null);
+
+  // 포커스 트랩 및 ESC 닫기
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    prevFocusRef.current = document.activeElement as HTMLElement | null;
+    closeBtnRef.current?.focus();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key === "Tab") {
+        if (!dialogRef.current) return;
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      prevFocusRef.current?.focus();
+    };
   }, [onClose]);
 
   // 열려 있는 동안 배경 스크롤 잠금 — 뒤쪽 페이지가 함께 굴러가면 포커스가 이탈한다.
@@ -275,10 +311,10 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
       {/* 딤 — 모달보다 짧게 페이드 인 (200ms ease-out) */}
       <div className="absolute inset-0 bg-black/50 transition-opacity duration-200 ease-out starting:opacity-0" />
       <div
-        /* 패널 진입 — 모달은 트리거에 고정되지 않으므로 origin은 center가 맞다(스킬 예외 규칙).
-           모바일 bottom-sheet는 아래에서(spring 대신 240ms ease-out), 데스크톱은 제자리 scale-in.
-           scale(0)이 아니라 0.96 + opacity — 실세계엔 무에서 유가 없다. */
-        className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-[var(--r-xl)] border border-line bg-[var(--ink-1)] p-5 [box-shadow:var(--shadow-float)] transition-[opacity,transform] duration-[240ms] ease-[var(--ease-soft)] starting:translate-y-6 starting:scale-[0.98] starting:opacity-0 sm:rounded-[var(--r-xl)] sm:p-6 sm:starting:translate-y-0 sm:starting:scale-[0.96]"
+        ref={dialogRef}
+        /* 패널 진입 — 모달은 트리거에 고정되지 않으므로 origin은 center가 맞다.
+           모바일 bottom-sheet는 아래에서(starting:translate-y-full), 데스크톱은 제자리 scale-in. */
+        className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-[var(--r-xl)] border border-line bg-[var(--ink-1)] p-5 [box-shadow:var(--shadow-float)] transition-[opacity,transform] duration-[240ms] ease-[var(--ease-soft)] starting:translate-y-full starting:opacity-100 sm:rounded-[var(--r-xl)] sm:p-6 sm:starting:translate-y-0 sm:starting:scale-[0.96] sm:starting:opacity-0"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
@@ -292,6 +328,7 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
             </p>
           </div>
           <button
+            ref={closeBtnRef}
             onClick={onClose}
             aria-label="닫기"
             className="btn-ghost btn-icon shrink-0"

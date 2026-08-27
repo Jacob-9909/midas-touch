@@ -15,7 +15,7 @@ export default function NotFound() {
       <div className="mt-8 flex justify-center">
         <Link
           href="/"
-          className="rounded-full border border-accent/40 bg-accent/20 px-4 py-2 font-mono-spec text-xs text-accent shadow-md transition hover:bg-accent/30"
+          className="btn-accent"
         >
           홈으로 돌아가기 →
         </Link>

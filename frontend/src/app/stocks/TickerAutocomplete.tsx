@@ -49,6 +49,14 @@ export default function TickerAutocomplete({ value, onChange, onSubmit }: Ticker
     };
   }, [value]);
 
+  // 활성 항목 키보드 이동 시 자동 스크롤 추적
+  useEffect(() => {
+    if (active >= 0) {
+      const el = document.getElementById(`ticker-opt-${active}`);
+      el?.scrollIntoView({ block: "nearest" });
+    }
+  }, [active]);
+
   // 외부 클릭 닫기.
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -88,19 +96,25 @@ export default function TickerAutocomplete({ value, onChange, onSubmit }: Ticker
 
   return (
     <div ref={boxRef} className="relative flex flex-1 flex-col gap-1.5">
-      <span className="text-xs text-muted">티커 / 종목명 검색</span>
+      <label htmlFor="ticker-search-input" className="text-xs text-muted">티커 / 종목명 검색</label>
       <div className="relative">
         <MagnifyingGlass
           size={15}
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
         />
         <input
+          id="ticker-search-input"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={open && results.length > 0}
+          aria-controls="ticker-autocomplete-list"
+          aria-activedescendant={open && active >= 0 ? `ticker-opt-${active}` : undefined}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder="예: AAPL, 삼성전자, Tesla, 7203.T"
-          className="w-full rounded-xl border border-line bg-[var(--ink-2)]/50 py-2 pl-9 pr-3 text-sm text-fg outline-none focus:border-accent"
+          className="field w-full py-2 pl-9 pr-3 text-sm"
           autoComplete="off"
         />
       </div>
@@ -108,21 +122,32 @@ export default function TickerAutocomplete({ value, onChange, onSubmit }: Ticker
       {open && results.length > 0 && (
         /* 입력(트리거) 위쪽에서 scale-in — origin-top. 150ms ease-out.
            starting:(@starting-style)로 마운트 프레임부터 전이가 잡힌다. */
-        <ul className="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-line bg-[var(--ink-1)] py-1 [box-shadow:var(--shadow-float)] origin-top transition duration-150 ease-out starting:opacity-0 starting:scale-[0.98] starting:-translate-y-1">
+        <ul
+          id="ticker-autocomplete-list"
+          role="listbox"
+          aria-label="티커 검색 결과"
+          className="absolute top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-line bg-[var(--ink-1)] py-1 [box-shadow:var(--shadow-float)] origin-top transition duration-150 ease-out starting:opacity-0 starting:scale-[0.98] starting:-translate-y-1"
+        >
           {results.map((r, i) => (
-            <li key={`${r.symbol}-${i}`}>
+            <li
+              key={`${r.symbol}-${i}`}
+              id={`ticker-opt-${i}`}
+              role="option"
+              aria-selected={i === active}
+            >
               <button
+                type="button"
                 onMouseEnter={() => setActive(i)}
                 onClick={() => pick(r)}
                 className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors ${
-                  i === active ? "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]" : ""
+                  i === active ? "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] font-medium" : ""
                 }`}
               >
                 <span className="flex min-w-0 flex-col">
                   <span className="truncate text-fg">{r.name || r.symbol}</span>
                   {r.exchange && <span className="truncate text-xs text-muted">{r.exchange}</span>}
                 </span>
-                <span className="shrink-0 font-mono text-xs text-accent">{r.symbol}</span>
+                <span className="shrink-0 font-mono-spec text-xs text-accent">{r.symbol}</span>
               </button>
             </li>
           ))}

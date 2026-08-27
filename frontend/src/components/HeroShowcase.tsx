@@ -78,8 +78,8 @@ export default function HeroShowcase() {
         </Card>
 
         {/* 하단 행 — 근거 칩 + 목표자금 스파크라인 */}
-        <div className="mt-3 grid grid-cols-5 gap-3">
-          <Card variant="subtle" className="col-span-2 animate-rise p-4 [animation-delay:120ms]">
+        <div className="mt-3 grid grid-cols-5 gap-2.5">
+          <Card variant="subtle" className="col-span-2 animate-rise p-3.5 [animation-delay:120ms]">
             <p className="flex items-center gap-1.5 font-mono-spec text-[10px] uppercase tracking-widest text-gilt">
               <FileText weight="fill" size={12} /> 근거
             </p>
@@ -89,15 +89,15 @@ export default function HeroShowcase() {
               해석례 <b className="text-fg">2건</b> 인용
             </p>
           </Card>
-          <Card variant="subtle" className="col-span-3 animate-rise p-4 [animation-delay:240ms]">
+          <Card variant="subtle" className="col-span-3 animate-rise p-3.5 [animation-delay:240ms]">
             <p className="font-mono-spec text-[10px] uppercase tracking-widest text-muted">
               목표 자금 추이
             </p>
-            <div className="mt-2 flex items-end justify-between gap-2">
+            <div className="mt-2 flex items-end justify-between gap-1.5">
               <p className="font-display text-xl text-fg">
                 <AnimatedNumber value={76} suffix="%" />
               </p>
-              <MiniSparkline data={SPARK} color="accent" width={110} height={30} />
+              <MiniSparkline data={SPARK} color="accent" width={92} height={28} />
             </div>
           </Card>
         </div>
@@ -105,7 +105,7 @@ export default function HeroShowcase() {
 
       {/* 부유 배지 — 카드 밖에 떠 있는 '라이브' 신호 */}
       <div
-        className="float-slow absolute -right-4 -top-4 flex items-center gap-1.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_85%,transparent)] px-3 py-1.5 text-[11px] font-semibold text-fg shadow-[var(--shadow-1)] backdrop-blur-md"
+        className="float-slow absolute -right-2 -top-3 sm:-right-3 sm:-top-3 flex items-center gap-1.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_85%,transparent)] px-3 py-1.5 text-[11px] font-semibold text-fg shadow-[var(--shadow-1)] backdrop-blur-md whitespace-nowrap z-20"
         data-tour="hero-badge"
       >
         <span className="h-1.5 w-1.5 rounded-full bg-positive" />
@@ -113,7 +113,7 @@ export default function HeroShowcase() {
       </div>
       {/* 부유 배지 2 — 사기 검증 탑재 신호(좌하단, 위상차 애니메이션) */}
       <div
-        className="float-slow absolute -bottom-4 -left-4 flex items-center gap-1.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_85%,transparent)] px-3 py-1.5 text-[11px] font-semibold text-fg shadow-[var(--shadow-1)] backdrop-blur-md [animation-delay:1.6s]"
+        className="float-slow absolute -bottom-3 -left-2 sm:-bottom-3 sm:-left-3 flex items-center gap-1.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_85%,transparent)] px-3 py-1.5 text-[11px] font-semibold text-fg shadow-[var(--shadow-1)] backdrop-blur-md [animation-delay:1.6s] whitespace-nowrap z-20"
       >
         <ShieldWarning weight="fill" size={13} className="text-gilt" />
         사기 문자 검증 탑재

@@ -95,11 +95,11 @@ const EXIT_LABEL: Record<string, string> = {
   take_profit: "익절",
   trailing_stop: "추격손절",
 };
-const EXIT_TONE: Record<string, string> = {
-  signal: "text-muted",
-  stop_loss: "text-negative",
-  trailing_stop: "text-warning",
-  take_profit: "text-positive",
+const EXIT_PILL_STYLE: Record<string, string> = {
+  signal: "bg-surface text-muted border-line",
+  stop_loss: "bg-negative/10 text-negative border-negative/20",
+  trailing_stop: "bg-warning/10 text-warning border-warning/20",
+  take_profit: "bg-positive/10 text-positive border-positive/20",
 };
 
 // 백테스트에 적용된 리스크 오버레이를 사람이 읽는 한 줄로 (null=미적용은 생략).
@@ -365,6 +365,7 @@ export default function StocksPage() {
   const [qa, setQa] = useState<QuickAnalysis | null>(null);
   /** 가격 헤더 스파크라인용 실제 종가 시계열(최근 1개월, yfinance). */
   const [series, setSeries] = useState<number[]>([]);
+  const [lastDate, setLastDate] = useState<string | null>(null);
   const [qaBusy, setQaBusy] = useState(false);
   const [tradesOpen, setTradesOpen] = useState(false);
 
@@ -404,8 +405,14 @@ export default function StocksPage() {
       setQa(res);
       // 가격 헤더의 스파크라인용 실제 종가 시계열(최근 1개월). 백엔드 미기동이면 목데이터로 프리뷰.
       withMock(getPriceHistory(symbol, "1mo"), () => mockPriceHistory(symbol, "1mo"), "가격 히스토리")
-        .then((h: PriceHistory) => setSeries(h.points.map((p) => p.close)))
-        .catch(() => setSeries([]));
+        .then((h: PriceHistory) => {
+          setSeries(h.points.map((p) => p.close));
+          if (h.points.length > 0) setLastDate(h.points[h.points.length - 1].date);
+        })
+        .catch(() => {
+          setSeries([]);
+          setLastDate(null);
+        });
     } catch (e) {
       toast(`빠른 분석 실패: ${errMsg(e)}`, "error");
     } finally {
@@ -615,7 +622,7 @@ export default function StocksPage() {
                       <span className="font-mono-spec text-xs font-bold uppercase tracking-wider text-accent">{qa.ticker}</span>
                       {/* 실시간 표시는 과장이므로 빼고, 데이터 출처·분석 시점을 정직하게 남긴다 */}
                       <span className="rounded-full border border-line px-2 py-0.5 font-mono-spec text-[10px] text-muted">
-                        yfinance · {new Date().toLocaleDateString("ko-KR")}
+                        yfinance · {lastDate ? new Date(lastDate).toLocaleDateString("ko-KR") : "최근 종가 기준"}
                       </span>
                     </div>
                     <p className="font-display text-3xl font-bold tracking-tight text-fg">{price(qa.current_price)}</p>
@@ -1161,16 +1168,22 @@ export default function StocksPage() {
                               <td className="py-1.5 pr-4 text-muted">{i + 1}</td>
                               <td className="py-1.5 pr-4">{t.entry_date}</td>
                               <td className="py-1.5 pr-4">{t.exit_date}</td>
-                              <td className="py-1.5 pr-4 text-right font-mono">{price(t.entry_price)}</td>
-                              <td className="py-1.5 pr-4 text-right font-mono">{price(t.exit_price)}</td>
+                              <td className="py-1.5 pr-4 text-right font-mono-spec tabular-nums">{price(t.entry_price)}</td>
+                              <td className="py-1.5 pr-4 text-right font-mono-spec tabular-nums">{price(t.exit_price)}</td>
                               <td
-                                className={`py-1.5 pr-4 text-right font-mono font-medium ${t.pnl_pct >= 0 ? "text-positive" : "text-negative"}`}
+                                className={`py-1.5 pr-4 text-right font-mono-spec tabular-nums font-medium ${t.pnl_pct >= 0 ? "text-positive" : "text-negative"}`}
                               >
                                 {t.pnl_pct >= 0 ? "+" : ""}
                                 {pct(t.pnl_pct)}
                               </td>
-                              <td className={`py-1.5 text-right ${EXIT_TONE[t.exit_reason ?? "signal"] ?? "text-muted"}`}>
-                                {EXIT_LABEL[t.exit_reason ?? "signal"] ?? t.exit_reason}
+                              <td className="py-1.5 text-right">
+                                <span
+                                  className={`inline-block rounded-full border px-2 py-0.5 font-mono-spec text-[10px] font-semibold ${
+                                    EXIT_PILL_STYLE[t.exit_reason ?? "signal"] ?? "bg-surface text-muted border-line"
+                                  }`}
+                                >
+                                  {EXIT_LABEL[t.exit_reason ?? "signal"] ?? t.exit_reason}
+                                </span>
                               </td>
                             </tr>
                           ))}

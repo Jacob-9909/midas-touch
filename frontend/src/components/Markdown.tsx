@@ -1,23 +1,71 @@
 "use client";
 
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import { Copy, Check } from "@phosphor-icons/react";
 import type { Components } from "react-markdown";
 
+function CodeBlock({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [copied, setCopied] = useState(false);
+  const text = String(children).replace(/\n$/, "");
+  const lang = className?.replace("language-", "") || "code";
+
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
+  return (
+    <div className="relative my-3 rounded-xl border border-line bg-[var(--ink-2)] overflow-hidden font-mono-spec">
+      <div className="flex items-center justify-between border-b border-line/60 bg-surface/40 px-3 py-1.5 text-[11px] text-muted">
+        <span className="uppercase font-semibold tracking-wider text-accent">{lang}</span>
+        <button
+          type="button"
+          onClick={onCopy}
+          aria-label="코드 복사"
+          className="flex items-center gap-1 hover:text-fg transition-colors px-1.5 py-0.5 rounded text-[10px]"
+        >
+          {copied ? (
+            <>
+              <Check size={12} weight="bold" className="text-positive" />
+              <span className="text-positive font-medium">복사됨</span>
+            </>
+          ) : (
+            <>
+              <Copy size={12} />
+              <span>복사</span>
+            </>
+          )}
+        </button>
+      </div>
+      <pre className="p-3.5 overflow-x-auto text-xs text-fg/90 leading-relaxed font-mono-spec">
+        <code>{text}</code>
+      </pre>
+    </div>
+  );
+}
+
 // 채팅/리포트용 마크다운 렌더러.
-// - remark-gfm: 표·취소선·자동링크 등 GFM 지원
-// - remark-breaks: 단일 개행(\n)을 <br>로 — 마크다운이 아닌 평문도 원문 줄바꿈 그대로 보이게 함
-// 스타일은 components 맵으로 주입해 @tailwindcss/typography 의존 없이 자기완결.
 const components: Components = {
-  p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
-  h1: ({ children }) => <h1 className="mb-2 mt-3 text-base font-semibold first:mt-0">{children}</h1>,
-  h2: ({ children }) => <h2 className="mb-2 mt-3 text-sm font-semibold first:mt-0">{children}</h2>,
-  h3: ({ children }) => <h3 className="mb-1.5 mt-2.5 text-sm font-semibold first:mt-0">{children}</h3>,
+  p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed break-keep">{children}</p>,
+  h1: ({ children }) => <h1 className="mb-2 mt-3 text-base font-semibold first:mt-0 break-keep">{children}</h1>,
+  h2: ({ children }) => <h2 className="mb-2 mt-3 text-sm font-semibold first:mt-0 break-keep">{children}</h2>,
+  h3: ({ children }) => <h3 className="mb-1.5 mt-2.5 text-sm font-semibold first:mt-0 break-keep">{children}</h3>,
   ul: ({ children }) => <ul className="mb-2 list-disc space-y-1 pl-5">{children}</ul>,
   ol: ({ children }) => <ol className="mb-2 list-decimal space-y-1 pl-5">{children}</ol>,
-  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  li: ({ children }) => <li className="leading-relaxed break-keep">{children}</li>,
+  strong: ({ children }) => <strong className="font-semibold text-fg">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   a: ({ href, children }) => (
     <a
@@ -33,7 +81,6 @@ const components: Components = {
     <blockquote className="my-2 border-l-2 border-line pl-3 text-muted">{children}</blockquote>
   ),
   hr: () => <hr className="my-3 border-line" />,
-  // 표는 좁은 버블에서 넘칠 수 있어 가로 스크롤 컨테이너로 감싼다.
   table: ({ children }) => (
     <div className="my-2 overflow-x-auto">
       <table className="w-full border-collapse text-xs">{children}</table>
@@ -45,17 +92,13 @@ const components: Components = {
     </th>
   ),
   td: ({ children }) => <td className="border border-line px-2 py-1">{children}</td>,
-  pre: ({ children }) => (
-    <pre className="my-2 overflow-x-auto rounded-lg bg-[color-mix(in_srgb,var(--fg)_6%,transparent)] p-3 text-xs">
-      {children}
-    </pre>
-  ),
+  pre: ({ children }) => <>{children}</>,
   code: ({ className, children }) => {
     const isBlock = /\n/.test(String(children)) || (className ?? "").startsWith("language-");
     return isBlock ? (
-      <code className={`font-mono ${className ?? ""}`}>{children}</code>
+      <CodeBlock className={className}>{children}</CodeBlock>
     ) : (
-      <code className="rounded bg-[color-mix(in_srgb,var(--fg)_8%,transparent)] px-1 py-0.5 font-mono text-[0.85em]">
+      <code className="rounded bg-[color-mix(in_srgb,var(--fg)_8%,transparent)] px-1.5 py-0.5 font-mono-spec text-[0.85em] text-accent">
         {children}
       </code>
     );

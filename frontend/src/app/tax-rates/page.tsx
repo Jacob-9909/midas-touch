@@ -89,7 +89,7 @@ export default function TaxRatesPage() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={6}
-          className="w-full resize-y rounded-lg border border-line bg-surface/40 p-3 font-mono-spec text-sm text-fg outline-none focus:border-accent"
+          className="field w-full resize-y p-3 font-mono-spec text-sm"
           placeholder="세법개정안 텍스트를 붙여넣으세요…"
         />
         <div className="flex flex-wrap items-center gap-3">
@@ -98,7 +98,7 @@ export default function TaxRatesPage() {
             <input
               value={year}
               onChange={(e) => setYear(e.target.value)}
-              className="w-20 rounded-md border border-line bg-surface/40 px-2 py-1 font-mono-spec text-sm text-fg outline-none focus:border-accent"
+              className="field w-20 px-2.5 py-1 text-sm font-mono-spec"
             />
           </label>
           <button
