@@ -125,6 +125,57 @@ class TestOverlayApplyAndGetRates(unittest.TestCase):
         self.assertIsNone(build_overlaid_set("2099"))
 
 
+class TestChatCalcUsesApprovedRates(unittest.TestCase):
+    """승인된 개정 세율이 챗봇 계산 경로(tax_calculator 툴)에도 반영되는지."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115 — setUp/tearDown 수명주기라 컨텍스트 매니저 부적합
+            suffix=".json", delete=False, mode="w", encoding="utf-8"
+        )
+        self._tmp.close()
+        os.environ["TAX_RATE_OVERLAY_PATH"] = self._tmp.name
+
+    def tearDown(self) -> None:
+        os.environ.pop("TAX_RATE_OVERLAY_PATH", None)
+        os.unlink(self._tmp.name)
+
+    def test_tool_uses_latest_approved_year_by_default(self) -> None:
+        from backend.app.services.agent.tools import tax_calculator
+
+        apply_overlay(heuristic_extract(_SAMPLE_AMENDMENT, year="2026"))
+        out = tax_calculator.invoke(
+            {
+                "calc_type": "foreign_stock_sale",
+                "sale_price": 152_500_000,
+                "acquisition_cost": 50_000_000,
+            }
+        )
+        # 개정 후 22%: 과세표준 1억 × 22% + 지방 10% = 24,200,000
+        self.assertIn("24,200,000", out)
+        self.assertIn("2026 귀속", out)
+
+    def test_explicit_past_year_overrides_latest(self) -> None:
+        from backend.app.services.agent.tools import tax_calculator
+
+        apply_overlay(heuristic_extract(_SAMPLE_AMENDMENT, year="2026"))
+        out = tax_calculator.invoke(
+            {
+                "calc_type": "foreign_stock_sale",
+                "sale_price": 152_500_000,
+                "acquisition_cost": 50_000_000,
+                "year": "2025",
+            }
+        )
+        # 2025 명시 → 20%: 과세표준 1억 × 20% + 지방 10% = 22,000,000
+        self.assertIn("22,000,000", out)
+
+    def test_detect_year_from_utterance(self) -> None:
+        from backend.app.services.agent.nodes.tax_calculator import _detect_year
+
+        self.assertEqual(_detect_year("2024년 기준 양도세 알려줘"), "2024")
+        self.assertIsNone(_detect_year("해외주식 양도세 계산해줘"))
+
+
 class TestApiFlow(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115 — setUp/tearDown 수명주기라 컨텍스트 매니저 부적합

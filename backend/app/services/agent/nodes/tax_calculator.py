@@ -38,6 +38,8 @@ _BARE_WON_RE = re.compile(r"(?<![\d,.])(\d{1,3}(?:,\d{3})+|\d{6,})(?![\d])")
 # 보유기간: N년 / N.N년 (2025년 같은 연도 표기 제외용 상한 필터), N개월
 _YEARS_RE = re.compile(r"(\d+(?:\.\d+)?)\s*년")
 _MONTHS_RE = re.compile(r"(\d{1,3})\s*개월")
+# 귀속연도 명시: "2025년 기준", "2024년에 팔았는데" 등. 없으면 최신 규정을 적용한다.
+_TAX_YEAR_RE = re.compile(r"(20\d{2})\s*년")
 
 # 양도/취득 구분 힌트: 금액 직후 짧은 창(window)에서 매수·매도 동사를 찾는다.
 _ACQ_VERB_RE = re.compile(r"(샀|사서|구입|취득|들였|에\s*산)")
@@ -67,6 +69,12 @@ def _detect_calc_type(text: str) -> str | None:
     if any(tok in text for tok in _HOUSING_TOKENS):
         return "housing_sale"
     return None
+
+
+def _detect_year(text: str) -> str | None:
+    """발화에 명시된 귀속연도(예 '2024년')를 뽑는다. 없으면 None(툴이 최신 규정 적용)."""
+    m = _TAX_YEAR_RE.search(text)
+    return m.group(1) if m else None
 
 
 def _amount_spans(text: str) -> list[tuple[int, int]]:
@@ -158,13 +166,18 @@ def tax_calculator_node(state: AgentState) -> dict:
             return {"tool_context": [_guidance(None)]}
 
         amounts = parse_amounts(user_text)
+        year = _detect_year(user_text)  # 명시 없으면 None → 툴이 최신 규정 적용
 
         if calc_type == "interest_dividend":
             if not amounts:
                 return {"tool_context": [_guidance("interest_dividend")]}
-            result = tax_calculator.invoke(
-                {"calc_type": calc_type, "annual_financial_income": amounts[0]}
-            )
+            id_kwargs: dict[str, object] = {
+                "calc_type": calc_type,
+                "annual_financial_income": amounts[0],
+            }
+            if year:
+                id_kwargs["year"] = year
+            result = tax_calculator.invoke(id_kwargs)
         else:
             years = parse_holding_years(user_text)
             sale_price, acquisition_cost = split_sale_and_acquisition(user_text, amounts)
@@ -180,6 +193,8 @@ def tax_calculator_node(state: AgentState) -> dict:
             if calc_type == "housing_sale":
                 kwargs["holding_years"] = years
                 kwargs["adjusted_area"] = any(t in user_text for t in ("조정대상지역", "투기과열지구"))
+            if year:
+                kwargs["year"] = year
             result = tax_calculator.invoke(kwargs)
 
         return {"tool_context": [f"[tax_calculator 결과]\n{result}"]}

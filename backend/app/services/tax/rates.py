@@ -119,6 +119,17 @@ RATE_REGISTRY: dict[str, TaxRateSet] = {
 DEFAULT_YEAR = "2025"
 
 
+def latest_year() -> str:
+    """등록된(하드코딩 + 승인 오버레이) 귀속연도 중 가장 최신.
+
+    규정은 기본적으로 최신 연도로 적용한다 — 계산 노드가 발화에 과거 연도가 없을 때 이 값을 쓴다.
+    """
+    from .rate_overlay import overlay_years
+
+    years = set(RATE_REGISTRY) | set(overlay_years())
+    return max(years, key=int)
+
+
 def get_rates(year: str = DEFAULT_YEAR) -> TaxRateSet:
     """귀속연도에 해당하는 세율 세트를 돌려준다.
 

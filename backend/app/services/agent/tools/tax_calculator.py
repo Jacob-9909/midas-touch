@@ -20,6 +20,7 @@ from backend.app.services.tax.calculator import (
     calc_housing_sale,
     calc_interest_dividend,
 )
+from backend.app.services.tax.rates import get_rates, latest_year
 
 
 @tool
@@ -31,6 +32,7 @@ def tax_calculator(
     is_sole_home: bool = True,
     adjusted_area: bool = False,
     annual_financial_income: int | None = None,
+    year: str | None = None,
 ) -> str:
     """세금을 코드로 **결정론적** 계산한다. 주택 양도소득세(1세대 1주택 비과세·장기보유특별공제
     포함), 해외주식 양도소득세, 이자·배당소득 분리과세를 지원하며 각 단계 금액과 법령 근거를
@@ -45,7 +47,11 @@ def tax_calculator(
         is_sole_home: 1세대 1주택 여부(housing_sale, 기본 True).
         adjusted_area: 조정대상지역 여부(housing_sale, 기본 False — 비과세 한도 9억/12억 구분).
         annual_financial_income: 연간 이자·배당소득 합계(원). interest_dividend에서 필수.
+        year: 적용 귀속연도. 미지정 시 등록된 최신 연도(승인 오버레이 포함)를 적용한다.
     """
+    # 규정은 최신 연도가 기본. 발화에 과거 연도가 명시된 경우에만 노드가 그 연도를 넘긴다.
+    rates = get_rates(year or latest_year())
+
     if calc_type == "housing_sale":
         if sale_price is None or acquisition_cost is None or holding_years is None:
             raise ValueError(
@@ -59,7 +65,8 @@ def tax_calculator(
                 holding_years=holding_years,
                 is_sole_home=is_sole_home,
                 adjusted_area=adjusted_area,
-            )
+            ),
+            rates,
         )
     elif calc_type == "foreign_stock_sale":
         if sale_price is None or acquisition_cost is None:
@@ -68,13 +75,15 @@ def tax_calculator(
                 "acquisition_cost(취득가액+필요경비 합계)가 필요합니다."
             )
         result = calc_foreign_stock_sale(
-            ForeignStockSaleInput(sale_price=sale_price, acquisition_cost=acquisition_cost)
+            ForeignStockSaleInput(sale_price=sale_price, acquisition_cost=acquisition_cost),
+            rates,
         )
     elif calc_type == "interest_dividend":
         if annual_financial_income is None:
             raise ValueError("interest_dividend 계산에는 annual_financial_income(연간 금융소득)이 필요합니다.")
         result = calc_interest_dividend(
-            InterestDividendInput(annual_income=annual_financial_income)
+            InterestDividendInput(annual_income=annual_financial_income),
+            rates,
         )
     else:
         raise ValueError(f"지원하지 않는 calc_type 입니다: {calc_type}")

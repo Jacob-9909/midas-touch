@@ -55,6 +55,11 @@ def apply_overlay(
     p.write_text(json.dumps(overlays, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def overlay_years(path: str | os.PathLike[str] | None = None) -> list[str]:
+    """오버레이에 등록된 귀속연도 목록(승인된 개정연도)."""
+    return list(_load_all(path).keys())
+
+
 def build_overlaid_set(
     year: str, path: str | os.PathLike[str] | None = None
 ) -> TaxRateSet | None:
