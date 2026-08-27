@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# 노드 테스트는 regex 경로를 결정론적으로 검증한다 — LLM 슬롯필링을 꺼 네트워크·비결정성을 배제.
+os.environ["TAX_SLOT_LLM"] = "0"
+
 from backend.app.services.tax.calculator import (
     DISCLAIMER,
     ForeignStockSaleInput,
@@ -251,6 +254,47 @@ class TestTaxCalculatorToolAndNode(unittest.TestCase):
         self.assertIn("[tax_calculator 결과]", ctx[0])
         self.assertIn("비과세 판정", ctx[0])
         self.assertIn("단순 계산기", ctx[0])
+
+
+# ---------------------------------------------------------------------------
+# LLM 슬롯필링 — 입력만 추출, 계산은 여전히 코드(네트워크 없이 monkeypatch로 검증)
+# ---------------------------------------------------------------------------
+class TestLlmSlotFilling(unittest.TestCase):
+    def test_kwargs_from_slots_sufficient_and_insufficient(self) -> None:
+        from backend.app.services.agent.nodes.tax_calculator import (
+            TaxSlots,
+            _kwargs_from_slots,
+        )
+
+        ok = TaxSlots(calc_type="foreign_stock_sale", sale_price=100, acquisition_cost=10)
+        self.assertEqual(
+            _kwargs_from_slots(ok),
+            {"calc_type": "foreign_stock_sale", "sale_price": 100, "acquisition_cost": 10},
+        )
+        # housing인데 보유연수 없음 → 불충분(None)
+        self.assertIsNone(
+            _kwargs_from_slots(TaxSlots(calc_type="housing_sale", sale_price=1, acquisition_cost=1))
+        )
+
+    def test_node_uses_llm_slots_when_available(self) -> None:
+        from langchain_core.messages import HumanMessage
+
+        from backend.app.services.agent.nodes import tax_calculator as node_mod
+
+        # regex는 놓칠 자연어를 LLM이 슬롯으로 뽑았다고 가정(네트워크 없이 주입).
+        slots = node_mod.TaxSlots(
+            calc_type="foreign_stock_sale", sale_price=152_500_000, acquisition_cost=50_000_000
+        )
+        original = node_mod._llm_slots
+        node_mod._llm_slots = lambda _text: slots
+        try:
+            state = {"messages": [HumanMessage(content="작년에 엔비디아 정리했는데 세금 궁금해")]}
+            ctx = node_mod.tax_calculator_node(state)["tool_context"]
+        finally:
+            node_mod._llm_slots = original
+        self.assertIn("[tax_calculator 결과]", ctx[0])
+        # 과세표준 1억 × 22%/20% 계열 — 코드가 계산한 결과가 들어온다
+        self.assertIn("해외주식 양도소득세", ctx[0])
 
 
 # ---------------------------------------------------------------------------
