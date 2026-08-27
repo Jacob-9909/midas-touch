@@ -7,6 +7,7 @@ DB(localhost Postgres/Neo4j)와 NVIDIA NIM 연동을 전제로 하는 통합 테
 NVIDIA_API_KEY가 없으면 LLM이 필요한 테스트는 skip된다.
 """
 
+import logging
 import os
 import sys
 import unittest
@@ -14,8 +15,10 @@ import unittest
 try:
     import truststore
     truststore.inject_into_ssl()
-except Exception:
-    pass
+except Exception as exc:
+    # truststore가 없거나 주입에 실패해도 테스트는 돈다(certifi 번들로 폴백). 다만 사내망 등
+    # 시스템 인증서가 필요한 환경에선 이후 TLS 실패의 원인이 되므로 조용히 넘기지 않는다.
+    logging.getLogger(__name__).debug("truststore 미적용 — 시스템 인증서 대신 기본 번들 사용: %s", exc)
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)

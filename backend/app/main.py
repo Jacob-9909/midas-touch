@@ -4,15 +4,18 @@ main.py
 FastAPI 기반 실시간 Midas Touch 금융 자산 관리 및 GraphRAG 질의 웹 API 서비스 엔트리포인트.
 """
 
+import logging
+
 try:
     import truststore
     truststore.inject_into_ssl()
-except Exception:
-    pass
+except Exception as exc:
+    # truststore가 없거나 주입에 실패해도 앱은 뜬다(certifi 번들로 폴백). 다만 사내망 등
+    # 시스템 인증서가 필요한 환경에선 이후 TLS 실패의 원인이 되므로 조용히 넘기지 않는다.
+    logging.getLogger(__name__).debug("truststore 미적용 — 시스템 인증서 대신 기본 번들 사용: %s", exc)
 
 import asyncio
 import contextlib
-import logging
 import os
 from contextlib import asynccontextmanager
 

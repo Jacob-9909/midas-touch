@@ -8,12 +8,15 @@ state 조립, 세션 메타데이터 upsert)을 한곳으로 모은다. 비스�
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Iterator
 
 from fastapi import HTTPException
 
 from backend.app.services.agent.graph import get_agent
 from shared.database.repositories.sessions import upsert_chat_session
+
+logger = logging.getLogger(__name__)
 
 _TITLE_MAX = 40
 
@@ -170,8 +173,10 @@ class ChatService:
                             remainder = last_content[len(streamed_content):]
                             if remainder:
                                 yield _sse({"type": "token", "content": remainder})
-            except Exception:
-                pass
+            except Exception as exc:
+                # 안전망 자체가 실패해도 스트림은 이미 흘렀으니 응답을 깨지 않는다. 다만 이걸
+                # 조용히 삼키면 '답변 끝이 잘렸다'는 증상의 원인을 추적할 수 없다.
+                logger.debug("스트림 종료 후 잔여 토큰 보정 실패: %s", exc)
 
             self._record_session(session_id, message, user_uuid, config)
             yield _sse({"type": "done"})
