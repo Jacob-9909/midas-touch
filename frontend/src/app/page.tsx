@@ -80,40 +80,40 @@ export default function HomePage() {
               <br />
               한 번에 잡는 <span className="grad-text">AI 보안 비서</span>
             </h1>
-            <p className="mt-7 max-w-2xl leading-[1.6] text-muted break-keep">
+            <p className="mt-7 max-w-2xl text-[15px] sm:text-base leading-[1.65] text-muted break-keep">
               사기 문자를 붙여넣으면 판정 근거와 나에게 맞는 행동 요령을 알려주고, 세금은
               법령 근거와 함께 코드가 직접 계산하며, 청약·자산 상담은 모든 답변의 출처를
               공개합니다. 매 답변 말미의 방어 증명 카드가 이 AI가 왜 믿을 수 있는지
               증명합니다.
             </p>
-            <p className="mt-3 max-w-2xl text-xs leading-relaxed text-muted break-keep">
+            <p className="mt-3 max-w-2xl text-xs sm:text-[13px] leading-relaxed text-muted/90 break-keep">
               판단을 대신하지 않고 근거를 정리해 보여주는 정보 제공 서비스이며, 투자·세무 자문이 아닙니다.
             </p>
 
             {/* 주 CTA — 인디고 그라디언트 pill */}
             <div className="mt-9 flex flex-wrap items-center gap-3">
-              <Link href="/me" className="btn-accent">
+              <Link href="/me" className="btn-accent text-sm sm:text-[15px]">
                 내 정보 입력하고 시작하기
               </Link>
               <Link
                 href={`/chat?prefill=${encodeURIComponent("이 문자 사기야? 엄마 나 사고났어. 경찰서에 있는데 지금 당장 300만원 이체해줘. 전화하지 마세요.")}`}
-                className="btn-ghost"
+                className="btn-ghost text-sm sm:text-[15px]"
               >
                 사기 검증 먼저 체험하기
               </Link>
             </div>
 
             {/* 신뢰 스트립 — "3대 AI 피해 차단" 서사의 제품면 증거(기획서 태그라인 정합) */}
-            <div className="mt-7 flex flex-wrap items-center gap-x-2 gap-y-2 text-xs text-muted">
-              <span className="font-mono-spec text-[10px] font-semibold uppercase tracking-[0.18em] text-stone">
+            <div className="mt-7 flex flex-wrap items-center gap-x-2.5 gap-y-2 text-xs sm:text-[13px] text-muted">
+              <span className="font-mono-spec text-xs font-semibold uppercase tracking-[0.18em] text-stone">
                 AI 피해 차단
               </span>
               {TRUST_BADGES.map((b) => (
                 <span
                   key={b.label}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] px-3 py-1.5 backdrop-blur-sm"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] px-3.5 py-1.5 backdrop-blur-sm font-medium"
                 >
-                  <b.icon weight="fill" size={13} className={b.tone} />
+                  <b.icon weight="fill" size={14} className={b.tone} />
                   {b.label}
                 </span>
               ))}
@@ -146,23 +146,23 @@ export default function HomePage() {
                 className="lift group flex h-full flex-col rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-5 transition hover:border-accent/40"
               >
                 <div className="flex items-center justify-between border-b border-line/60 pb-3">
-                  <span className="font-mono-spec text-[10px] font-semibold tracking-widest text-gilt">
+                  <span className="font-mono-spec text-[11px] font-semibold tracking-widest text-gilt">
                     {s.step}
                   </span>
-                  <span className="rounded-full border border-line bg-surface/50 px-2 py-0.5 font-mono-spec text-[9px] font-semibold text-muted">
+                  <span className="rounded-full border border-line bg-surface/50 px-2.5 py-0.5 font-mono-spec text-[10px] font-semibold text-muted">
                     {s.tag}
                   </span>
                 </div>
                 <div className="mt-4 flex items-center gap-2">
-                  <s.icon size={20} weight="duotone" className="text-accent shrink-0" />
+                  <s.icon size={22} weight="duotone" className="text-accent shrink-0" />
                   <h3 className="font-display text-lg font-semibold text-fg group-hover:text-accent transition-colors">
                     {s.title}
                   </h3>
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-muted break-keep">
+                <p className="mt-2.5 text-[13px] sm:text-sm leading-relaxed text-muted break-keep">
                   {s.body}
                 </p>
-                <div className="mt-auto pt-4 flex items-center gap-1 text-xs font-semibold text-accent">
+                <div className="mt-auto pt-4 flex items-center gap-1 text-xs sm:text-sm font-semibold text-accent">
                   체험하기 →
                 </div>
               </Link>

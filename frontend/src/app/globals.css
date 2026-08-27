@@ -105,6 +105,7 @@ html.light {
 /* 배경은 반드시 html이 소유한다 (음수 z-index 캔버스 페인팅 순서 보호). */
 html {
   background: var(--ink);
+  font-size: 106.25%; /* 기본 베이스 17px (전체 rem 타이포그래피를 시원하고 또렷하게 확대) */
 }
 
 body {
@@ -113,8 +114,8 @@ body {
   background: transparent;
   min-height: 100dvh;
   position: relative;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 0.95rem; /* ~16.2px 가독성 높은 엔터프라이즈 본문 기본 폰트 */
+  line-height: 1.62;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -123,7 +124,7 @@ body {
 .font-display {
   font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 600;
-  line-height: 1.05;
+  line-height: 1.1;
   letter-spacing: -0.02em;
 }
 
@@ -141,8 +142,8 @@ body {
   border-radius: var(--r-pill);
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
-  padding: 0.25rem 0.75rem;
-  font-size: 11px;
+  padding: 0.3rem 0.85rem;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -178,7 +179,7 @@ html.dark .glass {
   min-height: 46px;
   padding: 0.65rem 1.4rem;
   border-radius: var(--r-pill);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   /* press 피드백은 100~160ms — 눌렀다는 응답은 즉각적이어야 한다 */
@@ -247,7 +248,8 @@ html.dark .glass {
   background: var(--ink-2);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  min-height: 44px;
+  min-height: 46px;
+  font-size: 0.95rem;
   color: var(--fg);
   font-family: var(--font-sans);
   outline: none;
@@ -444,34 +446,37 @@ html.dark .glass {
 }
 
 /* ── 고령층 친화 모드 — NavBar "큰 글씨" 토글(html.a11y-large-text) ──
-   html 배율 112%: 레이아웃 그리드 붕괴 없이 전 페이지를 안정적으로 12% 확대.
-   터치 타깃 44px+(WCAG 2.5.5) 및 시니어 가독성 라인하이트 확보. */
+   html 배율 118%: 레이아웃 그리드 붕괴 없이 전 페이지를 안정적으로 18% 확대.
+   터치 타깃 48px+(WCAG 2.5.5) 및 시니어 가독성 라인하이트 확보. */
 .a11y-large-text {
-  font-size: 112%;
+  font-size: 118%;
 }
 .a11y-large-text body {
-  font-size: 0.9375rem;
-  line-height: 1.6;
+  font-size: 1.025rem;
+  line-height: 1.68;
 }
 .a11y-large-text .font-display {
   letter-spacing: -0.01em;
 }
 .a11y-large-text .btn-accent,
 .a11y-large-text .btn-ghost {
-  min-height: 44px;
+  min-height: 48px;
+  font-size: 1rem;
 }
 /* 네비게이션 바 내부 버튼은 알약 캡슐 레이아웃을 유지하도록 컴팩트 타깃 보정 */
 .a11y-large-text nav .btn-ghost,
 .a11y-large-text nav .btn-icon {
   min-height: 36px;
+  font-size: 0.875rem;
 }
 .a11y-large-text .field {
-  min-height: 44px;
+  min-height: 48px;
+  font-size: 1rem;
 }
 /* 답변 말풍선은 줄간격과 글자 크기를 넓혀 시니어 가독성을 보강한다 */
 .a11y-large-text [data-chat-answer] {
-  font-size: 1.025rem;
-  line-height: 1.75;
+  font-size: 1.1rem;
+  line-height: 1.8;
 }
 
 /* prefers-reduced-motion: 모든 모션 제거 */
