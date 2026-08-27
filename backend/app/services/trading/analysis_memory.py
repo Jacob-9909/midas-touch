@@ -16,8 +16,11 @@ quick_analysis()의 기술지표 스냅샷과 AI 전망(decision/outlook)을 Pos
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timedelta
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _CREATE_SQL = """
 CREATE TABLE IF NOT EXISTS stock_analysis_memory (
@@ -257,28 +260,48 @@ class AnalysisMemory:
         self._ensure()
 
     def _ensure(self) -> None:
-        try:
-            from shared.database.repositories.connection import db_cursor
+        """부트스트랩 DDL은 best-effort로 돌리고, 가용성은 '실제로 읽히는가'로만 판단한다.
 
+        oracle_vm은 midas_touch 전 테이블이 postgres 소유라 appuser에겐 CREATE INDEX·ALTER
+        TABLE이 InsufficientPrivilege로 막힌다. 예전엔 DDL 3개를 한 트랜잭션에 묶어 돌리고
+        성공해야만 _available=True 였는데, 이미 있는 테이블에 인덱스를 다시 만들려다 실패하면
+        통째로 롤백돼 저장·통계·유사검색·캘리브레이션이 전부 조용히 죽었다. DDL 성공은
+        가용성의 조건이 아니다 — 테이블이 이미 있고 SELECT 되면 그게 가용한 것이다.
+        """
+        from shared.database.repositories.connection import db_cursor
+
+        # 문장마다 트랜잭션을 분리한다 — 하나가 죽어도 나머지가 같이 롤백되지 않게.
+        for sql in (_CREATE_SQL, _INDEX_SQL, _CREATE_HORIZON_SQL):
+            try:
+                with db_cursor() as (_, cur):
+                    cur.execute(sql)
+            except Exception as exc:
+                # 이미 있는 테이블/인덱스면 정상. 권한 부족도 여기로 떨어지는데, 조용히 삼키면
+                # 원인 추적이 불가능해져서(이 버그가 정확히 그랬다) debug로는 남긴다.
+                logger.debug("analysis_memory 부트스트랩 DDL 건너뜀: %s", exc)
+
+        try:
             with db_cursor() as (_, cur):
-                cur.execute(_CREATE_SQL)
-                cur.execute(_INDEX_SQL)
-                cur.execute(_CREATE_HORIZON_SQL)
+                cur.execute("SELECT 1 FROM stock_analysis_memory LIMIT 1")
             self._available = True
         except Exception:
             self._available = False
             return
 
-        # pgvector는 선택적: 확장/컬럼이 없거나 권한이 없으면 파이썬 유사도로 폴백한다.
-        try:
-            from shared.database.repositories.connection import db_cursor
+        # pgvector는 선택적: 컬럼이 없거나 캐스트가 안 되면 파이썬 유사도로 폴백한다.
+        for sql in (
+            "CREATE EXTENSION IF NOT EXISTS vector",
+            f"ALTER TABLE stock_analysis_memory ADD COLUMN IF NOT EXISTS feature_vec vector({_FEATURE_DIM})",
+        ):
+            try:
+                with db_cursor() as (_, cur):
+                    cur.execute(sql)
+            except Exception as exc:
+                logger.debug("analysis_memory pgvector DDL 건너뜀: %s", exc)
 
+        try:
             with db_cursor() as (_, cur):
-                cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-                cur.execute(
-                    f"ALTER TABLE stock_analysis_memory "
-                    f"ADD COLUMN IF NOT EXISTS feature_vec vector({_FEATURE_DIM})"
-                )
+                cur.execute("SELECT feature_vec FROM stock_analysis_memory LIMIT 1")
             self._vec_available = True
         except Exception:
             self._vec_available = False

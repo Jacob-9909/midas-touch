@@ -121,7 +121,8 @@ class TestAgentEndToEnd(unittest.TestCase):
         agent = get_agent()
 
         # 턴 1: 유사 투자자 벤치마크 → intent가 검색 도구를 라우팅해야 한다
-        r1 = chat(ChatRequest(session_id=thread, message="나와 비슷한 투자자들의 자산 배분을 보여줘.", user_uuid=self.uuid))
+        # 핸들러를 HTTP 없이 직접 부르므로 Depends가 주입되지 않는다 — auth_uuid를 명시로 넘긴다.
+        r1 = chat(ChatRequest(session_id=thread, message="나와 비슷한 투자자들의 자산 배분을 보여줘.", user_uuid=self.uuid), auth_uuid=self.uuid)
         self.assertTrue(r1.reply)
 
         # 턴 1의 라우팅 결과 검증 (route 필드는 턴마다 갱신되므로 턴2 전에 확인)
@@ -131,7 +132,7 @@ class TestAgentEndToEnd(unittest.TestCase):
         )
 
         # 턴 2: 멀티턴 메모리 — 이전 맥락 참조
-        r2 = chat(ChatRequest(session_id=thread, message="방금 내용 중 핵심 하나만 다시 짚어줘.", user_uuid=self.uuid))
+        r2 = chat(ChatRequest(session_id=thread, message="방금 내용 중 핵심 하나만 다시 짚어줘.", user_uuid=self.uuid), auth_uuid=self.uuid)
         self.assertTrue(r2.reply)
 
         # 멀티턴 누적(턴1 user + 응답 + 턴2 user + 응답)으로 4개 초과
@@ -141,7 +142,7 @@ class TestAgentEndToEnd(unittest.TestCase):
     def test_anonymous_browser_uuid_chat(self) -> None:
         from backend.app.api.chat import ChatRequest, chat
 
-        res = chat(ChatRequest(session_id="test-anon-session", message="간단히 인사해줘.", user_uuid="anon-browser-uuid-0000"))
+        res = chat(ChatRequest(session_id="test-anon-session", message="간단히 인사해줘.", user_uuid="anon-browser-uuid-0000"), auth_uuid="anon-browser-uuid-0000")
         self.assertTrue(res.reply)
 
 

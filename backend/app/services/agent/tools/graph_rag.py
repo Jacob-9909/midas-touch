@@ -46,11 +46,16 @@ def _get_retriever_bundle():
         temperature=0.0,
     )
 
+    # refresh_schema=False 필수 — 스키마 갱신이 apoc.meta.data를 호출하는데 oracle_vm의
+    # Neo4j는 community 5.26(APOC 미설치)이라 그대로 두면 검색 전체가 ProcedureNotFound로
+    # 죽는다. 검색(VectorContextRetriever)은 __Entity__.embedding 벡터 인덱스만 쓰므로
+    # 스키마 캐시가 없어도 동작한다.
     graph_store = Neo4jPropertyGraphStore(
         username=require_env("NEO4J_USERNAME"),
         password=require_env("NEO4J_PASSWORD"),
         url=require_env("NEO4J_URL"),
         database="neo4j",
+        refresh_schema=False,
     )
     PropertyGraphIndex.from_existing(property_graph_store=graph_store)
 
