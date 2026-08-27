@@ -14,6 +14,12 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except Exception:
+    pass
+
 from sentence_transformers import SentenceTransformer
 
 EMBEDDING_MODEL_NAME = os.environ.get("AGENT_EMBEDDING_MODEL", "BAAI/bge-m3")

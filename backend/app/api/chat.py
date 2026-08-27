@@ -137,6 +137,8 @@ def chat_history(
     config = {"configurable": {"thread_id": session_id}}
     state = agent.get_state(config)
     messages = state.values.get("messages", []) if state and state.values else []
+    if not messages:
+        raise HTTPException(status_code=404, detail=f"세션을 찾을 수 없습니다: {session_id}")
 
     out: list[dict] = []
     for m in messages:
