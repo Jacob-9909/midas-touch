@@ -113,6 +113,7 @@ class ChatService:
 
         try:
             announced_synth = False
+            streamed_content = ""
             for mode, payload in self._agent.stream(
                 state_in, config, stream_mode=["updates", "messages"]
             ):
@@ -120,6 +121,23 @@ class ChatService:
                     # 노드가 끝날 때마다 진행상태. intent 완료 시엔 '무엇을 수집하는지'까지 알린다.
                     for node, update in (payload or {}).items():
                         if node == "synthesize":
+                            # synthesize 노드가 완료되었을 때, LLM 스트림 이후 코드가 덧붙인
+                            # 방어 증명(_defense_footer) 및 출처(_sources_footer)를 스트림으로 방출한다.
+                            messages_list = (update or {}).get("messages", [])
+                            if messages_list:
+                                final_content = getattr(messages_list[-1], "content", "")
+                                if isinstance(final_content, str) and final_content:
+                                    if final_content.startswith(streamed_content):
+                                        remainder = final_content[len(streamed_content):]
+                                        if remainder:
+                                            yield _sse({"type": "token", "content": remainder})
+                                            streamed_content = final_content
+                                    elif streamed_content and streamed_content in final_content:
+                                        idx = final_content.find(streamed_content)
+                                        remainder = final_content[idx + len(streamed_content):]
+                                        if remainder:
+                                            yield _sse({"type": "token", "content": remainder})
+                                            streamed_content = final_content
                             continue
                         if node == "intent":
                             route = (update or {}).get("route") or []
@@ -138,7 +156,22 @@ class ChatService:
                     yield _sse({"type": "status", "message": "답변 작성 중"})
                 content = getattr(chunk, "content", None)
                 if content:
+                    streamed_content += content
                     yield _sse({"type": "token", "content": content})
+
+            # 안전망: 체크포인트에 저장된 최종 메시지와 스트리밍된 토큰 간 차이가 있으면 마저 방출
+            try:
+                state = self._agent.get_state(config)
+                if state and state.values:
+                    msgs = state.values.get("messages", [])
+                    if msgs:
+                        last_content = getattr(msgs[-1], "content", "")
+                        if isinstance(last_content, str) and last_content.startswith(streamed_content):
+                            remainder = last_content[len(streamed_content):]
+                            if remainder:
+                                yield _sse({"type": "token", "content": remainder})
+            except Exception:
+                pass
 
             self._record_session(session_id, message, user_uuid, config)
             yield _sse({"type": "done"})

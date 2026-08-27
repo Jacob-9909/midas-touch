@@ -1,12 +1,10 @@
 // 챗 assistant 답변 말미의 "방어 증명" 및 "출처" 섹션 감지/분리 헬퍼.
 // 백엔드 synthesize 노드(nodes/synthesize.py)가 생성하는 형식:
 //   <본문>
-//   \n---\n🛡 방어 증명:\n- 검색 도구...
-//   \n---\n출처:\n[1] <source> (<passage_id>)...
+//   \n\n---\n🛡 방어 증명\n- 검색 도구...
+//   \n\n---\n출처:\n[1] <source> (<passage_id>)...
 
-const DEFENSE_HEADER = "\n---\n🛡 방어 증명:";
-const SOURCES_HEADER = "\n---\n출처:";
-const SOURCE_ITEM_RE = /^\[(\d+)\] (.+) \((.+)\)$/;
+const SOURCE_ITEM_RE = /^\[(\d+)\]\s+(.+?)\s+\((.+?)\)$/;
 
 export interface ChatSource {
   index: number;
@@ -35,17 +33,19 @@ export function splitChatSources(
   let sources: ChatSource[] = [];
   let defense: DefenseAudit | null = null;
 
-  // 1. 출처 파싱
-  const sourcesAt = text.lastIndexOf(SOURCES_HEADER);
-  if (sourcesAt !== -1) {
-    const rawSources = text.slice(sourcesAt + SOURCES_HEADER.length).split("\n");
+  // 1. 출처 파싱 (SOURCES_HEADER: --- 출처: or ### 출처 or 출처:)
+  const sourcesMatch = /(?:^|\n)(?:---\s*\n)?(?:###\s*)?출처:?\s*\n/i.exec(text);
+  if (sourcesMatch) {
+    const sourcesAt = sourcesMatch.index;
+    const rawSources = text.slice(sourcesAt + sourcesMatch[0].length).split("\n");
     const parsedSources: ChatSource[] = [];
     let expectedIndex = 1;
     let valid = true;
 
     for (const line of rawSources) {
-      if (line.trim() === "") continue;
-      const m = SOURCE_ITEM_RE.exec(line.trim());
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const m = SOURCE_ITEM_RE.exec(trimmed);
       if (!m || Number(m[1]) !== expectedIndex) {
         valid = false;
         break;
@@ -60,17 +60,18 @@ export function splitChatSources(
     }
   }
 
-  // 2. 방어 증명 파싱
-  const defenseAt = text.lastIndexOf(DEFENSE_HEADER);
-  if (defenseAt !== -1) {
-    const rawDefense = text.slice(defenseAt + DEFENSE_HEADER.length).split("\n");
+  // 2. 방어 증명 파싱 (DEFENSE_HEADER: --- 🛡️ 방어 증명:? or 🛡 방어 증명:?)
+  const defenseMatch = /(?:^|\n)(?:---\s*\n)?(?:###\s*)?🛡️?\s*방어\s*증명:?\s*\n/i.exec(text);
+  if (defenseMatch) {
+    const defenseAt = defenseMatch.index;
+    const rawDefense = text.slice(defenseAt + defenseMatch[0].length).split("\n");
     const items: string[] = [];
 
     for (const line of rawDefense) {
       const trimmed = line.trim();
       if (!trimmed) continue;
-      if (trimmed.startsWith("- ")) {
-        items.push(trimmed.slice(2));
+      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+        items.push(trimmed.slice(2).trim());
       }
     }
 
@@ -82,7 +83,7 @@ export function splitChatSources(
       defense = {
         rawItems: items,
         tools,
-        hasDeterministicMath: rawText.includes("결정론 계산기"),
+        hasDeterministicMath: rawText.includes("결정론 계산기") || rawText.includes("결정론"),
         hasGrounding: rawText.includes("grounding") || rawText.includes("근거 문서"),
         isLowTemp: rawText.includes("저온 생성") || rawText.includes("temp"),
       };
