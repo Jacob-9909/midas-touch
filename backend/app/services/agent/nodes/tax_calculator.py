@@ -176,8 +176,12 @@ class TaxSlots(BaseModel):
     calc_type: Literal["housing_sale", "foreign_stock_sale", "interest_dividend"] | None = (
         Field(default=None, description="세금 종류. 특정 불가 시 null")
     )
-    sale_price: int | None = Field(default=None, description="양도가액(원)")
-    acquisition_cost: int | None = Field(default=None, description="취득가액+필요경비(원)")
+    sale_price: int | None = Field(default=None, description="양도가액/매도가(원)")
+    acquisition_cost: int | None = Field(default=None, description="취득가액+필요경비/매수가(원)")
+    net_profit: int | None = Field(
+        default=None,
+        description="순수익/양도차익(원). '2천만원 벌었다', '수익 2000만'처럼 매도가/매수가가 따로 없이 순이익만 명시된 경우 채움",
+    )
     holding_years: float | None = Field(default=None, description="보유연수(년)")
     is_sole_home: bool | None = Field(default=None, description="1세대 1주택 여부")
     adjusted_area: bool | None = Field(default=None, description="조정대상지역·투기과열지구 여부")
@@ -185,8 +189,9 @@ class TaxSlots(BaseModel):
     year: str | None = Field(default=None, description="명시된 귀속연도(예 '2024'). 없으면 null")
 
 
-def _llm_slots(user_text: str) -> TaxSlots | None:
+def _llm_slots(user_text: str, *args, **kwargs) -> TaxSlots | None:
     """LLM structured output으로 슬롯을 추출한다. 비활성/실패 시 None(→ regex 폴백)."""
+    context = args[0] if args else kwargs.get("context", "")
     if os.environ.get("TAX_SLOT_LLM", "1") == "0":
         return None
     try:
@@ -194,11 +199,11 @@ def _llm_slots(user_text: str) -> TaxSlots | None:
 
         model = build_chat_model(temperature=0.0).with_structured_output(TaxSlots)
         prompt = (
-            "다음 사용자 발화에서 세금 계산에 필요한 입력만 구조화해 추출하라. 세액을 계산하지 "
-            "말고, 발화에 명확히 있는 값만 채우고 없으면 null로 두라. 금액은 원 단위 정수로, "
-            "'3억'=300000000, '2억5천만'=250000000 처럼 정확히 환산하라. 상대 연도('재작년')는 "
-            "질문 맥락상 귀속연도로 환산하되 불확실하면 null로 두라.\n\n"
-            f"[발화]\n{user_text}"
+            "다음 사용자 발화 및 이전 대화 맥락에서 세금 계산에 필요한 입력만 구조화해 추출하라. "
+            "세액을 직접 계산하지 말고, 발화 및 맥락에 명확히 있는 값만 채우고 없으면 null로 두라. "
+            "금액은 원 단위 정수로 환산하라('3억'=300000000, '2000만원'=20000000, '2억5천만'=250000000). "
+            "해외주식/미국주식의 경우 '2,000만원 벌었다'처럼 순이익만 언급된 경우 net_profit에 20000000을 채우라.\n\n"
+            f"[대화 맥락]\n{context}\n\n[현재 발화]\n{user_text}"
         )
         result = model.invoke(prompt)
         return result if isinstance(result, TaxSlots) else None
@@ -214,22 +219,42 @@ def _kwargs_from_slots(slots: TaxSlots) -> dict[str, object] | None:
         if slots.annual_financial_income is None:
             return None
         kw: dict[str, object] = {"calc_type": ct, "annual_financial_income": slots.annual_financial_income}
-    elif ct in ("housing_sale", "foreign_stock_sale"):
+    elif ct == "foreign_stock_sale":
+        if slots.sale_price is not None and slots.acquisition_cost is not None:
+            kw = {
+                "calc_type": ct,
+                "sale_price": slots.sale_price,
+                "acquisition_cost": slots.acquisition_cost,
+            }
+        elif slots.net_profit is not None:
+            kw = {
+                "calc_type": ct,
+                "sale_price": slots.net_profit,
+                "acquisition_cost": 0,
+            }
+        elif slots.sale_price is not None and slots.acquisition_cost is None:
+            kw = {
+                "calc_type": ct,
+                "sale_price": slots.sale_price,
+                "acquisition_cost": 0,
+            }
+        else:
+            return None
+    elif ct == "housing_sale":
         if slots.sale_price is None or slots.acquisition_cost is None:
+            return None
+        if slots.holding_years is None:
             return None
         kw = {
             "calc_type": ct,
             "sale_price": slots.sale_price,
             "acquisition_cost": slots.acquisition_cost,
+            "holding_years": slots.holding_years,
         }
-        if ct == "housing_sale":
-            if slots.holding_years is None:
-                return None
-            kw["holding_years"] = slots.holding_years
-            if slots.is_sole_home is not None:
-                kw["is_sole_home"] = slots.is_sole_home
-            if slots.adjusted_area is not None:
-                kw["adjusted_area"] = slots.adjusted_area
+        if slots.is_sole_home is not None:
+            kw["is_sole_home"] = slots.is_sole_home
+        if slots.adjusted_area is not None:
+            kw["adjusted_area"] = slots.adjusted_area
     else:
         return None
     if slots.year:
@@ -237,34 +262,48 @@ def _kwargs_from_slots(slots: TaxSlots) -> dict[str, object] | None:
     return kw
 
 
-def _regex_kwargs(user_text: str) -> tuple[dict[str, object] | None, str]:
+def _regex_kwargs(user_text: str, *args, **kwargs) -> tuple[dict[str, object] | None, str]:
     """정규식 폴백. (kwargs, "") on 성공, (None, 안내문구) on 정보 부족."""
-    calc_type = _detect_calc_type(user_text)
+    context = args[0] if args else kwargs.get("context", "")
+    calc_type = _detect_calc_type(user_text) or _detect_calc_type(context)
     if calc_type is None:
         return None, _guidance(None)
 
     amounts = parse_amounts(user_text)
-    year = _detect_year(user_text)  # 명시 없으면 None → 툴이 최신 규정 적용
+    year = _detect_year(user_text) or _detect_year(context)
 
     if calc_type == "interest_dividend":
         if not amounts:
             return None, _guidance("interest_dividend")
         kw: dict[str, object] = {"calc_type": calc_type, "annual_financial_income": amounts[0]}
+    elif calc_type == "foreign_stock_sale":
+        if any(w in user_text for w in ("벌었", "수익", "차익", "이익")) and len(amounts) == 1:
+            kw = {
+                "calc_type": calc_type,
+                "sale_price": amounts[0],
+                "acquisition_cost": 0,
+            }
+        else:
+            sale_price, acquisition_cost = split_sale_and_acquisition(user_text, amounts)
+            if sale_price is None or acquisition_cost is None:
+                return None, _guidance(calc_type)
+            kw = {
+                "calc_type": calc_type,
+                "sale_price": sale_price,
+                "acquisition_cost": acquisition_cost,
+            }
     else:
-        years = parse_holding_years(user_text)
+        years = parse_holding_years(user_text) or parse_holding_years(context)
         sale_price, acquisition_cost = split_sale_and_acquisition(user_text, amounts)
-        if sale_price is None or acquisition_cost is None or (
-            calc_type == "housing_sale" and years is None
-        ):
+        if sale_price is None or acquisition_cost is None or years is None:
             return None, _guidance(calc_type)
         kw = {
             "calc_type": calc_type,
             "sale_price": sale_price,
             "acquisition_cost": acquisition_cost,
+            "holding_years": years,
+            "adjusted_area": any(t in user_text or t in context for t in ("조정대상지역", "투기과열지구")),
         }
-        if calc_type == "housing_sale":
-            kw["holding_years"] = years
-            kw["adjusted_area"] = any(t in user_text for t in ("조정대상지역", "투기과열지구"))
     if year:
         kw["year"] = year
     return kw, ""
@@ -274,13 +313,30 @@ def tax_calculator_node(state: AgentState) -> dict:
     try:
         user_text = latest_user_text(state)
 
+        # 멀티턴 대화 맥락 추출
+        raw_msgs = state.get("messages") or []
+        history_snippets: list[str] = []
+        for m in raw_msgs[-4:]:
+            role = getattr(m, "type", "user")
+            c = getattr(m, "content", "")
+            if c:
+                prefix = "사용자" if role in ("human", "user") else "AI"
+                history_snippets.append(f"{prefix}: {c[:200]}")
+        context_text = "\n".join(history_snippets) if history_snippets else user_text
+
         # 1) LLM 슬롯필링 우선(자연어 강건성) — 입력만 추출, 계산은 코드.
-        slots = _llm_slots(user_text)
+        try:
+            slots = _llm_slots(user_text, context_text)
+        except TypeError:
+            slots = _llm_slots(user_text)
         kwargs = _kwargs_from_slots(slots) if slots else None
 
         # 2) 실패/불충분 시 regex 폴백. 폴백도 부족하면 되묻기 안내.
         if kwargs is None:
-            kwargs, guidance = _regex_kwargs(user_text)
+            try:
+                kwargs, guidance = _regex_kwargs(user_text, context_text)
+            except TypeError:
+                kwargs, guidance = _regex_kwargs(user_text)
             if kwargs is None:
                 return {"tool_context": [guidance]}
 

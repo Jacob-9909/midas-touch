@@ -164,13 +164,27 @@ def classify_intent(state: AgentState) -> dict:
     if _is_smalltalk(user_text):
         return {"route": [], "tax_asset_types": [], "ticker": None, "tool_context": None}
 
+    # 최근 대화 히스토리(최대 최근 4개 메시지)를 함께 맥락으로 제공
+    raw_msgs = state.get("messages") or []
+    recent_history: list[str] = []
+    for m in raw_msgs[-4:]:
+        role = getattr(m, "type", "user")
+        content = getattr(m, "content", "")
+        if content and role in ("human", "ai", "user", "assistant"):
+            prefix = "사용자" if role in ("human", "user") else "AI"
+            short_content = content[:200] + "..." if len(content) > 200 else content
+            recent_history.append(f"{prefix}: {short_content}")
+
+    dialogue_context = "\n".join(recent_history) if recent_history else f"사용자: {user_text}"
+
     try:
         # 라우터 출력은 도구 이름 몇 개짜리 JSON이라 300토큰이면 충분하다. 기본값(4000)을
         # 두면 모델이 structured output에서 폭주할 때 4000토큰을 다 태우고서야 끝난다
         # (실측 45초). 상한을 낮추면 폭주해도 금방 끝나고 아래 _keyword_route로 폴백된다.
         router = build_chat_model(temperature=0.0, max_tokens=300).with_structured_output(_Route)
+        prompt_input = f"[대화 맥락]\n{dialogue_context}\n\n[현재 사용자 발화]\n{user_text}"
         result = router.invoke(
-            [SystemMessage(content=_INTENT_PROMPT), HumanMessage(content=user_text)]
+            [SystemMessage(content=_INTENT_PROMPT), HumanMessage(content=prompt_input)]
         )
         tools = list(dict.fromkeys(result.tools))  # 중복 제거, 순서 유지
         asset_types = list(dict.fromkeys(result.asset_types))
