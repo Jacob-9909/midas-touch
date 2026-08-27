@@ -52,8 +52,8 @@ export function PageTitle({
 
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mb-3 font-mono-spec text-[10px] font-semibold uppercase tracking-[0.25em] text-accent flex items-center gap-2">
-      <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+    <h2 className="mb-3 font-mono-spec text-xs font-semibold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
+      <span className="h-2 w-2 rounded-full bg-accent" />
       {children}
     </h2>
   );

@@ -109,37 +109,37 @@ function AssistantAnswer({ content }: { content: string }) {
 
       {/* ── 🛡️ 실시간 5겹 보안 검증 증명서 (Audit Verified Trace) ── */}
       {defense && (
-        <div className="mt-3.5 rounded-xl border border-line bg-[color-mix(in_srgb,var(--ink-2)_65%,transparent)] p-3 text-xs">
-          <div className="flex items-center justify-between gap-2 border-b border-line/50 pb-2">
-            <div className="flex items-center gap-1.5 font-semibold text-positive">
-              <ShieldCheck weight="fill" size={16} className="text-positive shrink-0" />
+        <div className="mt-3.5 rounded-xl border border-line bg-[color-mix(in_srgb,var(--ink-2)_65%,transparent)] p-3.5 text-sm">
+          <div className="flex items-center justify-between gap-2 border-b border-line/50 pb-2.5">
+            <div className="flex items-center gap-1.5 font-semibold text-positive text-sm">
+              <ShieldCheck weight="fill" size={17} className="text-positive shrink-0" />
               <span>실시간 5겹 보안 검증 완료</span>
             </div>
-            <span className="rounded-full bg-positive/10 border border-positive/25 px-2 py-0.5 font-mono-spec text-[10px] font-semibold text-positive tracking-wide">
+            <span className="rounded-full bg-positive/10 border border-positive/25 px-2 py-0.5 font-mono-spec text-[11px] font-semibold text-positive tracking-wide">
               AUDIT VERIFIED
             </span>
           </div>
-          <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+          <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
             <div className="flex items-center gap-1.5 text-muted">
-              <CheckCircle weight="fill" size={13} className="text-positive shrink-0" />
+              <CheckCircle weight="fill" size={14} className="text-positive shrink-0" />
               <span>검색 도구: <strong className="font-mono-spec text-fg">{defense.tools}</strong></span>
             </div>
             <div className="flex items-center gap-1.5 text-muted">
-              <CheckCircle weight="fill" size={13} className="text-positive shrink-0" />
+              <CheckCircle weight="fill" size={14} className="text-positive shrink-0" />
               <span>
                 {defense.hasDeterministicMath ? (
-                  <span>수치 계산: <strong className="text-fg">결정론 코드 (LLM 개입 0%)</strong></span>
+                  <span>수치 계산: <strong className="text-fg">결정론 코드 (LLM 0%)</strong></span>
                 ) : (
                   <span>수치 계산: <span className="text-fg">컨텍스트 접지 작문</span></span>
                 )}
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-muted">
-              <CheckCircle weight="fill" size={13} className="text-positive shrink-0" />
-              <span>근거 접지: <span className="text-fg">{sources.length > 0 ? `${sources.length}건 인용` : "Grounding 지시 상시 유지"}</span></span>
+              <CheckCircle weight="fill" size={14} className="text-positive shrink-0" />
+              <span>근거 접지: <span className="text-fg">{sources.length > 0 ? `${sources.length}건 인용` : "Grounding 지시 유지"}</span></span>
             </div>
             <div className="flex items-center gap-1.5 text-muted">
-              <CheckCircle weight="fill" size={13} className="text-positive shrink-0" />
+              <CheckCircle weight="fill" size={14} className="text-positive shrink-0" />
               <span>안정화: <span className="text-fg">저온 생성 (temp 0.3)</span></span>
             </div>
           </div>
@@ -148,14 +148,14 @@ function AssistantAnswer({ content }: { content: string }) {
 
       {/* ── 출처 칩 ── */}
       {sources.length > 0 && (
-        <div className="mt-3 border-t border-line/60 pt-2">
-          <p className="mb-1.5 text-[11px] font-semibold text-muted">인용 출처 ({sources.length}건)</p>
+        <div className="mt-3.5 border-t border-line/60 pt-2.5">
+          <p className="mb-1.5 text-xs font-semibold text-muted">인용 출처 ({sources.length}건)</p>
           <ul role="list" aria-label="참고 출처" className="flex flex-wrap gap-1.5">
             {sources.map((s) => (
               <li
                 key={s.index}
                 title={`${s.source} (${s.passageId})`}
-                className="max-w-full truncate rounded-full border border-accent/20 bg-accent/10 px-2.5 py-0.5 text-[11px] text-fg/90"
+                className="max-w-full truncate rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-xs text-fg/90"
               >
                 [{s.index}] {s.source} ({s.passageId})
               </li>

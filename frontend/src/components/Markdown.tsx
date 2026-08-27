@@ -58,12 +58,12 @@ function CodeBlock({
 
 // 채팅/리포트용 마크다운 렌더러.
 const components: Components = {
-  p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed break-keep">{children}</p>,
-  h1: ({ children }) => <h1 className="mb-2 mt-3 text-base font-semibold first:mt-0 break-keep">{children}</h1>,
-  h2: ({ children }) => <h2 className="mb-2 mt-3 text-sm font-semibold first:mt-0 break-keep">{children}</h2>,
-  h3: ({ children }) => <h3 className="mb-1.5 mt-2.5 text-sm font-semibold first:mt-0 break-keep">{children}</h3>,
-  ul: ({ children }) => <ul className="mb-2 list-disc space-y-1 pl-5">{children}</ul>,
-  ol: ({ children }) => <ol className="mb-2 list-decimal space-y-1 pl-5">{children}</ol>,
+  p: ({ children }) => <p className="mb-2.5 last:mb-0 text-[15px] sm:text-base leading-relaxed break-keep">{children}</p>,
+  h1: ({ children }) => <h1 className="mb-3 mt-4 text-xl font-bold first:mt-0 break-keep text-fg">{children}</h1>,
+  h2: ({ children }) => <h2 className="mb-2.5 mt-3.5 text-lg font-bold first:mt-0 break-keep text-fg">{children}</h2>,
+  h3: ({ children }) => <h3 className="mb-2 mt-3 text-base font-semibold first:mt-0 break-keep text-fg">{children}</h3>,
+  ul: ({ children }) => <ul className="mb-2.5 list-disc space-y-1.5 pl-5 text-[15px] sm:text-base">{children}</ul>,
+  ol: ({ children }) => <ol className="mb-2.5 list-decimal space-y-1.5 pl-5 text-[15px] sm:text-base">{children}</ol>,
   li: ({ children }) => <li className="leading-relaxed break-keep">{children}</li>,
   strong: ({ children }) => <strong className="font-semibold text-fg">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
@@ -72,33 +72,33 @@ const components: Components = {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-accent underline underline-offset-2 hover:opacity-80"
+      className="text-accent font-medium underline underline-offset-2 hover:opacity-80"
     >
       {children}
     </a>
   ),
   blockquote: ({ children }) => (
-    <blockquote className="my-2 border-l-2 border-line pl-3 text-muted">{children}</blockquote>
+    <blockquote className="my-3 border-l-3 border-accent/40 bg-surface/30 px-3.5 py-1.5 rounded-r-lg text-muted text-sm sm:text-[15px]">{children}</blockquote>
   ),
-  hr: () => <hr className="my-3 border-line" />,
+  hr: () => <hr className="my-3.5 border-line" />,
   table: ({ children }) => (
-    <div className="my-2 overflow-x-auto">
-      <table className="w-full border-collapse text-xs">{children}</table>
+    <div className="my-3 overflow-x-auto rounded-xl border border-line">
+      <table className="w-full border-collapse text-sm">{children}</table>
     </div>
   ),
   th: ({ children }) => (
-    <th className="border border-line bg-[color-mix(in_srgb,var(--fg)_5%,transparent)] px-2 py-1 text-left font-medium">
+    <th className="border-b border-line bg-surface/60 px-3 py-2 text-left font-semibold text-fg text-xs uppercase tracking-wider">
       {children}
     </th>
   ),
-  td: ({ children }) => <td className="border border-line px-2 py-1">{children}</td>,
+  td: ({ children }) => <td className="border-b border-line/60 px-3 py-2 text-fg/90">{children}</td>,
   pre: ({ children }) => <>{children}</>,
   code: ({ className, children }) => {
     const isBlock = /\n/.test(String(children)) || (className ?? "").startsWith("language-");
     return isBlock ? (
       <CodeBlock className={className}>{children}</CodeBlock>
     ) : (
-      <code className="rounded bg-[color-mix(in_srgb,var(--fg)_8%,transparent)] px-1.5 py-0.5 font-mono-spec text-[0.85em] text-accent">
+      <code className="rounded bg-[color-mix(in_srgb,var(--fg)_8%,transparent)] px-1.5 py-0.5 font-mono-spec text-[0.88em] text-accent font-medium">
         {children}
       </code>
     );
