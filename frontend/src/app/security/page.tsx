@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Calculator,
+  Check,
+  Copy,
   Crosshair,
   GlobeSimple,
   ListChecks,
@@ -12,6 +15,7 @@ import {
   Snowflake,
 } from "@phosphor-icons/react";
 import { Card, PageTitle, SectionLabel } from "@/components/ui";
+import { useToast } from "@/lib/toast";
 
 // ── 5겹 방어 ── 백엔드 에이전트(MidasAdviser)가 실제로 걸어놓은 장치 다섯 층.
 // 심사위원이 공격을 던지기 전에 "왜 안 뚫리는가"를 한 줄씩 먼저 보여준다.
@@ -129,9 +133,23 @@ const ATTACKS: AttackPreset[] = [
 
 export default function SecurityPage() {
   const router = useRouter();
+  const toast = useToast();
+  const [copiedTag, setCopiedTag] = useState<string | null>(null);
+
   // 공격 문구를 /chat?prefill= 로 넘긴다. 챗 페이지가 파라미터를 소비해 입력창에 채운다.
   const experiment = (prompt: string) =>
     router.push("/chat?prefill=" + encodeURIComponent(prompt));
+
+  const copyPrompt = async (tag: string, prompt: string) => {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopiedTag(tag);
+      toast("공격 프롬프트가 클립보드에 복사되었습니다.", "success");
+      setTimeout(() => setCopiedTag(null), 2000);
+    } catch {
+      toast("클립보드 복사에 실패했습니다.", "error");
+    }
+  };
 
   return (
     <main className="mx-auto max-w-[1200px] px-6 py-[72px]">
@@ -175,13 +193,29 @@ export default function SecurityPage() {
               <div className="mt-3 flex-1 whitespace-pre-wrap break-words rounded-xl border border-line bg-[var(--ink-2)]/50 p-3.5 font-mono-spec text-xs leading-relaxed text-fg/85">
                 {a.prompt}
               </div>
-              <button
-                onClick={() => experiment(a.prompt)}
-                className="btn-ghost mt-3 self-start gap-1.5 rounded-full px-3.5 text-xs"
-              >
-                <Crosshair size={13} weight="bold" />
-                챗에서 실험하기 <ArrowRight size={12} weight="bold" className="opacity-60" />
-              </button>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => experiment(a.prompt)}
+                  className="btn-ghost gap-1.5 rounded-full px-3.5 text-xs"
+                >
+                  <Crosshair size={13} weight="bold" />
+                  챗에서 실험하기 <ArrowRight size={12} weight="bold" className="opacity-60" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyPrompt(a.tag, a.prompt)}
+                  aria-label="프롬프트 복사"
+                  className="btn-ghost btn-icon h-7 w-7 rounded-full text-muted hover:text-fg"
+                  title="클립보드 복사"
+                >
+                  {copiedTag === a.tag ? (
+                    <Check size={13} className="text-positive" weight="bold" />
+                  ) : (
+                    <Copy size={13} />
+                  )}
+                </button>
+              </div>
             </Card>
           ))}
         </div>

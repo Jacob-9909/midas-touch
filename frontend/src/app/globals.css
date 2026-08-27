@@ -87,14 +87,14 @@ html.light {
   --line-subtle: rgba(23, 25, 45, 0.08);
   --fg: #191b2a;
   --muted: #5d6172;
-  --stone: #878b9c;
+  --stone: #63677a;           /* WCAG AA 준수 (대비비 5.5:1+) */
   --accent: #5546e8;          /* 다크 인디고 — 밝은 배경 대비용 */
   --accent-soft: #4433d4;
-  --gilt: #d98e00;            /* 진한 앰버 — 화이트 위 대비 확보 */
-  --gilt-soft: #b87a00;
+  --gilt: #8a5800;            /* 딥 앰버 — 화이트 위 WCAG AA 대비(6.1:1) 확보 */
+  --gilt-soft: #a86c00;
   --positive: #11845b;
   --negative: #dc2f52;
-  --warning: #d97300;
+  --warning: #b35600;         /* 화이트 위 대비 확보 */
   --glow: rgba(85, 70, 232, 0.22);
   --specular: rgba(255, 255, 255, 0.7);
   --shadow-1: 0 1px 2px rgba(23, 25, 45, 0.06), 0 8px 28px -12px rgba(85, 70, 232, 0.14);
@@ -444,19 +444,28 @@ html.dark .glass {
 }
 
 /* ── 고령층 친화 모드 — NavBar "큰 글씨" 토글(html.a11y-large-text) ──
-   html 배율 118%: Tailwind 크기가 rem 기반이라 전 페이지가 비율 그대로 확대된다.
-   body 기본값(14px px 고정)도 rem으로 되돌려 같은 배율을 타게 한다. */
+   html 배율 112%: 레이아웃 그리드 붕괴 없이 전 페이지를 안정적으로 12% 확대.
+   터치 타깃 44px+(WCAG 2.5.5) 및 시니어 가독성 라인하이트 확보. */
 .a11y-large-text {
-  font-size: 118%;
+  font-size: 112%;
 }
 .a11y-large-text body {
-  font-size: 0.875rem; /* = 14px × 1.18 — 상속 텍스트도 동일 배율로 확대 */
+  font-size: 0.9375rem;
+  line-height: 1.6;
 }
 .a11y-large-text .font-display {
   letter-spacing: -0.01em;
 }
-/* 답변 말풍선은 줄간격까지 넓혀 시니어 가독성을 보강한다 */
+.a11y-large-text .btn-accent,
+.a11y-large-text .btn-ghost {
+  min-height: 48px;
+}
+.a11y-large-text .field {
+  min-height: 44px;
+}
+/* 답변 말풍선은 줄간격과 글자 크기를 넓혀 시니어 가독성을 보강한다 */
 .a11y-large-text [data-chat-answer] {
+  font-size: 1.025rem;
   line-height: 1.75;
 }
 

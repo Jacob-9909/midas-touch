@@ -37,13 +37,13 @@ export default function Error({
       <div className="mt-6 flex items-center justify-center gap-3">
         <button
           onClick={reset}
-          className="rounded-full border border-accent/40 bg-accent/20 px-4 py-2 font-mono-spec text-xs text-accent shadow-md transition hover:bg-accent/30"
+          className="btn-accent"
         >
           다시 시도
         </button>
         <Link
           href="/"
-          className="rounded-full border border-line bg-surface/60 px-4 py-2 font-mono-spec text-xs text-fg transition hover:border-accent/40"
+          className="btn-ghost"
         >
           홈으로
         </Link>

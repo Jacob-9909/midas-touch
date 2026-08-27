@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
+import { motion, useMotionValue, useSpring, useReducedMotion } from "motion/react";
 
 /**
  * 마우스를 따라 기우는 3D 카드 — Neon Ledger §Motion.
- * transform 만 쓰므로 레이아웃 스래싱이 없고, reduced-motion 에선 즉시 비활성.
+ * useSpring 으로 물성감 있는 감속/복원을 구현하며, reduced-motion 에선 즉시 비활성.
  */
 export default function TiltCard({
   children,
@@ -16,17 +17,23 @@ export default function TiltCard({
   /** 최대 기울기(도). */
   max?: number;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
   const glareRef = useRef<HTMLDivElement>(null);
 
-  const onMove = (e: React.MouseEvent) => {
-    const el = ref.current;
-    if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const r = el.getBoundingClientRect();
+  const rawX = useMotionValue(0);
+  const rawY = useMotionValue(0);
+
+  const rotateX = useSpring(rawX, { stiffness: 240, damping: 22 });
+  const rotateY = useSpring(rawY, { stiffness: 240, damping: 22 });
+
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (reduce) return;
+    const r = e.currentTarget.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width;
     const py = (e.clientY - r.top) / r.height;
-    el.style.transform = `perspective(900px) rotateY(${(px - 0.5) * max * 2}deg) rotateX(${(0.5 - py) * max * 2}deg) translateZ(0)`;
+    rawY.set((px - 0.5) * max * 2);
+    rawX.set((0.5 - py) * max * 2);
+
     if (glareRef.current) {
       glareRef.current.style.opacity = "1";
       glareRef.current.style.background = `radial-gradient(420px circle at ${px * 100}% ${py * 100}%, var(--specular), transparent 65%)`;
@@ -34,17 +41,25 @@ export default function TiltCard({
   };
 
   const onLeave = () => {
-    const el = ref.current;
-    if (el) el.style.transform = "";
+    rawX.set(0);
+    rawY.set(0);
     if (glareRef.current) glareRef.current.style.opacity = "0";
   };
 
+  if (reduce) {
+    return <div className={`relative ${className}`}>{children}</div>;
+  }
+
   return (
-    <div
-      ref={ref}
+    <motion.div
       onMouseMove={onMove}
       onMouseLeave={onLeave}
-      className={`relative transition-transform duration-300 ease-[var(--ease-out)] will-change-transform ${className}`}
+      style={{
+        rotateX,
+        rotateY,
+        transformStyle: "preserve-3d",
+      }}
+      className={`relative will-change-transform ${className}`}
     >
       {/* 커서 따라다니는 스페큘러 광택 */}
       <div
@@ -53,6 +68,6 @@ export default function TiltCard({
         className="pointer-events-none absolute inset-0 z-10 rounded-[inherit] opacity-0 transition-opacity duration-300"
       />
       {children}
-    </div>
+    </motion.div>
   );
 }

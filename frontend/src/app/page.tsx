@@ -4,6 +4,7 @@ import {
   ShieldWarning,
   Scroll,
   SealCheck,
+  Calculator,
 } from "@phosphor-icons/react/dist/ssr";
 import ProfileNudge from "@/components/ProfileNudge";
 import LandingGuide from "@/components/LandingGuide";
@@ -18,19 +19,7 @@ const TRUST_BADGES = [
   { icon: SealCheck, label: "예측 자가 채점", tone: "text-positive" },
 ] as const;
 
-/** 랜딩(`/`)은 대시보드 겸 관문 — 콘솔의 정체성을 요약하고 여정으로 보낸다.
- *
- * 원래는 거시지표·주식 히트맵·전망 적중률·페르소나 선택표까지 얹힌 대시보드였는데,
- * 전부 청약·자금마련(core)과 무관해서 걷어냈다. 주식 쪽은 `/stocks`, 적중률은
- * `/stocks`의 MemoryStatsCard 에 그대로 살아 있다.
- *
- * 디자인은 "Bullion Terminal"(globals.css)을 따른다 — 근흑색 콘솔 위에 골드는
- * 목표·달성 신호로만 찍고, 카드는 8px 헤어라인, 숫자·단계 라벨은 모노로.
- * 데이터를 부르지 않으므로 서버 컴포넌트로 둔다(가이드만 클라이언트 경계). */
-
-/** 헤드라인 여정 — 히어로의 '검증 가능한 AI 금융 비서' 약속을 세 증거로 잇는다.
- *  각 단계가 대회 예시주제에 매핑된다: 사기검증(소비자보호·이상금융거래) →
- *  세법·근거 계산(환각 방지) → 청약·자금마련(포용금융 스포크). */
+/** 헤드라인 여정 — 히어로의 '검증 가능한 AI 금융 비서' 약속을 4대 핵심 증거로 잇는다. */
 const JOURNEY = [
   {
     icon: ShieldWarning,
@@ -39,7 +28,8 @@ const JOURNEY = [
     )}`,
     step: "STEP 01",
     title: "사기 문자 검증",
-    body: "의심 문자를 붙여넣으면 판정 근거와 나에게 맞는 대응 요령·공식 신고 번호까지 알려줍니다.",
+    body: "의심 문자를 붙여넣으면 판정 근거와 나에게 맞는 대응 요령·공식 신고 번호까지 1초 만에 제시합니다.",
+    tag: "소비자 보호",
   },
   {
     icon: Scroll,
@@ -48,14 +38,24 @@ const JOURNEY = [
     )}`,
     step: "STEP 02",
     title: "세법·근거 계산",
-    body: "세금은 LLM이 아니라 코드가 법령 상수로 계산하고, 답변마다 조문 원문 출처를 함께 붙입니다.",
+    body: "세금은 LLM이 아니라 코드가 법령 상수로 계산하고, 답변마다 조문 원문 출처를 증명서로 붙입니다.",
+    tag: "환각 제로",
   },
   {
     icon: Coins,
     href: "/cheongyak",
     step: "STEP 03",
-    title: "청약·자금마련",
-    body: "실제 공고의 당첨가점과 내 청약가점(84점 기준)을 나란히 보고, 목표자금까지 근거와 함께 정리합니다.",
+    title: "청약·가점 매칭",
+    body: "실제 공고의 당첨가점과 내 청약가점(84점 기준)을 나란히 보고, 전국 지도에서 실시간 공고를 찾습니다.",
+    tag: "포용 금융",
+  },
+  {
+    icon: Calculator,
+    href: "/simulator",
+    step: "STEP 04",
+    title: "자금마련 시뮬레이터",
+    body: "청년도약계좌 vs 일반적금 금리를 비교해 내 목표자금(계약금 등)까지 몇 개월 당겨지는지 계산합니다.",
+    tag: "자금 설계",
   },
 ] as const;
 
@@ -75,18 +75,18 @@ export default function HomePage() {
               <span className="eyebrow">AI 금융 보안 비서 · 금융소비자 보호</span>
               <LandingGuide />
             </div>
-            <h1 className="font-display mt-10 max-w-[24ch] text-[clamp(2.25rem,5vw,3.75rem)]">
+            <h1 className="font-display mt-10 max-w-2xl text-[clamp(2.25rem,5vw,3.75rem)] break-keep">
               피싱·환각·틀린 세법 답변
               <br />
               한 번에 잡는 <span className="grad-text">AI 보안 비서</span>
             </h1>
-            <p className="mt-7 max-w-[58ch] leading-[1.6] text-muted">
+            <p className="mt-7 max-w-2xl leading-[1.6] text-muted break-keep">
               사기 문자를 붙여넣으면 판정 근거와 나에게 맞는 행동 요령을 알려주고, 세금은
               법령 근거와 함께 코드가 직접 계산하며, 청약·자산 상담은 모든 답변의 출처를
               공개합니다. 매 답변 말미의 방어 증명 카드가 이 AI가 왜 믿을 수 있는지
               증명합니다.
             </p>
-            <p className="mt-3 max-w-[58ch] text-xs leading-relaxed text-muted">
+            <p className="mt-3 max-w-2xl text-xs leading-relaxed text-muted break-keep">
               판단을 대신하지 않고 근거를 정리해 보여주는 정보 제공 서비스이며, 투자·세무 자문이 아닙니다.
             </p>
 
@@ -129,27 +129,42 @@ export default function HomePage() {
       <section className="mx-auto max-w-[1200px] px-6 py-[88px]" data-tour="journey">
         <ProfileNudge className="mb-12" data-tour="nudge" />
 
-        <h2 className="font-display text-[clamp(1.75rem,3vw,2.25rem)] text-fg">
-          한 대화로, 근거와 함께 — 세 가지를 검증합니다
-        </h2>
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="font-display text-[clamp(1.75rem,3vw,2.25rem)] text-fg break-keep">
+            단 한 번의 클릭으로 — 4대 금융 안전망을 검증합니다
+          </h2>
+          <span className="hidden sm:inline-block font-mono-spec text-xs text-accent font-semibold">
+            One-Click Proofs
+          </span>
+        </div>
 
-        <div className="mt-10 grid gap-[1px] overflow-hidden rounded-[var(--r-lg)] border border-line bg-line sm:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {JOURNEY.map((s) => (
-            <TiltCard key={s.title} max={4} className="bg-[var(--ink-1)]">
-              <Link href={s.href} className="lift group flex h-full flex-col p-6">
-                <div className="flex items-center justify-between border-b border-line pb-3">
+            <TiltCard key={s.title} max={4} className="h-full">
+              <Link
+                href={s.href}
+                className="lift group flex h-full flex-col rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-5 transition hover:border-accent/40"
+              >
+                <div className="flex items-center justify-between border-b border-line/60 pb-3">
                   <span className="font-mono-spec text-[10px] font-semibold tracking-widest text-gilt">
                     {s.step}
                   </span>
-                  <span className="text-muted">
-                    <s.icon size={18} weight="duotone" />
+                  <span className="rounded-full border border-line bg-surface/50 px-2 py-0.5 font-mono-spec text-[9px] font-semibold text-muted">
+                    {s.tag}
                   </span>
                 </div>
-                <h3 className="font-display mt-5 text-xl text-fg">{s.title}</h3>
-                <p className="mt-2 text-xs leading-relaxed text-muted">{s.body}</p>
-                <span className="mt-auto pt-5 text-sm font-semibold text-fg transition-colors group-hover:text-accent">
-                  시작하기 →
-                </span>
+                <div className="mt-4 flex items-center gap-2">
+                  <s.icon size={20} weight="duotone" className="text-accent shrink-0" />
+                  <h3 className="font-display text-lg font-semibold text-fg group-hover:text-accent transition-colors">
+                    {s.title}
+                  </h3>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-muted break-keep">
+                  {s.body}
+                </p>
+                <div className="mt-auto pt-4 flex items-center gap-1 text-xs font-semibold text-accent">
+                  체험하기 →
+                </div>
               </Link>
             </TiltCard>
           ))}
