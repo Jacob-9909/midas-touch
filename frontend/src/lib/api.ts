@@ -633,3 +633,70 @@ export function ingestDocument(filename: string): Promise<{ job_id: string }> {
 export function buildGraph(limit = -1): Promise<{ job_id: string }> {
   return apiPost("/api/v1/graph/build/jobs", { limit });
 }
+
+// ---- 세율 개정안 인입 (rate ingestion) ----
+// 개정안 텍스트 → 추출 → 현행 대비 diff → 승인 시 오버레이 반영. 계산 산술은 승인 뒤에도 코드가 한다.
+export interface ProposedRate {
+  value: number;
+  basis: string;
+}
+
+export interface ProposedRateSet {
+  year: string;
+  foreign_stock_national_rate: ProposedRate | null;
+  interest_dividend_withholding_rate: ProposedRate | null;
+  local_income_tax_ratio: ProposedRate | null;
+  housing_local_education_tax_rate: ProposedRate | null;
+  lbts_yearly_rate: ProposedRate | null;
+  capital_gain_basic_deduction_per_year: ProposedRate | null;
+  financial_income_total_tax_threshold: ProposedRate | null;
+}
+
+export interface RateDiffRow {
+  field: string;
+  label: string;
+  kind: "rate" | "amount";
+  old_value: number;
+  new_value: number;
+  old_basis: string;
+  new_basis: string;
+  changed: boolean;
+}
+
+export interface RateExtractResult {
+  proposed: ProposedRateSet;
+  diff: RateDiffRow[];
+  issues: string[];
+  can_apply: boolean;
+}
+
+export interface RateCurrent {
+  year: string;
+  provenance: string;
+  rates: Record<string, { value: number; basis: string }>;
+}
+
+export interface RateApplyResult {
+  applied: boolean;
+  year: string;
+  active: RateCurrent;
+}
+
+/** 개정안 텍스트에서 세율을 추출하고 현행 대비 diff·검증 결과를 받는다(승인 전).
+ *  useLlm 기본 false — 데모/오프라인에서 결정론 휴리스틱으로 안정 동작. */
+export function extractRates(
+  text: string,
+  year = "2026",
+  useLlm = false,
+): Promise<RateExtractResult> {
+  return apiPost("/api/v1/tax-rates/extract", { text, year, use_llm: useLlm });
+}
+
+/** 검증 통과 제안을 승인해 오버레이에 반영한다(이후 해당 귀속연도 계산이 새 세율 사용). */
+export function applyRates(proposed: ProposedRateSet): Promise<RateApplyResult> {
+  return apiPost("/api/v1/tax-rates/apply", { proposed });
+}
+
+export function getCurrentRates(year = "2026"): Promise<RateCurrent> {
+  return apiGet(`/api/v1/tax-rates/current?year=${encodeURIComponent(year)}`);
+}

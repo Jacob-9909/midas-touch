@@ -10,11 +10,18 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import re
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 from ..state import AgentState
 from ..tools import tax_calculator
 from ._common import latest_user_text
+
+logger = logging.getLogger("agent.tax_calculator")
 
 # 계산 종류 감지 토큰. 이자·배당 → 해외주식 → 주택 순으로 판정한다.
 _FINANCIAL_INCOME_TOKENS = ("이자", "배당", "금융소득")
@@ -38,6 +45,8 @@ _BARE_WON_RE = re.compile(r"(?<![\d,.])(\d{1,3}(?:,\d{3})+|\d{6,})(?![\d])")
 # 보유기간: N년 / N.N년 (2025년 같은 연도 표기 제외용 상한 필터), N개월
 _YEARS_RE = re.compile(r"(\d+(?:\.\d+)?)\s*년")
 _MONTHS_RE = re.compile(r"(\d{1,3})\s*개월")
+# 귀속연도 명시: "2025년 기준", "2024년에 팔았는데" 등. 없으면 최신 규정을 적용한다.
+_TAX_YEAR_RE = re.compile(r"(20\d{2})\s*년")
 
 # 양도/취득 구분 힌트: 금액 직후 짧은 창(window)에서 매수·매도 동사를 찾는다.
 _ACQ_VERB_RE = re.compile(r"(샀|사서|구입|취득|들였|에\s*산)")
@@ -67,6 +76,12 @@ def _detect_calc_type(text: str) -> str | None:
     if any(tok in text for tok in _HOUSING_TOKENS):
         return "housing_sale"
     return None
+
+
+def _detect_year(text: str) -> str | None:
+    """발화에 명시된 귀속연도(예 '2024년')를 뽑는다. 없으면 None(툴이 최신 규정 적용)."""
+    m = _TAX_YEAR_RE.search(text)
+    return m.group(1) if m else None
 
 
 def _amount_spans(text: str) -> list[tuple[int, int]]:
@@ -150,38 +165,126 @@ def _guidance(calc_type: str | None) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# LLM 슬롯필링 — 자연어에서 계산 입력을 구조화 추출한다(계산은 여전히 코드 몫).
+# ---------------------------------------------------------------------------
+# LLM은 '입력 추출'만 하고 세액은 계산하지 않는다("2억5천" 오독 위험은 regex 폴백 + 결과 내역
+# 에코로 완화). 환경변수 TAX_SLOT_LLM=0 이면 완전히 끄고 regex만 쓴다(오프라인/테스트).
+class TaxSlots(BaseModel):
+    """발화에서 뽑은 세금 계산 입력 슬롯. 확실한 값만 채우고 나머지는 None으로 둔다."""
+
+    calc_type: Literal["housing_sale", "foreign_stock_sale", "interest_dividend"] | None = (
+        Field(default=None, description="세금 종류. 특정 불가 시 null")
+    )
+    sale_price: int | None = Field(default=None, description="양도가액(원)")
+    acquisition_cost: int | None = Field(default=None, description="취득가액+필요경비(원)")
+    holding_years: float | None = Field(default=None, description="보유연수(년)")
+    is_sole_home: bool | None = Field(default=None, description="1세대 1주택 여부")
+    adjusted_area: bool | None = Field(default=None, description="조정대상지역·투기과열지구 여부")
+    annual_financial_income: int | None = Field(default=None, description="연간 이자·배당소득(원)")
+    year: str | None = Field(default=None, description="명시된 귀속연도(예 '2024'). 없으면 null")
+
+
+def _llm_slots(user_text: str) -> TaxSlots | None:
+    """LLM structured output으로 슬롯을 추출한다. 비활성/실패 시 None(→ regex 폴백)."""
+    if os.environ.get("TAX_SLOT_LLM", "1") == "0":
+        return None
+    try:
+        from ..llm import build_chat_model
+
+        model = build_chat_model(temperature=0.0).with_structured_output(TaxSlots)
+        prompt = (
+            "다음 사용자 발화에서 세금 계산에 필요한 입력만 구조화해 추출하라. 세액을 계산하지 "
+            "말고, 발화에 명확히 있는 값만 채우고 없으면 null로 두라. 금액은 원 단위 정수로, "
+            "'3억'=300000000, '2억5천만'=250000000 처럼 정확히 환산하라. 상대 연도('재작년')는 "
+            "질문 맥락상 귀속연도로 환산하되 불확실하면 null로 두라.\n\n"
+            f"[발화]\n{user_text}"
+        )
+        result = model.invoke(prompt)
+        return result if isinstance(result, TaxSlots) else None
+    except Exception as exc:  # 키 부재·네트워크·파싱 실패 모두 regex 폴백 대상
+        logger.warning("[tax_slots] LLM 슬롯필링 실패(%s) → regex 폴백.", type(exc).__name__)
+        return None
+
+
+def _kwargs_from_slots(slots: TaxSlots) -> dict[str, object] | None:
+    """슬롯이 계산에 충분하면 tax_calculator 호출 kwargs로, 부족하면 None을 돌려준다."""
+    ct = slots.calc_type
+    if ct == "interest_dividend":
+        if slots.annual_financial_income is None:
+            return None
+        kw: dict[str, object] = {"calc_type": ct, "annual_financial_income": slots.annual_financial_income}
+    elif ct in ("housing_sale", "foreign_stock_sale"):
+        if slots.sale_price is None or slots.acquisition_cost is None:
+            return None
+        kw = {
+            "calc_type": ct,
+            "sale_price": slots.sale_price,
+            "acquisition_cost": slots.acquisition_cost,
+        }
+        if ct == "housing_sale":
+            if slots.holding_years is None:
+                return None
+            kw["holding_years"] = slots.holding_years
+            if slots.is_sole_home is not None:
+                kw["is_sole_home"] = slots.is_sole_home
+            if slots.adjusted_area is not None:
+                kw["adjusted_area"] = slots.adjusted_area
+    else:
+        return None
+    if slots.year:
+        kw["year"] = slots.year
+    return kw
+
+
+def _regex_kwargs(user_text: str) -> tuple[dict[str, object] | None, str]:
+    """정규식 폴백. (kwargs, "") on 성공, (None, 안내문구) on 정보 부족."""
+    calc_type = _detect_calc_type(user_text)
+    if calc_type is None:
+        return None, _guidance(None)
+
+    amounts = parse_amounts(user_text)
+    year = _detect_year(user_text)  # 명시 없으면 None → 툴이 최신 규정 적용
+
+    if calc_type == "interest_dividend":
+        if not amounts:
+            return None, _guidance("interest_dividend")
+        kw: dict[str, object] = {"calc_type": calc_type, "annual_financial_income": amounts[0]}
+    else:
+        years = parse_holding_years(user_text)
+        sale_price, acquisition_cost = split_sale_and_acquisition(user_text, amounts)
+        if sale_price is None or acquisition_cost is None or (
+            calc_type == "housing_sale" and years is None
+        ):
+            return None, _guidance(calc_type)
+        kw = {
+            "calc_type": calc_type,
+            "sale_price": sale_price,
+            "acquisition_cost": acquisition_cost,
+        }
+        if calc_type == "housing_sale":
+            kw["holding_years"] = years
+            kw["adjusted_area"] = any(t in user_text for t in ("조정대상지역", "투기과열지구"))
+    if year:
+        kw["year"] = year
+    return kw, ""
+
+
 def tax_calculator_node(state: AgentState) -> dict:
     try:
         user_text = latest_user_text(state)
-        calc_type = _detect_calc_type(user_text)
-        if calc_type is None:
-            return {"tool_context": [_guidance(None)]}
 
-        amounts = parse_amounts(user_text)
+        # 1) LLM 슬롯필링 우선(자연어 강건성) — 입력만 추출, 계산은 코드.
+        slots = _llm_slots(user_text)
+        kwargs = _kwargs_from_slots(slots) if slots else None
 
-        if calc_type == "interest_dividend":
-            if not amounts:
-                return {"tool_context": [_guidance("interest_dividend")]}
-            result = tax_calculator.invoke(
-                {"calc_type": calc_type, "annual_financial_income": amounts[0]}
-            )
-        else:
-            years = parse_holding_years(user_text)
-            sale_price, acquisition_cost = split_sale_and_acquisition(user_text, amounts)
-            if sale_price is None or acquisition_cost is None or (
-                calc_type == "housing_sale" and years is None
-            ):
-                return {"tool_context": [_guidance(calc_type)]}
-            kwargs: dict[str, object] = {
-                "calc_type": calc_type,
-                "sale_price": sale_price,
-                "acquisition_cost": acquisition_cost,
-            }
-            if calc_type == "housing_sale":
-                kwargs["holding_years"] = years
-                kwargs["adjusted_area"] = any(t in user_text for t in ("조정대상지역", "투기과열지구"))
-            result = tax_calculator.invoke(kwargs)
+        # 2) 실패/불충분 시 regex 폴백. 폴백도 부족하면 되묻기 안내.
+        if kwargs is None:
+            kwargs, guidance = _regex_kwargs(user_text)
+            if kwargs is None:
+                return {"tool_context": [guidance]}
 
+        result = tax_calculator.invoke(kwargs)
         return {"tool_context": [f"[tax_calculator 결과]\n{result}"]}
     except Exception as exc:
         return {"tool_context": [f"[tax_calculator 계산 실패] {exc}"]}

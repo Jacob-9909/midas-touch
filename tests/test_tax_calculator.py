@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# 노드 테스트는 regex 경로를 결정론적으로 검증한다 — LLM 슬롯필링을 꺼 네트워크·비결정성을 배제.
+os.environ["TAX_SLOT_LLM"] = "0"
+
 from backend.app.services.tax.calculator import (
     DISCLAIMER,
     ForeignStockSaleInput,
@@ -251,6 +254,88 @@ class TestTaxCalculatorToolAndNode(unittest.TestCase):
         self.assertIn("[tax_calculator 결과]", ctx[0])
         self.assertIn("비과세 판정", ctx[0])
         self.assertIn("단순 계산기", ctx[0])
+
+
+# ---------------------------------------------------------------------------
+# LLM 슬롯필링 — 입력만 추출, 계산은 여전히 코드(네트워크 없이 monkeypatch로 검증)
+# ---------------------------------------------------------------------------
+class TestLlmSlotFilling(unittest.TestCase):
+    def test_kwargs_from_slots_sufficient_and_insufficient(self) -> None:
+        from backend.app.services.agent.nodes.tax_calculator import (
+            TaxSlots,
+            _kwargs_from_slots,
+        )
+
+        ok = TaxSlots(calc_type="foreign_stock_sale", sale_price=100, acquisition_cost=10)
+        self.assertEqual(
+            _kwargs_from_slots(ok),
+            {"calc_type": "foreign_stock_sale", "sale_price": 100, "acquisition_cost": 10},
+        )
+        # housing인데 보유연수 없음 → 불충분(None)
+        self.assertIsNone(
+            _kwargs_from_slots(TaxSlots(calc_type="housing_sale", sale_price=1, acquisition_cost=1))
+        )
+
+    def test_node_uses_llm_slots_when_available(self) -> None:
+        from langchain_core.messages import HumanMessage
+
+        from backend.app.services.agent.nodes import tax_calculator as node_mod
+
+        # regex는 놓칠 자연어를 LLM이 슬롯으로 뽑았다고 가정(네트워크 없이 주입).
+        slots = node_mod.TaxSlots(
+            calc_type="foreign_stock_sale", sale_price=152_500_000, acquisition_cost=50_000_000
+        )
+        original = node_mod._llm_slots
+        node_mod._llm_slots = lambda _text: slots
+        try:
+            state = {"messages": [HumanMessage(content="작년에 엔비디아 정리했는데 세금 궁금해")]}
+            ctx = node_mod.tax_calculator_node(state)["tool_context"]
+        finally:
+            node_mod._llm_slots = original
+        self.assertIn("[tax_calculator 결과]", ctx[0])
+        # 과세표준 1억 × 22%/20% 계열 — 코드가 계산한 결과가 들어온다
+        self.assertIn("해외주식 양도소득세", ctx[0])
+
+
+# ---------------------------------------------------------------------------
+# 세율 레지스트리 — 세율이 코드가 아닌 데이터에서 오고, 근거를 들고 다닌다
+# ---------------------------------------------------------------------------
+class TestRateRegistry(unittest.TestCase):
+    def test_default_rates_carry_basis_and_source(self) -> None:
+        """기본 세트의 세율은 법령 근거(조문)와 출처를 함께 보관한다."""
+        from backend.app.services.tax.rates import get_rates
+
+        r = get_rates()
+        self.assertEqual(r.foreign_stock_national_rate.value, 0.20)
+        self.assertEqual(r.foreign_stock_national_rate.basis, "소득세법 §155①")
+        self.assertIn("귀속", r.provenance)
+
+    def test_unknown_year_falls_back_to_default(self) -> None:
+        from backend.app.services.tax.rates import DEFAULT_YEAR, get_rates
+
+        self.assertIs(get_rates("1999"), get_rates(DEFAULT_YEAR))
+
+    def test_injected_rateset_changes_output(self) -> None:
+        """세율을 데이터로 주입하면 로직 수정 없이 결과가 바뀐다(외부화 증명)."""
+        import dataclasses
+
+        from backend.app.services.tax.rates import Rate, get_rates
+
+        # 해외주식 국세율만 20% → 30%로 갈아끼운 가상 세트
+        base = get_rates()
+        hiked = dataclasses.replace(
+            base, foreign_stock_national_rate=Rate(0.30, "가상 개정")
+        )
+        p = ForeignStockSaleInput(sale_price=152_500_000, acquisition_cost=50_000_000)
+        # 과세표준 1억 × 30% = 3천만 본세 + 지방 10% = 3,300만
+        self.assertEqual(calc_foreign_stock_sale(p, hiked).total_tax, 33_000_000)
+        # 기본 세트(20%)는 그대로 2,200만 — 주입이 격리됨
+        self.assertEqual(calc_foreign_stock_sale(p).total_tax, 22_000_000)
+
+    def test_provenance_appears_in_render(self) -> None:
+        """계산 결과에 적용 세율 출처가 남는다(감사 가능성)."""
+        out = calc_interest_dividend(InterestDividendInput(annual_income=10_000_000)).render()
+        self.assertIn("적용 세율 기준", out)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,6 @@
 import Link from "next/link";
 import {
-  ChatsCircle,
   Coins,
-  ChartLineUp,
   ShieldWarning,
   Scroll,
   SealCheck,
@@ -30,28 +28,34 @@ const TRUST_BADGES = [
  * 목표·달성 신호로만 찍고, 카드는 8px 헤어라인, 숫자·단계 라벨은 모노로.
  * 데이터를 부르지 않으므로 서버 컴포넌트로 둔다(가이드만 클라이언트 경계). */
 
-/** MVP 헤드라인 여정(무주택 사회초년생: 청약 상담 → 목표자금 → 자금마련). docs/mvp-scope.md 기준. */
+/** 헤드라인 여정 — 히어로의 '검증 가능한 AI 금융 비서' 약속을 세 증거로 잇는다.
+ *  각 단계가 대회 예시주제에 매핑된다: 사기검증(소비자보호·이상금융거래) →
+ *  세법·근거 계산(환각 방지) → 청약·자금마련(포용금융 스포크). */
 const JOURNEY = [
   {
-    icon: ChatsCircle,
-    href: "/chat",
+    icon: ShieldWarning,
+    href: `/chat?prefill=${encodeURIComponent(
+      "이 문자 사기야? 엄마 나 사고났어. 경찰서에 있는데 지금 당장 300만원 이체해줘. 전화하지 마세요.",
+    )}`,
     step: "STEP 01",
-    title: "청약 상담",
-    body: "내 조건에서 어떤 청약 유형·특별공급이 적용되는지, 세법·청약 조문 근거와 함께 정리해 줍니다.",
+    title: "사기 문자 검증",
+    body: "의심 문자를 붙여넣으면 판정 근거와 나에게 맞는 대응 요령·공식 신고 번호까지 알려줍니다.",
+  },
+  {
+    icon: Scroll,
+    href: `/chat?prefill=${encodeURIComponent(
+      "미국 주식 팔아서 2,000만원 벌었는데 양도소득세 얼마나 내야 해?",
+    )}`,
+    step: "STEP 02",
+    title: "세법·근거 계산",
+    body: "세금은 LLM이 아니라 코드가 법령 상수로 계산하고, 답변마다 조문 원문 출처를 함께 붙입니다.",
   },
   {
     icon: Coins,
     href: "/cheongyak",
-    step: "STEP 02",
-    title: "내 가점·목표자금 확인",
-    body: "실제 공고의 당첨가점과 내 청약가점(84점 기준)을 나란히 보고, 그 공고의 목표금액을 잡습니다.",
-  },
-  {
-    icon: ChartLineUp,
-    href: "/simulator",
     step: "STEP 03",
-    title: "자금마련 타임라인",
-    body: "지금 저축 계획으로 목표까지 몇 개월인지, 상품을 바꾸면 얼마나 당겨지는지 그래프로 비교합니다.",
+    title: "청약·자금마련",
+    body: "실제 공고의 당첨가점과 내 청약가점(84점 기준)을 나란히 보고, 목표자금까지 근거와 함께 정리합니다.",
   },
 ] as const;
 
@@ -126,7 +130,7 @@ export default function HomePage() {
         <ProfileNudge className="mb-12" data-tour="nudge" />
 
         <h2 className="font-display text-[clamp(1.75rem,3vw,2.25rem)] text-fg">
-          세 단계면 내 청약 조건이 정리됩니다
+          한 대화로, 근거와 함께 — 세 가지를 검증합니다
         </h2>
 
         <div className="mt-10 grid gap-[1px] overflow-hidden rounded-[var(--r-lg)] border border-line bg-line sm:grid-cols-3">
