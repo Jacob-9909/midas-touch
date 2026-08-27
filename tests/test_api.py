@@ -11,6 +11,7 @@ import io
 import os
 import sys
 import unittest
+from contextlib import contextmanager
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
@@ -21,9 +22,24 @@ load_dotenv()
 
 from fastapi.testclient import TestClient
 
+from backend.app.api.auth import current_uuid
 from backend.app.main import app
 
 client = TestClient(app)
+
+
+@contextmanager
+def as_user(uuid: str):
+    """AUTH_ENABLED=true에서도 토큰 없이 보호 라우트를 때리기 위한 인증 우회.
+
+    실제 비밀번호를 테스트에 박아두는 대신 FastAPI가 제공하는 dependency_overrides로
+    current_uuid만 갈아끼운다(인증 자체의 검증은 test_auth 쪽 책임).
+    """
+    app.dependency_overrides[current_uuid] = lambda: uuid
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(current_uuid, None)
 
 
 class TestDashboardRoutes(unittest.TestCase):
@@ -35,7 +51,8 @@ class TestDashboardRoutes(unittest.TestCase):
         self.assertIsInstance(body["users"], list)
 
     def test_user_detail_404(self) -> None:
-        r = client.get("/api/v1/users/nonexistent-uuid-0000")
+        with as_user("nonexistent-uuid-0000"):
+            r = client.get("/api/v1/users/nonexistent-uuid-0000")
         self.assertEqual(r.status_code, 404)
 
     def test_market_snapshots(self) -> None:
@@ -62,12 +79,14 @@ class TestGraphUploadRoute(unittest.TestCase):
 
 class TestChatRoutes(unittest.TestCase):
     def test_sessions_list(self) -> None:
-        r = client.get("/api/v1/chat/sessions")
+        with as_user("test-uuid-0000"):
+            r = client.get("/api/v1/chat/sessions")
         self.assertEqual(r.status_code, 200)
         self.assertIsInstance(r.json().get("sessions"), list)
 
     def test_history_unknown_session_404(self) -> None:
-        r = client.get("/api/v1/chat/history/__no_such_session__")
+        with as_user("test-uuid-0000"):
+            r = client.get("/api/v1/chat/history/__no_such_session__")
         self.assertEqual(r.status_code, 404)
 
     def test_chat_accepts_optional_profile(self) -> None:
