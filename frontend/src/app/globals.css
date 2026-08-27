@@ -458,7 +458,12 @@ html.dark .glass {
 }
 .a11y-large-text .btn-accent,
 .a11y-large-text .btn-ghost {
-  min-height: 48px;
+  min-height: 44px;
+}
+/* 네비게이션 바 내부 버튼은 알약 캡슐 레이아웃을 유지하도록 컴팩트 타깃 보정 */
+.a11y-large-text nav .btn-ghost,
+.a11y-large-text nav .btn-icon {
+  min-height: 36px;
 }
 .a11y-large-text .field {
   min-height: 44px;
