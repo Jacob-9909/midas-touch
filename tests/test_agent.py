@@ -11,6 +11,12 @@ import os
 import sys
 import unittest
 
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except Exception:
+    pass
+
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
@@ -132,14 +138,11 @@ class TestAgentEndToEnd(unittest.TestCase):
         state = agent.get_state(config)
         self.assertGreater(len(state.values["messages"]), 4)
 
-    def test_unknown_user_returns_404(self) -> None:
-        from fastapi import HTTPException
-
+    def test_anonymous_browser_uuid_chat(self) -> None:
         from backend.app.api.chat import ChatRequest, chat
 
-        with self.assertRaises(HTTPException) as ctx:
-            chat(ChatRequest(session_id="test-404", message="안녕", user_uuid="nonexistent-uuid-0000"))
-        self.assertEqual(ctx.exception.status_code, 404)
+        res = chat(ChatRequest(session_id="test-anon-session", message="간단히 인사해줘.", user_uuid="anon-browser-uuid-0000"))
+        self.assertTrue(res.reply)
 
 
 if __name__ == "__main__":
