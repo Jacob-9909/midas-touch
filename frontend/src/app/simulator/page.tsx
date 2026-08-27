@@ -287,7 +287,11 @@ export default function SimulatorPage() {
               ) : (
                 <label className={labelClass}>
                   <span className={labelTextClass}>목표금액(원)</span>
-                  <MoneyInput className={inputClass} value={customTarget} onChange={setCustomTarget} />
+                  <MoneyInput
+                    value={customTarget}
+                    onChange={setCustomTarget}
+                    showQuickPills
+                  />
                 </label>
               )}
 
