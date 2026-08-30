@@ -1,0 +1,51 @@
+# 오라클 VM 백엔드 systemd 유닛 — 네이티브 실행(Docker 없음).
+#
+# 이 VM은 Postgres·Neo4j 가 systemd 서비스로 직접 돌고 Docker 가 설치돼 있지 않다.
+# 컨테이너로 감싸면 이미지 빌드(torch 때문에 수 GB)와 컨테이너→호스트 DB 네트워킹이
+# 붙을 뿐 얻는 게 없어서, uv 로 그냥 띄운다(맥의 start.sh 와 같은 방식).
+#
+# 설치:
+#   sudo cp infra/midas-backend.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now midas-backend
+#
+# User/WorkingDirectory 의 ubuntu 는 실제 계정명에 맞게 고칠 것.
+
+[Unit]
+Description=Midas Touch backend (FastAPI/uvicorn)
+# DB 가 뜨기 전에 올라오면 첫 요청이 실패한다. 같은 호스트의 두 서비스를 기다린다.
+After=network-online.target postgresql.service neo4j.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=ubuntu
+WorkingDirectory=/home/ubuntu/midas-touch
+EnvironmentFile=/home/ubuntu/midas-touch/.env
+Environment=PYTHONPATH=/home/ubuntu/midas-touch
+Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+# 127.0.0.1 로만 바인딩한다 — 외부 노출은 Caddy(TLS)가 전담하고,
+# 8000 을 밖에 열면 TLS 를 우회하는 평문 경로가 생긴다.
+ExecStart=/home/ubuntu/.local/bin/uv run uvicorn backend.app.main:app \
+  --host 127.0.0.1 --port 8000 --workers 1
+
+# bge-m3 임베딩 모델을 프로세스 안에서 torch 로 로드한다(최초 기동 시 다운로드까지).
+# 시작 타임아웃을 넉넉히 주지 않으면 systemd 가 로딩 중인 프로세스를 죽인다.
+TimeoutStartSec=600
+
+Restart=always
+RestartSec=10
+# OOM 으로 죽었을 때 무한 재시작 루프에 빠지지 않게 한다.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+# 이 상자는 12GB 를 Postgres·Neo4j 와 나눠 쓴다. 상한을 넘으면 커널이 이 서비스만
+# 정리하도록 해서, DB 까지 같이 죽는 상황을 막는다.
+MemoryMax=6G
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=midas-backend
+
+[Install]
+WantedBy=multi-user.target
