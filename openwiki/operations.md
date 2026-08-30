@@ -6,7 +6,7 @@ How to run, expose, and operate Midas Touch locally. There is **no auth layer** 
 
 ## Backing Services (Docker Compose)
 
-For production deployments on the Oracle VM, the backend and databases are run as native systemd services (see `infra/midas-backend.service` and the related unit files). Caddy is used as the reverse‑proxy with automatic TLS (see `infra/Caddyfile`).
+For production deployments on the Oracle VM, the backend and databases are run as native systemd services (see `infra/midas-backend.service` and the related unit files). Caddy is used as the reverse‑proxy with automatic TLS (see `infra/Caddyfile`). Note: `infra/midas-backend.service` avoids using `EnvironmentFile` due to an inline‑comment parsing issue; the service starts the backend via `uv run --env-file .env` instead.
 
 To start the services on the VM use:
 
