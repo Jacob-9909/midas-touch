@@ -59,6 +59,19 @@ frontend/
 | **Cheongyak** | 공고 목록(Korean map 필터) + 상세 모달에서 1순위 재판정 | Various `/api/v1/cheongyak/...` |
 | **Simulator** | 목표금액·저축액 → 도달 개월 그래프(상품 비교) | 없음(브라우저 계산) |
 | **Graph** | Build graph snapshot → visualiser → GraphRAG 질의 | `POST /api/v1/graph/build/jobs`, `GET /api/v1/graph/snapshot` |
+| **Security** | 방어 시나리오 프리셋 실행, 5겹 방어 시각화 – `/security` 페이지 | — |
+
+
+
+| Page | Core Interaction | Backend Endpoint |
+|------|------------------|------------------|
+| **Landing (`/`)** | 3단계 여정 카드 → 각 화면 진입 | — |
+| **Me (`/me`)** | 가점·1순위 요건·자금 입력 → 즉시 대조 판정 | 없음(localStorage) |
+| **Chat** | Send message → stream LLM response (+ Knowledge Panel tab) | `POST /api/v1/chat/stream` |
+| **Stocks** | Ticker 검색 → quick-analysis / backtest / grid-search | `GET /api/v1/stocks/quick-analysis`, `POST .../backtest`, `GET .../price-history` |
+| **Cheongyak** | 공고 목록(Korean map 필터) + 상세 모달에서 1순위 재판정 | Various `/api/v1/cheongyak/...` |
+| **Simulator** | 목표금액·저축액 → 도달 개월 그래프(상품 비교) | 없음(브라우저 계산) |
+| **Graph** | Build graph snapshot → visualiser → GraphRAG 질의 | `POST /api/v1/graph/build/jobs`, `GET /api/v1/graph/snapshot` |
 
 ## Guide Tours
 

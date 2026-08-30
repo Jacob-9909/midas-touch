@@ -53,6 +53,18 @@ This repository exposes a **FastAPI** server under the `/api/v1` prefix. The API
 ---
 
 ## Cheongyak (Housing) Endpoints (`backend/app/api/cheongyak.py`)
+
+## Tax Rates API (`backend/app/api/tax_rates.py`)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/tax-rates/extract` | Extract tax rate proposals from raw text (up to 20k chars). Returns diff against current rates and validation issues. |
+| `POST` | `/tax-rates/extract/upload` | Upload a `.txt`, `.md`, or `.pdf` file to extract tax rates. Supports same diff and validation as above. |
+| `POST` | `/tax-rates/apply` | Apply a validated tax rate proposal to the overlay for a given year. Returns confirmation and active rates payload. |
+| `GET` | `/tax-rates/current` | Retrieve the current effective tax rates for a given year (default 2026), after any overlays. |
+| `GET` | `/tax-rates/current?year=2025` | Retrieve rates for a specific year.
+
+These endpoints support the tax calculator tool and UI tax‑rate management features. Source: `backend/app/api/tax_rates.py`.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/cheongyak/list/{kind}` | List housing projects of a given `kind` (e.g., `apt`, `officetel`).
