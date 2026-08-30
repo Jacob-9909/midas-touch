@@ -1,0 +1,68 @@
+# 오라클 VM 배포 오버레이 — base(docker-compose.yml) 위에 얹어 쓴다.
+#
+#   cd infra
+#   docker compose -f docker-compose.yml -f docker-compose.vm.yml up -d --build
+#
+# base 와 다른 점:
+#   1) Caddy 를 앞에 세워 TLS 종료(도메인 필요 — Caddyfile 주석 참고)
+#   2) DB 포트를 외부에 열지 않는다(base 는 로컬 개발 편의로 5432/7687 을 노출한다)
+#   3) 2 OCPU / 12GB 상자에 세 프로세스가 같이 사는 전제로 메모리 상한을 못 박는다
+#
+# 메모리 배분(12GB): backend ~6G(bge-m3 임베딩 모델이 프로세스 안에서 torch 로 로드된다) /
+#                   neo4j ~3G / postgres ~1.5G / 나머지는 OS·페이지캐시.
+# 상한을 안 박으면 Neo4j 가 힙을 크게 잡아 백엔드가 모델 로딩 중 OOM 으로 죽는다.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: midas-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80" # Let's Encrypt HTTP-01 챌린지에 필요 — 닫으면 인증서 발급 실패
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # 발급받은 인증서 — 이 볼륨이 날아가면 재발급(rate limit 주의)
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+  backend:
+    # 외부에는 Caddy 만 노출한다. 8000 을 직접 열면 평문 경로가 생겨 TLS 를 우회당한다.
+    ports: !override []
+    environment:
+      RUN_BACKGROUND_JOBS: "true"
+      # 프론트가 다른 오리진(Vercel)에서 뜨므로 CORS 를 명시적으로 허용해야 한다.
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS}
+    deploy:
+      resources:
+        limits:
+          memory: 6g
+
+  neo4j:
+    ports: !override []
+    environment:
+      - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
+      - NEO4J_PLUGINS=["apoc"]
+      # 자동 튜닝에 맡기면 12GB 상자에서 힙을 과하게 잡는다. 현재 그래프가
+      # 노드 7,842 / 관계 14,851 규모라 이 정도면 넉넉하다.
+      - NEO4J_server_memory_heap_initial__size=1G
+      - NEO4J_server_memory_heap_max__size=2G
+      - NEO4J_server_memory_pagecache_size=512m
+    deploy:
+      resources:
+        limits:
+          memory: 3g
+
+  postgres:
+    ports: !override []
+    deploy:
+      resources:
+        limits:
+          memory: 1500m
+
+volumes:
+  caddy_data:
+  caddy_config:

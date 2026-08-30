@@ -1,0 +1,36 @@
+# 오라클 VM 백엔드 앞단 리버스 프록시 — Let's Encrypt 인증서 자동 발급/갱신.
+#
+# 프론트를 Vercel(HTTPS)에 두면 브라우저가 http:// 백엔드를 호출하지 못한다(mixed content 차단).
+# IP에는 인증서를 발급받을 수 없으므로 도메인이 필요하고, Caddy가 그 도메인으로 TLS를 자동 처리한다.
+#
+# API_DOMAIN 은 .env 에서 주입된다(예: api.midas-touch.example).
+# 사전 조건: 그 도메인의 A 레코드가 VM 공인 IP를 가리키고, VM 방화벽에서 80/443 이 열려 있을 것.
+# (80은 Let's Encrypt HTTP-01 챌린지에 필요하다 — 닫으면 발급이 실패한다.)
+
+{$API_DOMAIN} {
+	# SSE(/api/v1/chat/stream)를 버퍼링 없이 흘려보낸다.
+	# 앞단이 응답을 모아 버리면 챗봇이 아무것도 못 뱉는 것처럼 보인다 —
+	# next.config.ts 의 compress:false 와 같은 이유의 방어다.
+	reverse_proxy backend:8000 {
+		flush_interval -1
+	}
+
+	# 챗 한 턴이 2분 넘게 걸리는 경우가 있어(도구 병렬 실행 + 작문) 넉넉히 잡는다.
+	timeouts {
+		read_body 1m
+		idle 10m
+	}
+
+	encode zstd gzip {
+		# text/event-stream 은 압축 대상에서 제외 — 압축기가 청크를 모으면 스트리밍이 죽는다.
+		match {
+			header Content-Type text/*
+			header Content-Type application/json*
+		}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
