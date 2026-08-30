@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-08-30T13:13:41.777Z",
+  "updatedAt": "2026-08-30T13:13:42.355Z",
   "command": "update",
-  "gitHead": "b69bb0bfaf0d719619085b80b4dc35db32fe5469",
+  "gitHead": "bea8108aaaa4a4c3423f33b3585ef8aa7313e9b8",
   "model": "openai/gpt-oss-120b"
 }
