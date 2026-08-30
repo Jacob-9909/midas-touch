@@ -36,6 +36,8 @@ Each node is a single file; `graph.py` only imports them and wires the topology 
 | `persona_rag` | internal DB | Peer benchmarking — similar investors' recommended allocation / sector preference (pgvector). |
 | `graph_rag` | internal graph | Legal basis / tax‑rate provenance / asset relationships (Neo4j). |
 | `tax_lookup` | internal DB | Tax‑saving conditions + current market figures for a given asset. |
+| `fraud_check` | internal DB | Detects potential fraud patterns in user messages using heuristic rules and LLM evaluation. |
+| `tax_calculator` | internal DB | Performs after‑tax calculations using up‑to‑date Korean tax rule overlays and user‑specific income data. |
 | `product_research` | live | Domestic financial‑product current rates/terms (Naver search). |
 | `news_research` | live | US/JP/KR base‑rate trend + policy context (web search). |
 | `nts_law_research` | live | National Tax Service legal interpretations (latest cases). |
@@ -53,7 +55,7 @@ Prompts live in `prompts.py`; the shared LLM client in `llm.py`; small helpers i
 
 Nodes call retrieval tools rather than embedding the I/O inline:
 
-* `persona_rag.py`, `graph_rag.py`, `tax_lookup.py`, `doc_rag.py` — internal DB / Neo4j retrieval and Korean tax‑law document search.
+* `persona_rag.py`, `graph_rag.py`, `tax_lookup.py`, `doc_rag.py`, `fraud_check.py`, `tax_calculator.py` — internal DB / Neo4j retrieval and Korean tax‑law document search, plus fraud detection and tax calculation tools.
 * `_embedding.py` — shared query‑embedding helper (must use the same model that populated `persona_embeddings`).
 * `web/` — live search clients: `naver_web.py`, `tavily_search.py`, `nts_law.py`, with shared `_config.py`.
 
