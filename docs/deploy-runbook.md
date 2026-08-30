@@ -161,6 +161,7 @@ curl -s "$A/api/v1/cheongyak/list/apt" | head -c 120   # 외부 API까지 살았
 | CORS 누락 | 화면은 뜨는데 데이터가 전부 빔, 콘솔에 CORS 에러 | `CORS_ALLOW_ORIGINS`에 Vercel 도메인 추가 후 backend 재기동 |
 | Vercel 프리뷰 도메인 | 프리뷰 URL마다 오리진이 달라 CORS에 막힘 | 심사에는 **프로덕션 도메인**을 제출하고 그 오리진만 고정 허용 |
 | `NEXT_PUBLIC_*` 미반영 | 값은 바꿨는데 동작이 그대로 | 빌드 타임 주입이라 재배포 필요 |
+| **env 값에 주석이 섞임** | `/health`는 초록인데 챗·임베딩만 깨짐. 로그에 `cache warm failed (embedding)` | systemd `EnvironmentFile`은 값 뒤 `#` 주석을 자르지 않는다. 유닛은 `uv run --env-file .env`를 쓰도록 돼 있으니 되돌리지 말 것. 확인: `sudo tr '\0' '\n' < /proc/$(pgrep -f 'uvicorn backend')/environ \| grep AGENT_LLM_MODEL` |
 | OOM | 백엔드가 조용히 재시작 반복 | `journalctl -u midas-backend | grep -i oom`, 유닛의 `MemoryMax` 조정 또는 스왑 추가(§1) |
 | 인증서 유실 | 재발급 시도 → Let's Encrypt rate limit | `/var/lib/caddy` 를 지우지 말 것 |
 | 심사용 체험 계정 | 심사자가 로그인 못 함 | `/login` 화면의 `demo@midas.touch` 계정이 **배포 DB에** 있는지 확인 |

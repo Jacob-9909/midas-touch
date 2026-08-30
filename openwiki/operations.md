@@ -6,11 +6,13 @@ How to run, expose, and operate Midas Touch locally. There is **no auth layer** 
 
 ## Backing Services (Docker Compose)
 
-For production deployments on the Oracle VM, use the overlay compose file `infra/docker-compose.vm.yml` in addition to the base `docker-compose.yml`. This adds the Caddy reverse‑proxy with automatic TLS (see `infra/Caddyfile`) and restricts external DB ports. The VM‑specific command is:
+For production deployments on the Oracle VM, the backend and databases are run as native systemd services (see `infra/midas-backend.service` and the related unit files). Caddy is used as the reverse‑proxy with automatic TLS (see `infra/Caddyfile`).
+
+To start the services on the VM use:
 
 ```bash
-docker compose --env-file ../.env \
-  -f infra/docker-compose.yml -f infra/docker-compose.vm.yml up -d --build
+sudo systemctl enable --now midas-backend
+# Ensure PostgreSQL and Neo4j systemd units are enabled and started as described in the deployment runbook.
 ```
 
 Local development continues to use the single‑file command shown earlier.
