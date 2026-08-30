@@ -467,7 +467,7 @@ export default function CheongyakPage() {
           data-tour="region-map"
           className="mb-5 flex flex-col items-center gap-5 lg:flex-row lg:items-start"
         >
-          <KoreaMap counts={regionCounts} selected={mapRegion} onSelect={setMapRegion} />
+          <KoreaMap counts={regionCounts} total={statusFiltered?.length ?? 0} selected={mapRegion} onSelect={setMapRegion} />
           <div className="min-w-0 flex-1 text-sm">
             {mapRegion ? (
               <>

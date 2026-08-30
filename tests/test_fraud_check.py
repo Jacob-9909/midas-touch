@@ -168,10 +168,10 @@ class TestFraudScanVoicePhishingRegression(unittest.TestCase):
         self.assertIn("가족·지인 사칭", {s.category for s in report.signals})
 
     def test_loan_bingjip_scam_is_danger(self) -> None:
-        """저신용 타깃 + 즉시대출 + 수수료 선입금 → 대출 빙집 위험."""
+        """저신용 타깃 + 즉시대출 + 수수료 선입금 → 대출 빙자 위험."""
         report = scan_message(_LOAN_BINGJIP_MESSAGE)
         self.assertEqual(report.verdict, "위험")
-        self.assertIn("대출 빙집 사기", {s.category for s in report.signals})
+        self.assertIn("대출 빙자 사기", {s.category for s in report.signals})
 
     def test_crypto_leading_room_is_danger(self) -> None:
         """리딩방 + USDT 입금 + 10배 보장 → 가상자산 리딩방 위험."""
@@ -248,10 +248,10 @@ class TestFraudScanEvalFnRegression(unittest.TestCase):
         self.assertIn("가족·지인 사칭", {s.category for s in report.signals})
 
     def test_same_day_loan_no_docs_is_danger(self) -> None:
-        """당일대출·서류 없이·신청 즉시 문구 → 대출 빙집 위험."""
+        """당일대출·서류 없이·신청 즉시 문구 → 대출 빙자 위험."""
         report = scan_message(_FN_SAMEDAY_LOAN_MESSAGE)
         self.assertEqual(report.verdict, "위험")
-        self.assertIn("대출 빙집 사기", {s.category for s in report.signals})
+        self.assertIn("대출 빙자 사기", {s.category for s in report.signals})
 
     def test_police_safe_account_threat_is_danger(self) -> None:
         """경찰청 사칭 + 안전계좌 입금 압박 → 정부기관 사칭 위험."""

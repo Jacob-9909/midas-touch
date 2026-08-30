@@ -24,22 +24,25 @@ function focusTransform(p: Province | null): string {
 
 export default function KoreaMap({
   counts,
+  total,
   selected,
   onSelect,
 }: {
   counts: Record<string, number>;
+  /** 전체 공고 수. counts 를 합치면 안 된다 — 지역명·주소가 두 시도에 걸리는 공고는
+   *  두 번 세어져 바로 위 KPI 카드("전체 N건")와 어긋난 수가 찍힌다(실측 108 vs 109). */
+  total: number;
   selected: string | null;
   onSelect: (short: string | null) => void;
 }) {
   const [hovered, setHovered] = useState<Province | null>(null);
   const focused = PROVINCES.find((p) => p.short === selected) ?? null;
   const k = focused ? Math.min(VW / (focused.bbox[2] * 1.24), VH / (focused.bbox[3] * 1.24)) : 1;
-  const totalCount = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const currentProvince = hovered ?? focused;
   const currentCount = currentProvince
     ? counts[currentProvince.short] ?? 0
-    : totalCount;
+    : total;
 
   return (
     <div className="flex flex-col items-center">

@@ -83,6 +83,8 @@ def _defense_footer(route: list[str] | None, source_count: int) -> str:
             else "- 수치 계산: LLM 작문(수치는 컨텍스트 근거로만 제한)"
         ),
         "- 응답 안정화: grounding 지시 상시 삽입 + 저온 생성(temp 0.3)",
+        # 5겹째. 이게 빠져 있어서 화면 라벨("5겹")과 항목 수(4개)가 어긋났다.
+        "- 외곽 경계: 외부 fetch 허용 도메인 목록 고정(리다이렉트 후 재검증) + 서명 세션(JWT)·도구 인자 스키마 바인딩",
     ]
     return "\n".join(lines)
 
