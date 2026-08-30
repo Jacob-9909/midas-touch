@@ -6,6 +6,16 @@ How to run, expose, and operate Midas Touch locally. There is **no auth layer** 
 
 ## Backing Services (Docker Compose)
 
+For production deployments on the Oracle VM, use the overlay compose file `infra/docker-compose.vm.yml` in addition to the base `docker-compose.yml`. This adds the Caddy reverse‑proxy with automatic TLS (see `infra/Caddyfile`) and restricts external DB ports. The VM‑specific command is:
+
+```bash
+docker compose --env-file ../.env \
+  -f infra/docker-compose.yml -f infra/docker-compose.vm.yml up -d --build
+```
+
+Local development continues to use the single‑file command shown earlier.
+
+
 `infra/docker-compose.yml` provisions the two stateful dependencies:
 
 | Service | Image | Ports | Notes |

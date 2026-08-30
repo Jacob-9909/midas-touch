@@ -1,33 +1,32 @@
 # 오라클 VM 백엔드 앞단 리버스 프록시 — Let's Encrypt 인증서 자동 발급/갱신.
 #
-# 프론트를 Vercel(HTTPS)에 두면 브라우저가 http:// 백엔드를 호출하지 못한다(mixed content 차단).
-# IP에는 인증서를 발급받을 수 없으므로 도메인이 필요하고, Caddy가 그 도메인으로 TLS를 자동 처리한다.
+# 왜 필요한가: 프론트가 Vercel(HTTPS)에서 뜨면 브라우저가 http:// 백엔드를 호출하지 못하고
+# (mixed content 차단), Let's Encrypt 는 IP 에 인증서를 발급하지 않는다. 그래서 도메인 + TLS.
 #
-# API_DOMAIN 은 .env 에서 주입된다(예: api.midas-touch.example).
-# 사전 조건: 그 도메인의 A 레코드가 VM 공인 IP를 가리키고, VM 방화벽에서 80/443 이 열려 있을 것.
-# (80은 Let's Encrypt HTTP-01 챌린지에 필요하다 — 닫으면 발급이 실패한다.)
+# 설치:
+#   sudo cp infra/Caddyfile /etc/caddy/Caddyfile
+#   sudo caddy validate --config /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# 사전 조건: midas-touch.duckdns.org A 레코드 → VM 공인 IP, 80·443 open
+#            (80 은 HTTP-01 챌린지용 — 닫으면 발급 실패)
+#
+# 도메인이 바뀌면 아래 한 줄만 고치면 된다. 환경변수로 빼지 않은 건 systemd 로 도는 Caddy 가
+# compose 처럼 주입을 못 받아 EnvironmentFile 을 따로 걸어야 하기 때문 — 도메인 하나에 그건 과하다.
 
-{$API_DOMAIN} {
-	# SSE(/api/v1/chat/stream)를 버퍼링 없이 흘려보낸다.
-	# 앞단이 응답을 모아 버리면 챗봇이 아무것도 못 뱉는 것처럼 보인다 —
-	# next.config.ts 의 compress:false 와 같은 이유의 방어다.
-	reverse_proxy backend:8000 {
+midas-touch.duckdns.org {
+	# flush_interval -1 = 버퍼링 없이 즉시 흘려보낸다.
+	# 앞단이 응답을 모아 버리면 챗 SSE 가 청크 0개로 도착해 "아무것도 안 뱉는" 것처럼 보인다
+	# (next.config.ts 의 compress:false 와 같은 이유의 방어).
+	reverse_proxy 127.0.0.1:8000 {
 		flush_interval -1
 	}
 
-	# 챗 한 턴이 2분 넘게 걸리는 경우가 있어(도구 병렬 실행 + 작문) 넉넉히 잡는다.
-	timeouts {
-		read_body 1m
-		idle 10m
-	}
-
-	encode zstd gzip {
-		# text/event-stream 은 압축 대상에서 제외 — 압축기가 청크를 모으면 스트리밍이 죽는다.
-		match {
-			header Content-Type text/*
-			header Content-Type application/json*
-		}
-	}
+	# ponytail: encode(압축)와 timeouts 를 걸지 않는다.
+	#   - 이 오리진은 JSON 과 text/event-stream 만 내보내고 정적 자산은 Vercel 이 담당한다.
+	#     압축기가 SSE 청크를 모으는 사고만 남고 얻는 게 없다.
+	#   - Caddy v2 의 기본 write timeout 은 0(무제한)이라 2분 넘는 챗 턴도 그대로 통과한다.
+	#     timeouts 는 사이트 블록이 아니라 전역 옵션이라 여기 쓰면 설정 오류가 난다.
 
 	log {
 		output stdout

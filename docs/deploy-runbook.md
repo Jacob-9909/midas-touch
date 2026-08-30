@@ -2,11 +2,13 @@
 
 **필수 가동 시간**: 2026-09-07 11:00 ~ 09-11 23:59 (연속 5일)
 
-**구성(2026-08-30 결정)**: 프론트는 **Vercel**, 백엔드·DB는 **오라클 VM**(2 OCPU / 12GB).
+**구성(2026-08-30 결정)**: 프론트는 **Vercel**, 백엔드·DB는 **오라클 VM**(2 OCPU / 12GB, Ubuntu 22.04).
+VM에는 Docker가 없고 **Postgres 17·Neo4j가 systemd 네이티브 서비스**로 돈다 — 백엔드도 컨테이너
+없이 uv로 띄운다(이미지 빌드도, 컨테이너→호스트 DB 네트워킹도 필요 없다).
 
 ```
 브라우저 ──HTTPS──> Vercel (Next.js 정적·SSR)
-    └────HTTPS──> api.<도메인> ─Caddy(TLS)─> backend:8000 ─┬─ postgres(pgvector)
+    └────HTTPS──> midas-touch.duckdns.org ─Caddy(TLS)─> backend:8000 ─┬─ postgres(pgvector)
                      (오라클 VM 161.33.134.252)            └─ neo4j
 ```
 
@@ -23,14 +25,13 @@
 
 ## 0. 사전 준비 (1회, VM 이전 시)
 
-- [ ] **도메인 확보**. 서브도메인 하나면 된다(예: `api.midas-touch.xyz`).
-      보유 도메인이 없으면 DuckDNS 같은 무료 서브도메인도 Caddy DNS 챌린지로 발급 가능.
-- [ ] **A 레코드** `api.<도메인>` → `161.33.134.252`
-- [ ] **VM 방화벽 80·443 open**. 오라클은 두 군데를 다 열어야 한다 —
+- [x] **도메인 확보** — `midas-touch.duckdns.org` (DuckDNS 무료 서브도메인)
+- [ ] **A 레코드** `midas-touch.duckdns.org` → `161.33.134.252`
+- [x] **VM 방화벽 80·443 open** (확인 완료). 오라클은 두 군데를 다 열어야 한다 —
       ① 콘솔의 VCN Security List(ingress 80/443) ② VM 안의 iptables/firewalld.
       **80을 닫으면 Let's Encrypt HTTP-01 챌린지가 실패해 인증서가 안 나온다.**
-- [ ] VM에 Docker + Compose v2 설치
-- [ ] 레포와 `.env`를 VM으로 옮기고 `API_DOMAIN`, `CORS_ALLOW_ORIGINS` 채우기
+- [ ] VM에 `uv`, `caddy`, `git` 설치 (§1)
+- [ ] 레포 clone + `.env`를 VM으로 옮기고 `CORS_ALLOW_ORIGINS` 채우기
       (`.env`는 git에 없으므로 별도로 안전하게 전달할 것)
 
 ---
@@ -38,34 +39,73 @@
 ## 1. 백엔드 띄우기 (오라클 VM)
 
 ```bash
-cd ~/midas-touch/infra
+# ── 1) 도구 설치 ──────────────────────────────────────────
+sudo apt-get update && sudo apt-get install -y git curl debian-keyring debian-archive-keyring apt-transport-https
 
-# base + VM 오버레이. 오버레이가 하는 일:
-#   Caddy(TLS) 추가 / DB 포트 외부 노출 차단 / 12GB 상자 기준 메모리 상한
-docker compose --env-file ../.env \
-  -f docker-compose.yml -f docker-compose.vm.yml up -d --build
+# uv (파이썬 3.12+ 를 알아서 받아온다 — 시스템 파이썬 3.10 을 건드리지 않는다)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# caddy (공식 저장소)
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+  | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+  | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt-get update && sudo apt-get install -y caddy
+
+# ── 2) 레포 + .env ───────────────────────────────────────
+cd ~ && git clone https://github.com/Jacob-9909/midas-touch.git
+cd midas-touch
+# .env 는 git 에 없다. 맥에서 scp 로 옮긴다:
+#   scp .env ubuntu@161.33.134.252:~/midas-touch/.env
+# 옮긴 뒤 VM 기준으로 고칠 값:
+#   POSTGRES_HOST=localhost / DATABASE_URL 의 호스트 → localhost
+#   NEO4J_URL=bolt://localhost:7687
+#   CORS_ALLOW_ORIGINS=https://<vercel-도메인>
+chmod 600 .env
+
+# ── 3) 의존성 (torch 때문에 5~10분) ───────────────────────
+~/.local/bin/uv sync
+
+# ── 4) 서비스 등록 ───────────────────────────────────────
+sudo cp infra/midas-backend.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now midas-backend
+
+sudo cp infra/Caddyfile /etc/caddy/Caddyfile
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
 ```
 
-첫 기동은 이미지 빌드(torch 때문에 수 GB)와 bge-m3 모델 다운로드로 **10~20분** 걸릴 수 있다.
+첫 기동은 bge-m3 임베딩 모델(약 2.3GB) 다운로드 때문에 **5~10분** 걸린다. 유닛의
+`TimeoutStartSec=600`이 그 시간을 벌어 준다.
 
 ```bash
-# 인증서 발급 로그 확인 (실패하면 여기 이유가 찍힌다)
-docker logs -f midas-caddy | head -40
+# 백엔드 로그 (모델 로딩 → Uvicorn running 까지)
+sudo journalctl -u midas-backend -f
+
+# 인증서 발급 로그 (실패하면 여기 이유가 찍힌다)
+sudo journalctl -u caddy -f
 
 # 헬스체크
-curl -s https://api.<도메인>/health
+curl -s https://midas-touch.duckdns.org/health
 # → {"status":"healthy","database":"healthy","neo4j":"bolt://..."}
 ```
 
-**메모리 배분(12GB)**: backend 6G(임베딩 모델이 프로세스 안에서 torch로 로드) / neo4j 3G /
-postgres 1.5G / 나머지 OS·페이지캐시. 상한을 안 박으면 Neo4j가 힙을 크게 잡아 백엔드가
-모델 로딩 중 OOM으로 죽는다 — 오버레이에 못 박아 뒀다.
+**메모리(12GB, 실측 사용 3.2GB / 여유 6.6GB)**: Postgres·Neo4j가 이미 3.2GB를 쓰고 있어
+백엔드에 `MemoryMax=6G`를 걸어 뒀다. 상한이 없으면 모델 로딩 중 커널이 **DB를 골라 죽일 수도**
+있다 — 상한을 걸면 초과 시 백엔드만 정리된다.
 
 ```bash
-docker stats --no-stream   # 실제 사용량 확인
+free -h
+systemctl show midas-backend -p MemoryCurrent
 ```
 
----
+> 모델 로딩 중 OOM이 반복되면 스왑 4GB를 붙이는 게 가장 싸다(디스크 181GB 여유):
+> ```bash
+> sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile
+> sudo mkswap /swapfile && sudo swapon /swapfile
+> echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+> ```
 
 ## 2. 프론트 띄우기 (Vercel)
 
@@ -80,7 +120,7 @@ docker stats --no-stream   # 실제 사용량 확인
 환경변수 (Production + Preview 양쪽):
 
 ```
-NEXT_PUBLIC_API_BASE=https://api.<도메인>
+NEXT_PUBLIC_API_BASE=https://midas-touch.duckdns.org
 NEXT_PUBLIC_AUTH_ENABLED=true
 ```
 
@@ -91,7 +131,7 @@ NEXT_PUBLIC_AUTH_ENABLED=true
 이걸 빼먹으면 화면은 뜨는데 모든 API가 CORS로 막혀 빈 화면처럼 보인다.
 
 ```bash
-docker compose --env-file ../.env -f docker-compose.yml -f docker-compose.vm.yml up -d backend
+sudo systemctl restart midas-backend
 ```
 
 ---
@@ -100,7 +140,7 @@ docker compose --env-file ../.env -f docker-compose.yml -f docker-compose.vm.yml
 
 ```bash
 F=https://<vercel-도메인>
-A=https://api.<도메인>
+A=https://midas-touch.duckdns.org
 
 curl -s -o /dev/null -w "front %{http_code}\n" "$F"
 curl -s "$A/health"
@@ -117,12 +157,12 @@ curl -s "$A/api/v1/cheongyak/list/apt" | head -c 120   # 외부 API까지 살았
 
 | 위험 | 증상 | 대응 |
 |---|---|---|
-| 인증서 발급 실패 | `https://api.<도메인>` 접속 불가, Caddy 로그에 챌린지 실패 | 80 포트 개방(VCN + OS 방화벽 양쪽)과 A 레코드 전파 확인 |
+| 인증서 발급 실패 | `https://midas-touch.duckdns.org` 접속 불가, Caddy 로그에 챌린지 실패 | 80 포트 개방(VCN + OS 방화벽 양쪽)과 A 레코드 전파 확인 |
 | CORS 누락 | 화면은 뜨는데 데이터가 전부 빔, 콘솔에 CORS 에러 | `CORS_ALLOW_ORIGINS`에 Vercel 도메인 추가 후 backend 재기동 |
 | Vercel 프리뷰 도메인 | 프리뷰 URL마다 오리진이 달라 CORS에 막힘 | 심사에는 **프로덕션 도메인**을 제출하고 그 오리진만 고정 허용 |
 | `NEXT_PUBLIC_*` 미반영 | 값은 바꿨는데 동작이 그대로 | 빌드 타임 주입이라 재배포 필요 |
-| OOM | 백엔드가 조용히 재시작 반복 | `docker stats` 확인, 오버레이의 메모리 상한 조정 |
-| 인증서 볼륨 유실 | 재발급 시도 → Let's Encrypt rate limit | `caddy_data` 볼륨을 지우지 말 것 |
+| OOM | 백엔드가 조용히 재시작 반복 | `journalctl -u midas-backend | grep -i oom`, 유닛의 `MemoryMax` 조정 또는 스왑 추가(§1) |
+| 인증서 유실 | 재발급 시도 → Let's Encrypt rate limit | `/var/lib/caddy` 를 지우지 말 것 |
 | 심사용 체험 계정 | 심사자가 로그인 못 함 | `/login` 화면의 `demo@midas.touch` 계정이 **배포 DB에** 있는지 확인 |
 
 ---
@@ -134,11 +174,11 @@ curl -s "$A/api/v1/cheongyak/list/apt" | head -c 120   # 외부 API까지 살았
 - [ ] `/health`가 `database: healthy`인지
 - [ ] 새 시크릿창으로 처음부터 밟아보기 (§6)
 - [ ] 체험 계정으로 실제 로그인되는지
-- [ ] `docker stats`로 메모리 여유 확인
+- [ ] `free -h` 로 메모리 여유 확인
 
 **9/7 ~ 9/11 매일**
 - [ ] §3 헬스체크 1회
-- [ ] `docker logs --since 24h midas-backend | grep -i error | head`
+- [ ] `sudo journalctl -u midas-backend --since '24 hours ago' | grep -i error | head`
 
 ---
 
@@ -174,13 +214,13 @@ caffeinate -dimsu env PUBLIC_URL=https://gathering-disliking-hypnoses.ngrok-free
 SSE가 어딘가에서 버퍼링되는 것이다. 앞단부터 하나씩 벗겨 격리한다.
 
 ```bash
-# ① 백엔드 직접 (컨테이너 안)
-docker exec midas-backend curl -sN -X POST http://localhost:8000/api/v1/chat/stream \
+# ① 백엔드 직접 (VM 안에서)
+curl -sN -X POST http://127.0.0.1:8000/api/v1/chat/stream \
   -H 'Content-Type: application/json' \
   -d '{"session_id":"t","message":"청약 가점이 뭔가요?","user_uuid":"e7926df30b8f48c09b33684f3075f60f"}' | head -c 200
 
 # ② Caddy 경유
-curl -sN -X POST https://api.<도메인>/api/v1/chat/stream -H 'Content-Type: application/json' \
+curl -sN -X POST https://midas-touch.duckdns.org/api/v1/chat/stream -H 'Content-Type: application/json' \
   -d '{"session_id":"t","message":"청약 가점이 뭔가요?","user_uuid":"e7926df30b8f48c09b33684f3075f60f"}' | head -c 200
 ```
 
@@ -192,18 +232,18 @@ curl -sN -X POST https://api.<도메인>/api/v1/chat/stream -H 'Content-Type: ap
 브라우저 콘솔에 CORS 에러가 있는지 먼저 본다. 있으면 `CORS_ALLOW_ORIGINS` 문제(§4).
 없으면 DB가 내려간 것:
 ```bash
-curl -s https://api.<도메인>/health
-docker compose --env-file ../.env -f docker-compose.yml -f docker-compose.vm.yml ps
+curl -s https://midas-touch.duckdns.org/health
+systemctl status midas-backend postgresql neo4j --no-pager | head -30
 ```
 
 **청약 목록이 비어 있다**
 공공데이터 API(api.odcloud.kr) 점검일 수 있다. `CHEONGYAK_API_KEY` 확인:
 ```bash
-curl -s "https://api.<도메인>/api/v1/cheongyak/list/apt" | head -c 200
+curl -s "https://midas-touch.duckdns.org/api/v1/cheongyak/list/apt" | head -c 200
 ```
 
 **전부 재기동**
 ```bash
-cd ~/midas-touch/infra
-docker compose --env-file ../.env -f docker-compose.yml -f docker-compose.vm.yml restart
+sudo systemctl restart midas-backend caddy
+sudo journalctl -u midas-backend -n 50 --no-pager
 ```
