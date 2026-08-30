@@ -7,6 +7,12 @@ import { ShieldChevron, Eye, EyeSlash } from "@phosphor-icons/react";
 import { useSelectedUser } from "@/lib/user-context";
 import { Spinner } from "@/components/ui";
 
+/** 공개 체험 계정. 회원가입 경로가 없는 상태라 이게 없으면 배포 URL로 들어온
+ *  심사위원·외부 방문자는 첫 화면에서 그대로 막힌다. 노출을 전제로 만든 계정이므로
+ *  번들에 박혀 있는 것이 문제가 아니다. 자격은 set_user_password.py 로 발급한다. */
+const DEMO_EMAIL = "demo@midas.touch";
+const DEMO_PASSWORD = "MidasDemo2026!";
+
 export default function LoginPage() {
   const { login } = useSelectedUser();
   const router = useRouter();
@@ -16,18 +22,22 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function signIn(id: string, pw: string) {
     setBusy(true);
     setError(null);
     try {
-      await login(email.trim(), password);
+      await login(id.trim(), pw);
       router.replace("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    await signIn(email, password);
   }
 
   return (
@@ -99,6 +109,25 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+
+        {/* 체험 계정 안내 — 회원가입이 없으므로 여기서 막히면 서비스를 볼 방법이 없다. */}
+        <div className="mt-6 rounded-[var(--r-md)] border border-accent/30 bg-accent/8 p-4">
+          <p className="text-xs font-semibold text-fg">계정 없이 둘러보기</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted">
+            체험용 공개 계정을 준비해 두었습니다. 아래 버튼을 누르면 바로 들어갑니다.
+            <br />
+            <span className="font-mono-spec text-fg">{DEMO_EMAIL}</span> ·{" "}
+            <span className="font-mono-spec text-fg">{DEMO_PASSWORD}</span>
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => signIn(DEMO_EMAIL, DEMO_PASSWORD)}
+            className="btn-ghost mt-3 w-full border-accent/40 text-sm text-accent hover:bg-accent/15"
+          >
+            체험 계정으로 바로 시작
+          </button>
+        </div>
       </div>
     </div>
   );

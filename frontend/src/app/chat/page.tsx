@@ -142,6 +142,11 @@ function AssistantAnswer({ content }: { content: string }) {
               <CheckCircle weight="fill" size={14} className="text-positive shrink-0" />
               <span>안정화: <span className="text-fg">저온 생성 (temp 0.3)</span></span>
             </div>
+            {/* 5겹째 — 라벨이 "5겹"인데 4줄만 있으면 세어 보는 사람에게 바로 걸린다. */}
+            <div className="flex items-center gap-1.5 text-muted">
+              <CheckCircle weight="fill" size={14} className="text-positive shrink-0" />
+              <span>외곽 경계: <span className="text-fg">fetch 허용목록 · JWT 세션</span></span>
+            </div>
           </div>
         </div>
       )}

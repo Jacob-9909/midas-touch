@@ -69,6 +69,14 @@ export default function GuideTour({
       return;
     }
     const r = el.getBoundingClientRect();
+    // 타겟이 화면 대부분을 차지하면 스포트라이트가 성립하지 않는다 — 구멍이 화면 전체가 돼
+    // 딤이 사라지고, 카드는 타겟 좌상단(= 헤드라인 위)에 얹혀 본문을 가린다. 랜딩의
+    // data-tour="hero"(전체 폭 섹션)에서 실제로 그렇게 깨졌다. 이럴 땐 rect 를 버리고
+    // "전체 딤 + 가운데 카드"(설명 전용 단계)로 떨어뜨린다.
+    if (r.width * r.height > 0.6 * window.innerWidth * window.innerHeight) {
+      setRect(null);
+      return;
+    }
     setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
   }, [idx, steps]);
 
@@ -171,7 +179,7 @@ export default function GuideTour({
 
       <div
         className={`absolute w-[320px] rounded-[var(--r-lg)] border border-accent/40 bg-[var(--ink-1)] p-4 transition-[opacity,transform] duration-200 ease-out ${
-          shown && rect ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+          shown ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
         }`}
         style={{ top: cardTop, left: cardLeft }}
       >

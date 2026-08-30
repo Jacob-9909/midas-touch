@@ -69,9 +69,11 @@ export default function HeroShowcase() {
                 <SealCheck weight="fill" size={13} /> 내 청약가점
               </p>
               <ul className="space-y-1 text-xs text-muted">
-                <li>무주택 기간 <b className="text-fg">7년</b> · +32점</li>
-                <li>부양가족 <b className="text-fg">2명</b> · +15점</li>
-                <li>청약통장 <b className="text-fg">24개월</b> · +17점</li>
+                {/* 별표1 실제 배점과 합계가 맞아야 한다 — 이 서비스는 '정확성'을 파는데
+                    히어로 예시가 틀리면 그 자리에서 신뢰를 잃는다. 32+25+17 = 74. */}
+                <li>무주택 기간 <b className="text-fg">15년</b> · +32점</li>
+                <li>부양가족 <b className="text-fg">4명</b> · +25점</li>
+                <li>청약통장 <b className="text-fg">15년</b> · +17점</li>
               </ul>
             </div>
           </div>
