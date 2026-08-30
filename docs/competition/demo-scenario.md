@@ -26,8 +26,9 @@
 >   해제 방법: `SSL_CERT_FILE`/`CURL_CA_BUNDLE`에 Fortinet CA 포함 번들 주입.
 > - **외부 키 미설정 degrade 확인 완료**: CHEONGYAK_API_KEY 없이도 안내 문구로 우아하게 저하,
 >   fraud_check는 Tavily 없이 오프라인 휴리스틱만으로 판정 완결(115점/위험 판정 실측).
-> - **Neo4j 지식그래프 미구축**: `/graph/snapshot`이 `nodes=[]` — 배포 전
->   `pipelines.knowledge_graph.builder` 실행으로 세법 그래프 적재 필요.
+> - **Neo4j 지식그래프 적재 완료**(2026-08-30 확인): 노드 7,842 / 관계 14,851
+>   (`__Entity__` 7,044, `__Node__` 798). 배포 전 재적재 불필요 — 다만 배포 서버가
+>   같은 Neo4j(오라클 VM)를 보고 있는지만 확인할 것.
 
 ### 콘텐츠
 - [x] 로그인 화면에 체험 계정 안내 + 원클릭 진입 버튼(`demo@midas.touch` / `MidasDemo2026!`).
