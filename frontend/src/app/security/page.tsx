@@ -42,8 +42,8 @@ const DEFENSES = [
   },
   {
     icon: GlobeSimple,
-    title: "⑤ SSRF · JWT · 바인딩",
-    desc: "내부망 fetch 차단(SSRF), 서명된 세션(JWT), 도구 인자 스키마 바인딩으로 외곽 경계를 고정합니다.",
+    title: "⑤ 외부 fetch 허용목록 · JWT",
+    desc: "외부 문서 fetch는 허용 도메인 목록으로 고정하고 리다이렉트 후 다시 검증합니다(SSRF·우회 차단). 세션은 서명 토큰(JWT)으로 묶고, 도구 인자는 스키마로 바인딩합니다.",
   },
 ];
 

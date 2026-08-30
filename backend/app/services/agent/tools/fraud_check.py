@@ -1,7 +1,7 @@
 """fraud_check 도구 — 사기 메시지 휴리스틱 스코어러 + 선택적 웹 검색 보강.
 
 URL 패턴(짧은링크·IP·오타 도메인), 고수익 보장 문구, 개인 SNS·오픈채팅 유도, 선입금 요구,
-정부기관 사칭에 더해 가족·지인 사칭, 대출 빙집, 가상자산 리딩방, 환급·지원금 사칭,
+정부기관 사칭에 더해 가족·지인 사칭, 대출 빙자, 가상자산 리딩방, 환급·지원금 사칭,
 알바·부업 보증금 사기를 카테고리별 점수로 합산해 위험/주의/확인필요 3단으로 판정한다.
 브랜드 공식 도메인만 감지되면 오탐 감쇠(URL 안심)를 적용하고, 발견된 카테고리에 대응하는
 결정론 행동 요령(LLM 개입 없음)을 보고서 말미에 자동 첨부한다. 오프라인 휴리스틱만으로
@@ -151,7 +151,7 @@ _FAMILY_SECRECY_TERMS = ("전화하지 마", "비밀", "말하지 마", "연락 
 _FAMILY_MONEY_ASK_TERMS = ("빌려줘", "급하게 빌려", "돈 빌려")
 _FAMILY_CONTACT_CHANGE_TERMS = ("번호 바꿨", "번호가 바뀌", "임시번호", "연결이 안 되", "전화가 안 되")
 
-# 대출 빙집 사기: 저신용·무직 등 취약 조건을 노린 뒤 즉시 승인 미끼를 제시한다.
+# 대출 빙자 사기: 저신용·무직 등 취약 조건을 노린 뒤 즉시 승인 미끼를 제시한다.
 _LOAN_TARGET_TERMS = ("저신용", "무직", "신용등급", "신용점수", "연체자", "대출 거절")
 _LOAN_INSTANT_TERMS = (
     "즉시 대출", "즉시대출", "당일대출", "당일 대출", "대출 승인", "바로 대출",
@@ -353,7 +353,7 @@ def scan_message(text: str) -> FraudReport:
             FraudSignal("가족·지인 사칭", "; ".join(family_detail), min(family_score, _FAMILY_CAP))
         )
 
-    # 7) 대출 빙집 사기 (취약 조건 타깃 + 즉시 승인 문구; 선입금 요구와 합산된다)
+    # 7) 대출 빙자 사기 (취약 조건 타깃 + 즉시 승인 문구; 선입금 요구와 합산된다)
     loan_targets = [w for w in _LOAN_TARGET_TERMS if w in text]
     loan_instants = [w for w in _LOAN_INSTANT_TERMS if w in text]
     loan_score = (LOAN_TARGET_SCORE if loan_targets else 0) + (LOAN_INSTANT_APPROVAL_SCORE if loan_instants else 0)
@@ -363,7 +363,7 @@ def scan_message(text: str) -> FraudReport:
             loan_detail.append(f"타깃 조건({', '.join(loan_targets)})")
         if loan_instants:
             loan_detail.append(f"즉시 승인 문구({', '.join(loan_instants)})")
-        signals.append(FraudSignal("대출 빙집 사기", "; ".join(loan_detail), min(loan_score, _LOAN_CAP)))
+        signals.append(FraudSignal("대출 빙자 사기", "; ".join(loan_detail), min(loan_score, _LOAN_CAP)))
 
     # 8) 가상자산 리딩방 (키워드 1건당 가산하되 상한, 입금 유도 결합 시 추가 가산)
     crypto_keywords = [w for w in _CRYPTO_KEYWORDS if w in text or w.lower() in lowered]
@@ -410,13 +410,15 @@ _ACTION_GUIDES_BY_CATEGORY: tuple[tuple[str, str], ...] = (
     (
         "가족·지인 사칭",
         (
-            "- 본인 번호로 직접 다시 걸어 확인하세요(발신번호 재다이얼)\n"
+            "- 문자에 적힌 번호로 걸지 마세요 — 원래 저장돼 있던 가족 번호로 직접 확인하세요\n"
+            "- 연결이 안 되면 다른 가족·지인의 휴대폰으로 다시 걸어 보세요"
+            "(악성앱이 깔리면 발신이 사기범에게 가로채질 수 있습니다)\n"
             "- 이체 전 반드시 중단 — 112 즉시 신고\n"
             "- 피해 후엔 곧바로 은행 지급정지(1332) 요청"
         ),
     ),
     (
-        "대출 빙집 사기",
+        "대출 빙자 사기",
         (
             "- 정식 대출은 선입금을 요구하지 않습니다\n"
             "- 금융감독원 1332 대출사기 상담"
@@ -516,7 +518,7 @@ def web_enrichment(text: str) -> str:
 @tool
 def fraud_check(message_text: str) -> str:
     """받은 문자·메신저 내용·링크(URL)가 사기성인지 휴리스틱으로 검증한다.
-    투자 권유·고수익 보장·선입금 요구·정부기관 사칭·가족·지인 사칭·대출 빙집·
+    투자 권유·고수익 보장·선입금 요구·정부기관 사칭·가족·지인 사칭·대출 빙자·
     가상자산 리딩방·환급·지원금 사칭·알바·부업 보증금 요구·수상한 링크가 의심될 때 사용하라.
     판정은 '실제 사기 여부를 단정하지 않는' 참고 정보이며, 신고 안내와 행동 요령을 함께 돌려준다.
 
