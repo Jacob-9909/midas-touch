@@ -59,7 +59,7 @@ frontend/
 | **Cheongyak** | 공고 목록(Korean map 필터) + 상세 모달에서 1순위 재판정 | Various `/api/v1/cheongyak/...` |
 | **Simulator** | 목표금액·저축액 → 도달 개월 그래프(상품 비교) | 없음(브라우저 계산) |
 | **Graph** | Build graph snapshot → visualiser → GraphRAG 질의 | `POST /api/v1/graph/build/jobs`, `GET /api/v1/graph/snapshot` |
-| **Security** | 방어 시나리오 프리셋 실행, 5겹 방어 시각화 | — |
+| **Security** | 방어 시나리오 프리셋 실행, 5겹 방어 시각화 – `/security` 페이지 | — |
 
 
 
