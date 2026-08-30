@@ -20,13 +20,17 @@ Wants=network-online.target
 Type=exec
 User=ubuntu
 WorkingDirectory=/home/ubuntu/midas-touch
-EnvironmentFile=/home/ubuntu/midas-touch/.env
+# ⚠️ EnvironmentFile 을 쓰지 않는다. systemd 는 값 뒤의 인라인 `#` 주석을 자르지 않아
+#    `AGENT_LLM_MODEL=openai/gpt-oss-120b   # 에이전트용 LLM` 이 주석까지 값으로 들어간다.
+#    앱이 부르는 load_dotenv() 는 기본이 override=False 라 그 오염된 값을 덮지도 못한다
+#    (/health 는 DB만 보므로 초록인데 챗·임베딩만 조용히 깨지는, 찾기 나쁜 형태로 터진다).
+#    uv 의 --env-file 은 dotenv 규칙으로 파싱해 주석을 제대로 잘라낸다.
 Environment=PYTHONPATH=/home/ubuntu/midas-touch
 Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
 
 # 127.0.0.1 로만 바인딩한다 — 외부 노출은 Caddy(TLS)가 전담하고,
 # 8000 을 밖에 열면 TLS 를 우회하는 평문 경로가 생긴다.
-ExecStart=/home/ubuntu/.local/bin/uv run uvicorn backend.app.main:app \
+ExecStart=/home/ubuntu/.local/bin/uv run --env-file .env uvicorn backend.app.main:app \
   --host 127.0.0.1 --port 8000 --workers 1
 
 # bge-m3 임베딩 모델을 프로세스 안에서 torch 로 로드한다(최초 기동 시 다운로드까지).
