@@ -157,110 +157,64 @@ def _announcement_ts(date_str: str | None) -> float:
         return float("-inf")
 
 
+_STATUS_ORDER = {"접수중": 0, "접수예정": 1, "일정미정": 2, "마감": 3}
+# ponytail: 한 조회의 상한. ±120일 창 실측이 APT 108건이라 5배 여유. 더 필요해지면 올린다.
+_MAX_ROWS = 500
+
+
+def _fetch_list(endpoint: str, days_back: int, days_forward: int) -> list[dict]:
+    """공고 목록 공통 경로 — 기간 조건으로 전 페이지를 모아 상태·공고일 순으로 정렬한다.
+
+    perPage=100 단일 호출은 조회 창을 넓히면 조용히 잘렸다(프론트가 쓰는 ±120일 창에서
+    matchCount 108건 중 100건만 돌아와 8건이 사라지고 "100건"이라는 틀린 수를 표시했다).
+    matchCount 를 다 채울 때까지 page 를 넘긴다.
+    """
+    today = today_kst()
+    params = {
+        "cond[RCRIT_PBLANC_DE::GTE]": (today - timedelta(days=days_back)).isoformat(),
+        "cond[RCRIT_PBLANC_DE::LTE]": (today + timedelta(days=days_forward)).isoformat(),
+        "perPage": 100,
+    }
+
+    rows: list[dict] = []
+    page = 1
+    while True:
+        data = _call(endpoint, {**params, "page": page})
+        batch = data.get("data") or []
+        rows.extend(batch)
+        if not batch or len(rows) >= int(data.get("matchCount") or 0) or len(rows) >= _MAX_ROWS:
+            break
+        page += 1
+
+    results = [_row_to_summary(r) for r in rows[:_MAX_ROWS]]
+    # 접수중 → 접수예정 → 일정미정 → 마감 순, 같은 그룹 안에서는 공고일 내림차순(최신 먼저).
+    results.sort(key=lambda r: (_STATUS_ORDER.get(r["status"], 9), -_announcement_ts(r.get("announcement_date"))))
+    return results
+
+
 def fetch_recent_apt(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     """Fetch APT 분양정보 for recent + upcoming announcements."""
-    today = today_kst()
-    start = (today - timedelta(days=days_back)).isoformat()
-    end = (today + timedelta(days=days_forward)).isoformat()
-
-    data = _call(
-        "getAPTLttotPblancDetail",
-        {
-            "cond[RCRIT_PBLANC_DE::GTE]": start,
-            "cond[RCRIT_PBLANC_DE::LTE]": end,
-            "perPage": 100,
-        },
-    )
-    rows = data.get("data", [])
-    results = [_row_to_summary(r) for r in rows]
-    # Sort: 접수중 first, then 접수예정, then 마감; 같은 상태 그룹 내에선 공고일 내림차순(최신 먼저)
-    status_order = {"접수중": 0, "접수예정": 1, "일정미정": 2, "마감": 3}
-    results.sort(key=lambda r: (status_order.get(r["status"], 9), -_announcement_ts(r.get("announcement_date"))))
-    return results
+    return _fetch_list("getAPTLttotPblancDetail", days_back, days_forward)
 
 
 def fetch_officetel(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     """Fetch 오피스텔/도시형/민간임대 분양정보."""
-    today = today_kst()
-    start = (today - timedelta(days=days_back)).isoformat()
-    end = (today + timedelta(days=days_forward)).isoformat()
-
-    data = _call(
-        "getUrbtyOfctlLttotPblancDetail",
-        {
-            "cond[RCRIT_PBLANC_DE::GTE]": start,
-            "cond[RCRIT_PBLANC_DE::LTE]": end,
-            "perPage": 100,
-        },
-    )
-    rows = data.get("data", [])
-    results = [_row_to_summary(r) for r in rows]
-    status_order = {"접수중": 0, "접수예정": 1, "일정미정": 2, "마감": 3}
-    results.sort(key=lambda r: (status_order.get(r["status"], 9), r.get("announcement_date", "")))
-    return results
+    return _fetch_list("getUrbtyOfctlLttotPblancDetail", days_back, days_forward)
 
 
 def fetch_remaining_apt(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     """Fetch APT 무순위/잔여세대 분양정보."""
-    today = today_kst()
-    start = (today - timedelta(days=days_back)).isoformat()
-    end = (today + timedelta(days=days_forward)).isoformat()
-
-    data = _call(
-        "getRemndrLttotPblancDetail",
-        {
-            "cond[RCRIT_PBLANC_DE::GTE]": start,
-            "cond[RCRIT_PBLANC_DE::LTE]": end,
-            "perPage": 100,
-        },
-    )
-    rows = data.get("data", [])
-    results = [_row_to_summary(r) for r in rows]
-    status_order = {"접수중": 0, "접수예정": 1, "일정미정": 2, "마감": 3}
-    results.sort(key=lambda r: (status_order.get(r["status"], 9), r.get("announcement_date", "")))
-    return results
+    return _fetch_list("getRemndrLttotPblancDetail", days_back, days_forward)
 
 
 def fetch_opt_supply(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     """Fetch 임의공급 분양정보."""
-    today = today_kst()
-    start = (today - timedelta(days=days_back)).isoformat()
-    end = (today + timedelta(days=days_forward)).isoformat()
-
-    data = _call(
-        "getOPTLttotPblancDetail",
-        {
-            "cond[RCRIT_PBLANC_DE::GTE]": start,
-            "cond[RCRIT_PBLANC_DE::LTE]": end,
-            "perPage": 100,
-        },
-    )
-    rows = data.get("data", [])
-    results = [_row_to_summary(r) for r in rows]
-    status_order = {"접수중": 0, "접수예정": 1, "일정미정": 2, "마감": 3}
-    results.sort(key=lambda r: (status_order.get(r["status"], 9), r.get("announcement_date", "")))
-    return results
+    return _fetch_list("getOPTLttotPblancDetail", days_back, days_forward)
 
 
 def fetch_public_rent(days_back: int = 60, days_forward: int = 60) -> list[dict]:
     """Fetch 공공지원 민간임대 분양정보."""
-    today = today_kst()
-    start = (today - timedelta(days=days_back)).isoformat()
-    end = (today + timedelta(days=days_forward)).isoformat()
-
-    data = _call(
-        "getPblPvtRentLttotPblancDetail",
-        {
-            "cond[RCRIT_PBLANC_DE::GTE]": start,
-            "cond[RCRIT_PBLANC_DE::LTE]": end,
-            "perPage": 100,
-        },
-    )
-    rows = data.get("data", [])
-    results = [_row_to_summary(r) for r in rows]
-    status_order = {"접수중": 0, "접수예정": 1, "일정미정": 2, "마감": 3}
-    results.sort(key=lambda r: (status_order.get(r["status"], 9), r.get("announcement_date", "")))
-    return results
+    return _fetch_list("getPblPvtRentLttotPblancDetail", days_back, days_forward)
 
 
 def fetch_apt_housing_types(house_manage_no: str, pblanc_no: str) -> list[dict]:
