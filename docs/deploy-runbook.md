@@ -1,5 +1,7 @@
 # 배포 런북 — 2026 금융 AI Challenge
 
+**공개 URL(심사 제출용)**: https://midas-touch-five.vercel.app
+**API**: https://midas-touch.duckdns.org
 **필수 가동 시간**: 2026-09-07 11:00 ~ 09-11 23:59 (연속 5일)
 
 **구성(2026-08-30 결정)**: 프론트는 **Vercel**, 백엔드·DB는 **오라클 VM**(2 OCPU / 12GB, Ubuntu 22.04).
@@ -31,7 +33,7 @@ VM에는 Docker가 없고 **Postgres 17·Neo4j가 systemd 네이티브 서비스
       ① 콘솔의 VCN Security List(ingress 80/443) ② VM 안의 iptables/firewalld.
       **80을 닫으면 Let's Encrypt HTTP-01 챌린지가 실패해 인증서가 안 나온다.**
 - [ ] VM에 `uv`, `caddy`, `git` 설치 (§1)
-- [ ] 레포 clone + `.env`를 VM으로 옮기고 `CORS_ALLOW_ORIGINS` 채우기
+- [x] 레포 clone + `.env` 이관 + `CORS_ALLOW_ORIGINS` 설정 (2026-08-30 완료)
       (`.env`는 git에 없으므로 별도로 안전하게 전달할 것)
 
 ---
@@ -60,7 +62,7 @@ cd midas-touch
 # 옮긴 뒤 VM 기준으로 고칠 값:
 #   POSTGRES_HOST=localhost / DATABASE_URL 의 호스트 → localhost
 #   NEO4J_URL=bolt://localhost:7687
-#   CORS_ALLOW_ORIGINS=https://<vercel-도메인>
+#   CORS_ALLOW_ORIGINS=https://midas-touch-five.vercel.app,https://midas-touch-cj0336j-gmailcoms-projects.vercel.app,http://localhost:3000
 chmod 600 .env
 
 # ── 3) 의존성 (torch 때문에 5~10분) ───────────────────────
@@ -111,6 +113,9 @@ systemctl show midas-backend -p MemoryCurrent
 
 프로젝트 설정:
 
+프로젝트는 이미 연결돼 있다(`vercel link` 완료, 프로젝트명 `midas-touch`).
+`frontend/`에서 `vercel --prod --yes` 하면 재배포된다.
+
 | 항목 | 값 |
 |---|---|
 | Root Directory | `frontend` |
@@ -124,6 +129,9 @@ NEXT_PUBLIC_API_BASE=https://midas-touch.duckdns.org
 NEXT_PUBLIC_AUTH_ENABLED=true
 ```
 
+> ⚠️ Preview 환경변수는 CLI(54.6.1)가 `--yes`를 줘도 계속 브랜치를 물어 등록에 실패한다.
+> 어차피 preview URL은 배포마다 오리진이 달라 CORS에 막히므로, **심사에는 프로덕션 도메인만** 쓴다.
+>
 > `NEXT_PUBLIC_*`은 **빌드 타임에 번들에 박힌다.** 값을 바꾸면 반드시 재배포해야 반영된다.
 > 로컬 `frontend/.env.local`은 `NEXT_PUBLIC_API_BASE=`(빈 값)로 두어 rewrites 프록시를 계속 쓴다.
 
@@ -139,7 +147,7 @@ sudo systemctl restart midas-backend
 ## 3. 살아있는지 확인 (심사 기간 중 매일 1회)
 
 ```bash
-F=https://<vercel-도메인>
+F=https://midas-touch-five.vercel.app
 A=https://midas-touch.duckdns.org
 
 curl -s -o /dev/null -w "front %{http_code}\n" "$F"
