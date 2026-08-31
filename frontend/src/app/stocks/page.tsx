@@ -537,9 +537,9 @@ export default function StocksPage() {
       />
       <div className="flex items-start justify-between gap-4">
         <PageTitle
-          eyebrow="TRADING LAB"
-          title="주식 분석"
-          subtitle="기술적 지표 스냅샷과 AI 다중 시간축 전망, 전략 백테스트로 글로벌 종목을 분석하세요."
+          eyebrow="TRADING LAB · 보조·실험"
+          title="주식 지표 & 자가 채점"
+          subtitle="기술적 지표는 매매 권유가 아닌 참고입니다. 이 화면의 요점은 예측이 아니라, AI가 자기 예측을 실현 수익률로 사후 채점하고 성적표를 공개하는 검증 루프입니다."
         />
         <button
           type="button"
@@ -549,6 +549,18 @@ export default function StocksPage() {
           <Compass size={15} weight="bold" />
           사용 가이드
         </button>
+      </div>
+
+      {/* 보조·실험 고지 — 예측 자랑이 아니라 '자기 예측을 채점·공개하는 검증 루프'가 요점.
+          매매 권유·투자 자문이 아니며, 예측 성능(edge)은 미입증임을 숨기지 않고 표기한다. */}
+      <div className="mb-6 flex items-start gap-2.5 rounded-2xl border border-accent/30 bg-accent/[0.06] px-4 py-3">
+        <ShieldCheck size={16} weight="bold" className="mt-0.5 shrink-0 text-accent" />
+        <p className="text-xs leading-relaxed text-fg/80">
+          <span className="font-semibold text-fg">보조·실험 기능</span> · 매매 권유·투자 자문 아님.
+          핵심은 예측 적중이 아니라 <span className="font-semibold text-accent">검증 루프</span>입니다 —
+          AI 예측을 실현 수익률로 사후 채점해 성적표를 공개하며, 현재 예측 성능(edge)은 아직 미입증임을
+          그대로 표기합니다. <span className="text-muted">&ldquo;예측을 파는 게 아니라, 예측을 채점하는 구조를 봅니다.&rdquo;</span>
+        </p>
       </div>
 
       {/* ── 공통 입력 ──────────────────────────────────────────────── */}

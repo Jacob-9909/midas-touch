@@ -80,8 +80,8 @@ const MENU_CORE = [
 const MENU_ENGINE = [
   {
     href: "/stocks",
-    title: "주식 분석 & 백테스트",
-    desc: "RSI/MACD/KDJ 및 4종 전략 백테스트",
+    title: "주식 지표 & 자가 채점",
+    desc: "지표 참고(매매권유 아님) + AI 예측 자가 채점 검증 루프 · 보조·실험",
     icon: ChartLineUp,
   },
   {
