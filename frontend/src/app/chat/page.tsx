@@ -109,23 +109,23 @@ function AssistantAnswer({ content }: { content: string }) {
 
       {/* ── 🛡️ 실시간 5겹 보안 검증 증명서 (Audit Verified Trace) ── */}
       {defense && (
-        <div className="mt-3.5 rounded-xl border border-line bg-[color-mix(in_srgb,var(--ink-2)_65%,transparent)] p-3.5 text-sm">
+        <div className="mt-4 rounded-xl border border-line bg-[color-mix(in_srgb,var(--ink-2)_65%,transparent)] p-4 text-sm sm:text-[15px]">
           <div className="flex items-center justify-between gap-2 border-b border-line/50 pb-2.5">
-            <div className="flex items-center gap-1.5 font-semibold text-positive text-sm">
-              <ShieldCheck weight="fill" size={17} className="text-positive shrink-0" />
+            <div className="flex items-center gap-2 font-bold text-positive text-sm sm:text-[15px]">
+              <ShieldCheck weight="fill" size={19} className="text-positive shrink-0" />
               <span>실시간 5겹 보안 검증 완료</span>
             </div>
-            <span className="rounded-full bg-positive/10 border border-positive/25 px-2 py-0.5 font-mono-spec text-[11px] font-semibold text-positive tracking-wide">
+            <span className="rounded-full bg-positive/10 border border-positive/25 px-2.5 py-0.5 font-mono-spec text-xs font-bold text-positive tracking-wide">
               AUDIT VERIFIED
             </span>
           </div>
-          <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            <div className="flex items-center gap-1.5 text-muted">
-              <CheckCircle weight="fill" size={14} className="text-positive shrink-0" />
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-[13px]">
+            <div className="flex items-center gap-2 text-muted">
+              <CheckCircle weight="fill" size={16} className="text-positive shrink-0" />
               <span>검색 도구: <strong className="font-mono-spec text-fg">{defense.tools}</strong></span>
             </div>
-            <div className="flex items-center gap-1.5 text-muted">
-              <CheckCircle weight="fill" size={14} className="text-positive shrink-0" />
+            <div className="flex items-center gap-2 text-muted">
+              <CheckCircle weight="fill" size={16} className="text-positive shrink-0" />
               <span>
                 {defense.hasDeterministicMath ? (
                   <span>수치 계산: <strong className="text-fg">결정론 코드 (LLM 0%)</strong></span>
@@ -134,18 +134,18 @@ function AssistantAnswer({ content }: { content: string }) {
                 )}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-muted">
-              <CheckCircle weight="fill" size={14} className="text-positive shrink-0" />
-              <span>근거 접지: <span className="text-fg">{sources.length > 0 ? `${sources.length}건 인용` : "Grounding 지시 유지"}</span></span>
+            <div className="flex items-center gap-2 text-muted">
+              <CheckCircle weight="fill" size={16} className="text-positive shrink-0" />
+              <span>근거 접지: <span className="text-fg font-medium">{sources.length > 0 ? `${sources.length}건 인용` : "Grounding 지시 유지"}</span></span>
             </div>
-            <div className="flex items-center gap-1.5 text-muted">
-              <CheckCircle weight="fill" size={14} className="text-positive shrink-0" />
-              <span>안정화: <span className="text-fg">저온 생성 (temp 0.3)</span></span>
+            <div className="flex items-center gap-2 text-muted">
+              <CheckCircle weight="fill" size={16} className="text-positive shrink-0" />
+              <span>안정화: <span className="text-fg font-medium">저온 생성 (temp 0.3)</span></span>
             </div>
             {/* 5겹째 — 라벨이 "5겹"인데 4줄만 있으면 세어 보는 사람에게 바로 걸린다. */}
-            <div className="flex items-center gap-1.5 text-muted">
-              <CheckCircle weight="fill" size={14} className="text-positive shrink-0" />
-              <span>외곽 경계: <span className="text-fg">fetch 허용목록 · JWT 세션</span></span>
+            <div className="flex items-center gap-2 text-muted">
+              <CheckCircle weight="fill" size={16} className="text-positive shrink-0" />
+              <span>외곽 경계: <span className="text-fg font-medium">fetch 허용목록 · JWT 세션</span></span>
             </div>
           </div>
         </div>
@@ -153,14 +153,14 @@ function AssistantAnswer({ content }: { content: string }) {
 
       {/* ── 출처 칩 ── */}
       {sources.length > 0 && (
-        <div className="mt-3.5 border-t border-line/60 pt-2.5">
-          <p className="mb-1.5 text-xs font-semibold text-muted">인용 출처 ({sources.length}건)</p>
-          <ul role="list" aria-label="참고 출처" className="flex flex-wrap gap-1.5">
+        <div className="mt-4 border-t border-line/60 pt-3">
+          <p className="mb-2 text-xs sm:text-sm font-bold text-muted">인용 출처 ({sources.length}건)</p>
+          <ul role="list" aria-label="참고 출처" className="flex flex-wrap gap-2">
             {sources.map((s) => (
               <li
                 key={s.index}
                 title={`${s.source} (${s.passageId})`}
-                className="max-w-full truncate rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-xs text-fg/90"
+                className="max-w-full truncate rounded-full border border-accent/25 bg-accent/10 px-3.5 py-1 text-xs sm:text-[13px] text-fg/90 font-medium"
               >
                 [{s.index}] {s.source} ({s.passageId})
               </li>
@@ -170,23 +170,23 @@ function AssistantAnswer({ content }: { content: string }) {
       )}
 
       {/* ── 액션 툴바: 읽어주기 + 답변 복사 ── */}
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3.5 flex items-center gap-2">
         <button
           onClick={toggleSpeak}
           aria-label={speaking ? "읽기 정지" : "답변 읽어주기"}
           aria-pressed={speaking}
-          className={`btn-ghost gap-1.5 rounded-full px-3 py-1 text-xs ${
-            speaking ? "border-accent/40 bg-accent/15 text-accent" : ""
+          className={`btn-ghost gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-[13px] ${
+            speaking ? "border-accent/40 bg-accent/15 text-accent font-semibold" : ""
           }`}
         >
           {speaking ? (
             <>
-              <Stop weight="fill" size={13} />
+              <Stop weight="fill" size={14} />
               정지
             </>
           ) : (
             <>
-              <SpeakerHigh weight="fill" size={13} />
+              <SpeakerHigh weight="fill" size={14} />
               읽어주기
             </>
           )}
@@ -194,17 +194,17 @@ function AssistantAnswer({ content }: { content: string }) {
         <button
           onClick={copyAnswer}
           aria-label="답변 복사"
-          className="btn-ghost gap-1.5 rounded-full px-3 py-1 text-xs text-muted hover:text-fg"
+          className="btn-ghost gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-[13px] text-muted hover:text-fg"
         >
           {copied ? (
             <>
-              <Check weight="bold" size={13} className="text-positive" />
-              복사됨
+              <Check size={14} className="text-positive" weight="bold" />
+              <span className="text-positive font-semibold">복사됨</span>
             </>
           ) : (
             <>
-              <Copy size={13} />
-              답변 복사
+              <Copy size={14} />
+              <span>복사</span>
             </>
           )}
         </button>
@@ -458,10 +458,10 @@ function ChatClient() {
   return (
     /* 앱형 레이아웃 — NavBar(64px)를 뺀 나머지 뷰포트를 채운다. 페이지 스크롤 없음,
        스크롤은 메시지 영역과 사이드바 목록이 각자 소유한다. */
-    <div className="mx-auto flex h-[calc(100dvh-5.25rem)] max-w-[1200px] flex-col px-3 sm:px-6 pb-3 sm:pb-4 pt-2 sm:pt-3">
-      <header className="mb-3 flex items-center justify-between gap-3">
+    <div className="mx-auto flex h-[calc(100dvh-5.75rem)] max-w-[1200px] flex-col px-3 sm:px-6 pb-3 sm:pb-4 pt-4 sm:pt-6">
+      <header className="mb-3.5 flex items-center justify-between gap-3">
         <div className="flex items-baseline gap-2.5 min-w-0">
-          <h1 className="font-display text-lg sm:text-xl text-fg shrink-0">에이전트 챗봇</h1>
+          <h1 className="font-display text-lg sm:text-xl text-fg shrink-0 font-bold">에이전트 챗봇</h1>
           <span className="eyebrow hidden sm:inline-flex">AI Advisor</span>
           <span className="hidden font-mono-spec text-[10px] uppercase tracking-widest text-muted md:inline truncate">
             MidasAdviser · 멀티턴 · 실시간 스트리밍
@@ -574,20 +574,20 @@ function ChatClient() {
                           key={idx}
                           disabled={busy}
                           onClick={() => send(item.prompt)}
-                          className="lift p-4 rounded-[var(--r-md)] border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] text-left transition group hover:border-accent/40 active:scale-[0.98]"
+                          className="lift p-4 sm:p-4.5 rounded-[var(--r-md)] border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] text-left transition group hover:border-accent/40 active:scale-[0.98]"
                         >
                           <div className="flex items-center justify-between gap-2 mb-1.5">
-                            <span className="text-xs font-semibold text-fg group-hover:text-accent transition-colors">
+                            <span className="text-sm font-bold text-fg group-hover:text-accent transition-colors">
                               {item.title}
                             </span>
-                            <span className={`shrink-0 rounded-full border px-2 py-0.5 font-mono-spec text-[9px] font-semibold ${item.tone}`}>
+                            <span className={`shrink-0 rounded-full border px-2 py-0.5 font-mono-spec text-[10px] font-bold ${item.tone}`}>
                               {item.badge}
                             </span>
                           </div>
-                          <div className="text-[11px] text-muted line-clamp-2 leading-relaxed">
+                          <div className="text-xs sm:text-[13px] text-muted line-clamp-2 leading-relaxed">
                             &ldquo;{item.prompt}&rdquo;
                           </div>
-                          <div className="mt-2 text-[10px] font-semibold text-accent opacity-80 group-hover:opacity-100 flex items-center gap-1">
+                          <div className="mt-2.5 text-xs font-bold text-accent opacity-85 group-hover:opacity-100 flex items-center gap-1">
                             클릭하여 바로 질문하기 →
                           </div>
                         </button>
@@ -602,9 +602,9 @@ function ChatClient() {
                   >
                     <div
                       data-chat-answer
-                      className={`max-w-[80%] rounded-[var(--r-lg)] px-4 py-3 text-sm leading-relaxed ${
+                      className={`max-w-[85%] sm:max-w-[80%] rounded-[var(--r-lg)] px-5 py-3.5 text-base sm:text-[16.5px] leading-relaxed ${
                         m.role === "user"
-                          ? "whitespace-pre-wrap rounded-br-md bg-gradient-to-br from-[var(--accent)] to-[var(--accent-soft)] text-white shadow-[0_6px_20px_-8px_var(--glow)]"
+                          ? "whitespace-pre-wrap rounded-br-md bg-gradient-to-br from-[var(--accent)] to-[var(--accent-soft)] text-white shadow-[0_6px_20px_-8px_var(--glow)] font-medium"
                           : "rounded-bl-md border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] text-fg backdrop-blur-md [box-shadow:var(--shadow-soft)]"
                       }`}
                     >
@@ -613,7 +613,7 @@ function ChatClient() {
                         m.content ? (
                           <AssistantAnswer content={m.content} />
                         ) : busy ? (
-                          <span className="font-mono-spec inline-flex items-center gap-2 text-[11px] text-muted">
+                          <span className="font-mono-spec inline-flex items-center gap-2 text-xs sm:text-[13px] text-muted">
                             {status && (
                               <span>
                                 {"⟳ "}

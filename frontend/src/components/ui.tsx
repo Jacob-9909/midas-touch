@@ -52,7 +52,7 @@ export function PageTitle({
 
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mb-3 font-mono-spec text-xs font-semibold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
+    <h2 className="mb-3.5 font-mono-spec text-xs sm:text-[13px] font-bold uppercase tracking-[0.18em] text-accent flex items-center gap-2">
       <span className="h-2 w-2 rounded-full bg-accent" />
       {children}
     </h2>

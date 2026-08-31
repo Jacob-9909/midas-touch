@@ -19,46 +19,6 @@ const TRUST_BADGES = [
   { icon: SealCheck, label: "예측 자가 채점", tone: "text-positive" },
 ] as const;
 
-/** 헤드라인 여정 — 히어로의 '검증 가능한 AI 금융 비서' 약속을 4대 핵심 증거로 잇는다. */
-const JOURNEY = [
-  {
-    icon: ShieldWarning,
-    href: `/chat?prefill=${encodeURIComponent(
-      "이 문자 사기야? 엄마 나 사고났어. 경찰서에 있는데 지금 당장 300만원 이체해줘. 전화하지 마세요.",
-    )}`,
-    step: "STEP 01",
-    title: "사기 문자 검증",
-    body: "의심 문자를 붙여넣으면 판정 근거와 나에게 맞는 대응 요령·공식 신고 번호까지 1초 만에 제시합니다.",
-    tag: "소비자 보호",
-  },
-  {
-    icon: Scroll,
-    href: `/chat?prefill=${encodeURIComponent(
-      "미국 주식 팔아서 2,000만원 벌었는데 양도소득세 얼마나 내야 해?",
-    )}`,
-    step: "STEP 02",
-    title: "세법·근거 계산",
-    body: "세금은 LLM이 아니라 코드가 법령 상수로 계산하고, 답변마다 조문 원문 출처를 증명서로 붙입니다.",
-    tag: "환각 제로",
-  },
-  {
-    icon: Coins,
-    href: "/cheongyak",
-    step: "STEP 03",
-    title: "청약·가점 매칭",
-    body: "실제 공고의 당첨가점과 내 청약가점(84점 기준)을 나란히 보고, 전국 지도에서 실시간 공고를 찾습니다.",
-    tag: "포용 금융",
-  },
-  {
-    icon: Calculator,
-    href: "/simulator",
-    step: "STEP 04",
-    title: "자금마련 시뮬레이터",
-    body: "청년도약계좌 vs 일반적금 금리를 비교해 내 목표자금(계약금 등)까지 몇 개월 당겨지는지 계산합니다.",
-    tag: "자금 설계",
-  },
-] as const;
-
 export default function HomePage() {
   return (
     <>
@@ -69,16 +29,17 @@ export default function HomePage() {
         data-tour="hero"
         className="aurora surface-raised relative overflow-hidden border-b border-line"
       >
-        <div className="mx-auto grid max-w-[1200px] items-center gap-14 px-6 py-[88px] sm:py-[104px] lg:grid-cols-[1.15fr_1fr]">
+        <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-6 py-[80px] sm:py-[96px] lg:grid-cols-[1.25fr_1fr]">
           <div>
             <div className="flex items-center justify-between gap-4">
               <span className="eyebrow">AI 금융 보안 비서 · 금융소비자 보호</span>
               <LandingGuide />
             </div>
-            <h1 className="font-display mt-10 max-w-2xl text-[clamp(2.25rem,5vw,3.75rem)] break-keep">
-              피싱·환각·틀린 세법 답변
-              <br />
-              한 번에 잡는 <span className="grad-text">AI 보안 비서</span>
+            <h1 className="font-display mt-7 text-[clamp(1.45rem,2.9vw,2.65rem)] font-extrabold tracking-tight leading-[1.25] text-fg">
+              <span className="block whitespace-nowrap">피싱·환각·틀린 세법 답변</span>
+              <span className="block whitespace-nowrap mt-1 sm:mt-1.5">
+                한 번에 잡는 <span className="grad-text">AI 보안 비서</span>
+              </span>
             </h1>
             <p className="mt-7 max-w-2xl text-[15px] sm:text-base leading-[1.65] text-muted break-keep">
               사기 문자를 붙여넣으면 판정 근거와 나에게 맞는 행동 요령을 알려주고, 세금은
@@ -136,49 +97,224 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 카탈로그 섹션 ────────────────────────────────────────── */}
-      <section className="mx-auto max-w-[1200px] px-6 py-[88px]" data-tour="journey">
+      {/* ── 4대 금융 안전망 & 심사위원 퀵 검증 통합 섹션 ────────── */}
+      <section className="mx-auto max-w-[1200px] px-6 py-16 sm:py-20" data-tour="journey">
         <ProfileNudge className="mb-12" data-tour="nudge" />
 
-        <div className="flex items-baseline justify-between gap-4">
-          <h2 className="font-display text-[clamp(1.75rem,3vw,2.25rem)] text-fg break-keep">
-            단 한 번의 클릭으로 — 4대 금융 안전망을 검증합니다
-          </h2>
-          <span className="hidden sm:inline-block font-mono-spec text-xs text-accent font-semibold">
-            One-Click Proofs
-          </span>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-line/60 pb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="eyebrow">CORE CAPABILITIES · 심사위원 퀵 평가</span>
+              <span className="font-mono-spec text-[11px] font-bold text-accent px-2 py-0.5 rounded-full border border-accent/30 bg-accent/10">
+                3-MIN TOUR
+              </span>
+            </div>
+            <h2 className="font-display mt-2 text-[clamp(1.6rem,2.8vw,2.25rem)] font-bold text-fg break-keep">
+              단 한 번의 클릭으로 — 4대 금융 안전망을 검증합니다
+            </h2>
+            <p className="mt-1 text-xs sm:text-sm text-muted break-keep">
+              카드를 클릭하면 실제 의심 사례와 세법 질의가 챗봇에 즉시 입력되거나 해당 검증 페이지로 바로 연결됩니다.
+            </p>
+          </div>
+          <div className="shrink-0 flex items-center gap-2">
+            <Link
+              href="/security"
+              className="btn-ghost text-xs font-semibold px-3 py-1.5"
+            >
+              5겹 보안 체험
+            </Link>
+            <Link
+              href="/chat"
+              className="btn-accent text-xs font-semibold px-3 py-1.5"
+            >
+              챗봇 열기 →
+            </Link>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {JOURNEY.map((s) => (
-            <TiltCard key={s.title} max={4} className="h-full">
-              <Link
-                href={s.href}
-                className="lift group flex h-full flex-col rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-5 transition hover:border-accent/40"
-              >
+          <TiltCard max={4} className="h-full">
+            <Link
+              href={`/chat?prefill=${encodeURIComponent(
+                "이 문자 사기야? 엄마 나 폰 액정 깨져서 수리 맡겼어. 지금 급하게 결제할 게 있는데 이 링크로 들어가서 300만원만 보내줘: http://bit.ly/urgent-pay88. 전화는 안 돼.",
+              )}`}
+              className="lift group flex h-full flex-col justify-between rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-5 transition hover:border-accent/40"
+            >
+              <div>
                 <div className="flex items-center justify-between border-b border-line/60 pb-3">
                   <span className="font-mono-spec text-[11px] font-semibold tracking-widest text-gilt">
-                    {s.step}
+                    STEP 01
                   </span>
-                  <span className="rounded-full border border-line bg-surface/50 px-2.5 py-0.5 font-mono-spec text-[10px] font-semibold text-muted">
-                    {s.tag}
+                  <span className="rounded-full border border-gilt/40 bg-gilt/10 px-2.5 py-0.5 font-mono-spec text-[10px] font-bold text-gilt">
+                    피싱 방어
                   </span>
                 </div>
                 <div className="mt-4 flex items-center gap-2">
-                  <s.icon size={22} weight="duotone" className="text-accent shrink-0" />
+                  <ShieldWarning size={22} weight="duotone" className="text-gilt shrink-0" />
                   <h3 className="font-display text-lg font-semibold text-fg group-hover:text-accent transition-colors">
-                    {s.title}
+                    사기 문자 검증
                   </h3>
                 </div>
                 <p className="mt-2.5 text-[13px] sm:text-sm leading-relaxed text-muted break-keep">
-                  {s.body}
+                  의심 문자를 붙여넣으면 판정 근거와 연령별 대응 요령·공식 신고 번호까지 1초 만에 제시합니다.
                 </p>
-                <div className="mt-auto pt-4 flex items-center gap-1 text-xs sm:text-sm font-semibold text-accent">
-                  체험하기 →
+                <div className="mt-3 rounded-md border border-line/50 bg-[var(--ink-2)]/60 p-2 text-[11px] leading-relaxed text-muted/90">
+                  <span className="font-semibold text-fg/80 block mb-0.5">🔍 검증 포인트:</span>
+                  10카테고리 스코어링 + 공식 도메인 감쇠 + 112/1332 안내 + 🛡 방어 증명 부착
                 </div>
-              </Link>
-            </TiltCard>
-          ))}
+              </div>
+              <div className="mt-4 pt-3 border-t border-line/50 flex items-center justify-between text-xs font-bold text-accent">
+                <span>즉시 검증하기</span>
+                <span>→</span>
+              </div>
+            </Link>
+          </TiltCard>
+
+          <TiltCard max={4} className="h-full">
+            <Link
+              href={`/chat?prefill=${encodeURIComponent(
+                "미국 주식(엔비디아) 팔아서 올해 2,000만원 벌었는데 양도소득세 얼마 내야 해? 기본공제랑 세금 계산식 알려줘.",
+              )}`}
+              className="lift group flex h-full flex-col justify-between rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-5 transition hover:border-accent/40"
+            >
+              <div>
+                <div className="flex items-center justify-between border-b border-line/60 pb-3">
+                  <span className="font-mono-spec text-[11px] font-semibold tracking-widest text-accent">
+                    STEP 02
+                  </span>
+                  <span className="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 font-mono-spec text-[10px] font-bold text-accent">
+                    환각 제로
+                  </span>
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <Scroll size={22} weight="duotone" className="text-accent shrink-0" />
+                  <h3 className="font-display text-lg font-semibold text-fg group-hover:text-accent transition-colors">
+                    세법·근거 계산
+                  </h3>
+                </div>
+                <p className="mt-2.5 text-[13px] sm:text-sm leading-relaxed text-muted break-keep">
+                  세금은 LLM이 아니라 코드가 법령 상수로 계산하고, 답변마다 조문 원문 출처를 증명서로 붙입니다.
+                </p>
+                <div className="mt-3 rounded-md border border-line/50 bg-[var(--ink-2)]/60 p-2 text-[11px] leading-relaxed text-muted/90">
+                  <span className="font-semibold text-fg/80 block mb-0.5">🔍 검증 포인트:</span>
+                  결정론 250만 공제/22% 산출 + 국세청 해설서 RAG 조문 인용
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-line/50 flex items-center justify-between text-xs font-bold text-accent">
+                <span>즉시 계산하기</span>
+                <span>→</span>
+              </div>
+            </Link>
+          </TiltCard>
+
+          <TiltCard max={4} className="h-full">
+            <Link
+              href="/cheongyak"
+              className="lift group flex h-full flex-col justify-between rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-5 transition hover:border-accent/40"
+            >
+              <div>
+                <div className="flex items-center justify-between border-b border-line/60 pb-3">
+                  <span className="font-mono-spec text-[11px] font-semibold tracking-widest text-positive">
+                    STEP 03
+                  </span>
+                  <span className="rounded-full border border-positive/40 bg-positive/10 px-2.5 py-0.5 font-mono-spec text-[10px] font-bold text-positive">
+                    포용 금융
+                  </span>
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <Coins size={22} weight="duotone" className="text-positive shrink-0" />
+                  <h3 className="font-display text-lg font-semibold text-fg group-hover:text-accent transition-colors">
+                    청약·가점 매칭
+                  </h3>
+                </div>
+                <p className="mt-2.5 text-[13px] sm:text-sm leading-relaxed text-muted break-keep">
+                  실제 공고의 당첨가점과 내 청약가점(84점 기준)을 나란히 보고, 전국 지도에서 실시간 공고를 찾습니다.
+                </p>
+                <div className="mt-3 rounded-md border border-line/50 bg-[var(--ink-2)]/60 p-2 text-[11px] leading-relaxed text-muted/90">
+                  <span className="font-semibold text-fg/80 block mb-0.5">🔍 검증 포인트:</span>
+                  공공데이터 API 실공고 + 가점표 3요소 자동 판정 & 지도 필터
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-line/50 flex items-center justify-between text-xs font-bold text-accent">
+                <span>공고 조회하기</span>
+                <span>→</span>
+              </div>
+            </Link>
+          </TiltCard>
+
+          <TiltCard max={4} className="h-full">
+            <Link
+              href="/simulator"
+              className="lift group flex h-full flex-col justify-between rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-5 transition hover:border-accent/40"
+            >
+              <div>
+                <div className="flex items-center justify-between border-b border-line/60 pb-3">
+                  <span className="font-mono-spec text-[11px] font-semibold tracking-widest text-cyan-400">
+                    STEP 04
+                  </span>
+                  <span className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-0.5 font-mono-spec text-[10px] font-bold text-cyan-400">
+                    자금 설계
+                  </span>
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <Calculator size={22} weight="duotone" className="text-cyan-400 shrink-0" />
+                  <h3 className="font-display text-lg font-semibold text-fg group-hover:text-accent transition-colors">
+                    자금마련 시뮬레이터
+                  </h3>
+                </div>
+                <p className="mt-2.5 text-[13px] sm:text-sm leading-relaxed text-muted break-keep">
+                  청년도약계좌 vs 일반적금 금리를 비교해 내 목표자금까지 몇 개월 당겨지는지 브라우저에서 계산합니다.
+                </p>
+                <div className="mt-3 rounded-md border border-line/50 bg-[var(--ink-2)]/60 p-2 text-[11px] leading-relaxed text-muted/90">
+                  <span className="font-semibold text-fg/80 block mb-0.5">🔍 검증 포인트:</span>
+                  복리 이자 시각화 + 브라우저 로컬 연산(자산 데이터 미전송)
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-line/50 flex items-center justify-between text-xs font-bold text-accent">
+                <span>시뮬레이션 하기</span>
+                <span>→</span>
+              </div>
+            </Link>
+          </TiltCard>
+        </div>
+      </section>
+
+      {/* ── 차별화 기술 해자 요약 섹션 (Why Midas Touch?) ────────── */}
+      <section className="border-t border-line bg-[color-mix(in_srgb,var(--ink-1)_60%,transparent)] py-16 sm:py-20">
+        <div className="mx-auto max-w-[1200px] px-6">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="eyebrow">TRUST & ARCHITECTURE</span>
+            <h2 className="font-display mt-2 text-2xl sm:text-3xl font-bold text-fg break-keep">
+              일반 금융 AI 챗봇과 <span className="grad-text">무엇이 다른가요?</span>
+            </h2>
+            <p className="mt-2 text-xs sm:text-sm text-muted break-keep">
+              Midas Touch는 확률적 텍스트 생성에 의존하지 않고, 코드가 보증하는 신뢰 기술을 사용합니다.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-6">
+              <div className="font-mono-spec text-xs font-bold text-gilt">01. DETERMINISTIC</div>
+              <h3 className="font-display mt-2 text-lg font-bold text-fg">환각 없는 결정론 계산 엔진</h3>
+              <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed break-keep">
+                세율과 공제액 계산을 LLM에게 맡기지 않고 순수 Python/TS 코드로 산출하여 숫자 환각을 100% 원천 차단합니다.
+              </p>
+            </div>
+            <div className="rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-6">
+              <div className="font-mono-spec text-xs font-bold text-accent">02. 5-LAYER DEFENSE</div>
+              <h3 className="font-display mt-2 text-lg font-bold text-fg">모든 답변의 🛡 방어 증명</h3>
+              <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed break-keep">
+                도구 화이트리스트, 저온 생성, 국세청 조문 RAG 출처, 외부 경계 검증 상태를 매 답변 말미에 코드로 자동 부착합니다.
+              </p>
+            </div>
+            <div className="rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-6">
+              <div className="font-mono-spec text-xs font-bold text-positive">03. PRIVACY BY DESIGN</div>
+              <h3 className="font-display mt-2 text-lg font-bold text-fg">민감 금융 데이터 로컬 격리</h3>
+              <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed break-keep">
+                청약 가점과 개인 자산 시뮬레이션 데이터를 서버로 전송하지 않고 브라우저 LocalStorage에서만 독립 처리합니다.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
     </>
