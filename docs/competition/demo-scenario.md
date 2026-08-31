@@ -139,14 +139,16 @@
 ## 6. 장애 대응 플레이북 (심사 기간 9/7~9/11)
 
 ```bash
-# 헬스체크 (5분 주기 cron + 이상 시 알림)
-curl -fsS https://<domain>/api/v1/health || alert
+# 헬스체크 — 프론트·API·DB 의존 엔드포인트를 한 번에
+./vm.sh health
 
-# 재시작 절차
-cd ~/midas-touch && git pull && ./start.sh   # 또는 scripts/oracle_macro.sh 환경 확인
+# 재배포 / 재기동 (오라클 VM systemd)
+./vm.sh deploy      # git pull → uv sync → 재기동 → 헬스 대기
+./vm.sh restart     # 코드 변경 없이 재기동
 
 # 로그
-logs/ 디렉터리 + docker compose logs backend --tail 200
+./vm.sh logs -f
+./vm.sh errors      # 최근 24시간 에러만
 ```
 
 - **LLM 지연/실패**: NIM 키 로테이션 동작 확인, 키 잔량 급감 시 백업 키로 교체

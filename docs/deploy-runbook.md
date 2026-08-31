@@ -20,8 +20,9 @@ VM에는 Docker가 없고 **Postgres 17·Neo4j가 systemd 네이티브 서비스
   못하고(mixed content 차단), Let's Encrypt는 IP에 인증서를 발급하지 않는다.
 - 노트북 상주(`caffeinate`)·ngrok 경고 페이지·터널 끊김이 이 구성에서 전부 사라진다.
 
-> **이전 구성(로컬 맥 + ngrok)**은 `expose.sh` / `keepalive.sh`로 그대로 남아 있다.
-> VM 이전이 심사 전에 안 끝나면 §6 폴백으로 되돌아갈 수 있다.
+> **이전 구성(로컬 맥 + ngrok)의 `expose.sh`·`keepalive.sh`는 2026-08-31에 지웠다.**
+> 노트북이 아무것도 호스팅하지 않게 되면서 전제가 사라졌고, 재기동은 systemd 의
+> `Restart=always` 가 맡는다. 운영은 `./vm.sh` 하나로 한다.
 
 ---
 
@@ -109,6 +110,19 @@ systemctl show midas-backend -p MemoryCurrent
 > echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 > ```
 
+### 이후 재배포 (코드가 바뀌었을 때)
+
+위 §1은 최초 1회다. 그 다음부터는 맥에서 한 줄이다.
+
+```bash
+./vm.sh deploy     # git pull --ff-only → uv sync → 재기동 → 헬스 초록 될 때까지 대기
+```
+
+재기동하면 bge-m3 를 다시 로드하느라 수십 초 응답이 없다. `vm.sh` 가 `database: healthy`
+가 뜰 때까지 기다렸다가 결과를 보여주므로, **바로 curl 해서 실패로 오해하지 말 것.**
+
+---
+
 ## 2. 프론트 띄우기 (Vercel)
 
 프로젝트 설정:
@@ -139,7 +153,7 @@ NEXT_PUBLIC_AUTH_ENABLED=true
 이걸 빼먹으면 화면은 뜨는데 모든 API가 CORS로 막혀 빈 화면처럼 보인다.
 
 ```bash
-sudo systemctl restart midas-backend
+./vm.sh restart    # 맥에서. (VM 안이면 sudo systemctl restart midas-backend)
 ```
 
 ---
@@ -147,12 +161,9 @@ sudo systemctl restart midas-backend
 ## 3. 살아있는지 확인 (심사 기간 중 매일 1회)
 
 ```bash
-F=https://midas-touch-five.vercel.app
-A=https://midas-touch.duckdns.org
-
-curl -s -o /dev/null -w "front %{http_code}\n" "$F"
-curl -s "$A/health"
-curl -s "$A/api/v1/cheongyak/list/apt" | head -c 120   # 외부 API까지 살았는지
+./vm.sh health     # 프론트 + /health + DB 의존 엔드포인트를 한 번에
+./vm.sh status     # 위에 더해 VM 안(서비스 4개·메모리·배포된 커밋)까지
+./vm.sh errors     # 최근 24시간 에러만
 ```
 
 **프론트 200만 보고 안심하면 안 된다.** DB가 죽어도 앱은 200을 반환하며 graceful degrade 하기
@@ -184,11 +195,11 @@ curl -s "$A/api/v1/cheongyak/list/apt" | head -c 120   # 외부 API까지 살았
 - [ ] `/health`가 `database: healthy`인지
 - [ ] 새 시크릿창으로 처음부터 밟아보기 (§6)
 - [ ] 체험 계정으로 실제 로그인되는지
-- [ ] `free -h` 로 메모리 여유 확인
+- [ ] `./vm.sh status` 로 서비스 4개·메모리 여유 확인
 
 **9/7 ~ 9/11 매일**
-- [ ] §3 헬스체크 1회
-- [ ] `sudo journalctl -u midas-backend --since '24 hours ago' | grep -i error | head`
+- [ ] `./vm.sh health` 1회
+- [ ] `./vm.sh errors` (최근 24시간 에러)
 
 ---
 
@@ -207,14 +218,6 @@ curl -s "$A/api/v1/cheongyak/list/apt" | head -c 120   # 외부 API까지 살았
    기본 가점 **20/84**, "만 30세 미만이면서 미혼" 체크 시 **12/84** + 무주택칸 비활성
 6. 공고 선택 → 상세 → 당첨가점 표에 "내 점수 대비" 열 → "이 청약으로 자금계획 세우기"
 7. `/simulator` — 목표 4,000만/자산 2,000만/월 60만/3.5% vs 6.0%에서 **30개월 vs 27개월, 3개월 단축**
-
-**폴백(VM 이전이 안 끝났을 때)**: 기존 ngrok 경로가 그대로 산다.
-```bash
-./expose.sh
-caffeinate -dimsu env PUBLIC_URL=https://gathering-disliking-hypnoses.ngrok-free.dev ./keepalive.sh
-```
-단 무료 티어의 "You are about to visit…" 인터스티셜을 심사자가 먼저 보게 된다 —
-금융 서비스 심사에서 특히 불리하므로 폴백으로만 쓴다.
 
 ---
 

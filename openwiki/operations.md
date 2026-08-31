@@ -39,10 +39,11 @@ uv run alembic upgrade head   # apply schema + checkpoint tables
 | Script | Purpose | Backend | Frontend |
 |--------|---------|---------|----------|
 | `./dev.sh` | Local development | `uvicorn … --reload` (:8000) | `next dev` HMR (:3000) |
-| `./start.sh` | Production‑style run | `uvicorn … --workers N` (no reload) | `next build` → `next start` |
-| `./expose.sh` | Public tunnel | runs `start.sh` … | … + `ngrok http 3000` |
+| `./start.sh` | Production build, run locally | `uvicorn … --workers N` (no reload) | `next build` → `next start` |
 
-All three fix the project root, trap `Ctrl+C` to tear down the whole process group, and accept a `backend` / `frontend` argument to run just one side.
+Both fix the project root, trap `Ctrl+C` to tear down the whole process group, and accept a `backend` / `frontend` argument to run just one side. Both call `db-tunnel.sh` on start — the databases live on the Oracle VM and their ports are firewalled, so local dev reaches them over an SSH tunnel.
+
+`start.sh` is **not** how production runs. Production is the Oracle VM (systemd `midas-backend` behind Caddy) plus Vercel for the frontend; `start.sh` exists to catch what only breaks in a production build (build errors, SSR differences) before pushing to Vercel. Operate the deployed backend with `./vm.sh` (see below).
 
 ```bash
 ./dev.sh                 # backend + frontend
@@ -54,9 +55,21 @@ SKIP_BUILD=1 ./start.sh  # reuse existing frontend .next build
 
 > ⚠️ **Keep `BACKEND_WORKERS=1`.** The Job Manager keeps per‑worker in‑memory state, so job progress is only consistent with a single worker. Multi‑turn chat is unaffected (checkpoints are shared in Postgres).
 
-### Exposing externally
+### Operating the deployed backend
 
-`expose.sh` waits for `:3000` to return `200`, then starts an ngrok tunnel and prints the public URL (ngrok dashboard at `http://localhost:4040`). **Use production build behind the tunnel, never `dev.sh`** — dev's HMR WebSocket dies on free ngrok and hydration never completes.
+`vm.sh` drives the Oracle VM over SSH (host alias `oracle_vm`, override with `VM_HOST`).
+
+```bash
+./vm.sh health     # frontend + /health + a DB-backed endpoint
+./vm.sh status     # the above plus services, memory, deployed commit
+./vm.sh deploy     # git pull --ff-only → uv sync → restart → wait for healthy
+./vm.sh logs -f    # follow backend logs
+./vm.sh errors     # errors from the last 24h
+```
+
+`health` deliberately hits a DB-backed endpoint, not just `/health`: the app degrades gracefully, so it keeps returning `200` with empty data when the database is gone.
+
+> The old ngrok launchers (`expose.sh`, `keepalive.sh`) were deleted on 2026-08-31. They assumed the laptop hosted the stack; it no longer hosts anything, and systemd's `Restart=always` covers restarts.
 
 ---
 
