@@ -8,12 +8,17 @@ from __future__ import annotations
 
 from ..state import AgentState
 from ..tools import fraud_check
+from ..tools.fraud_check import classify_persona
 from ._common import latest_user_text
 
 
 def fraud_check_node(state: AgentState) -> dict:
     try:
-        result = fraud_check.invoke({"message_text": latest_user_text(state)})
+        # 프로필(연령대)을 결정론 분류해 넘긴다 → 같은 문자라도 소비자 특성별 맞춤 행동요령.
+        persona = classify_persona(state.get("profile_summary"))
+        result = fraud_check.invoke(
+            {"message_text": latest_user_text(state), "persona": persona}
+        )
         return {"tool_context": [f"[fraud_check 결과]\n{result}"]}
     except Exception as exc:
         return {"tool_context": [f"[fraud_check 검증 실패] {exc}"]}

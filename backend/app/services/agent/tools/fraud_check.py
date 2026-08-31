@@ -16,6 +16,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass, field
+from typing import Literal
 from urllib.parse import urlparse
 
 from langchain_core.tools import tool
@@ -465,7 +466,67 @@ def _action_guides(report: FraudReport) -> list[str]:
     return [guide for category, guide in _ACTION_GUIDES_BY_CATEGORY if category in categories]
 
 
-def format_report(report: FraudReport) -> str:
+# ---------------------------------------------------------------------------
+# 페르소나별 결정론 행동 우선순위 (LLM 개입 없음).
+# 같은 사기 문자라도 '누가 받았느냐'에 따라 전달 방식·우선순위를 코드로 다르게 낸다.
+# 탐지·판정은 동일하되, 행동 요령의 눈높이가 소비자 특성에 맞춰진다(주제: 맞춤형).
+# ---------------------------------------------------------------------------
+PersonaClass = Literal["senior", "youth", "general"]
+
+_SENIOR_TERMS = ("시니어", "고령", "어르신", "노년", "은퇴", "60대", "70대", "80대", "환갑", "칠순")
+_YOUTH_TERMS = ("청년", "사회초년생", "취준", "대학생", "20대", "30대", "신입", "첫 직장", "사회 초년")
+
+_PERSONA_ACTION: dict[PersonaClass, tuple[str, str]] = {
+    "senior": (
+        "고령층 맞춤",
+        (
+            "지금 이렇게 하세요 — 한 번에 하나씩:\n"
+            "1. 문자에 있는 번호로는 전화하지 마세요.\n"
+            "2. 평소 저장해 둔 가족·기관 번호로 직접 전화해 확인하세요.\n"
+            "3. 어떤 이체·송금도 지금은 멈추세요.\n"
+            "4. 112(경찰) 또는 1332(금융감독원)로 전화하세요.\n"
+            "5. 혼자 판단하지 말고 가족에게 바로 알리세요."
+        ),
+    ),
+    "youth": (
+        "청년 맞춤",
+        (
+            "원칙과 이 수법의 함정:\n"
+            "- 은행·경찰·국세청은 문자 링크나 전화로 돈·계좌·인증번호를 요구하지 않습니다.\n"
+            "- 발신번호는 위·변조되니 '문자에 찍힌 번호'로 되걸지 마세요.\n"
+            "- 링크·앱 설치 유도는 악성앱(원격제어) 신호 — 절대 설치 금지.\n"
+            "- 의심되면 그 자리에서 112·1332, 확인 전까지 어떤 송금도 보류."
+        ),
+    ),
+    "general": (
+        "일반",
+        (
+            "권장 행동 우선순위:\n"
+            "- 문자에 적힌 번호가 아니라 공식 대표번호로 직접 확인하세요.\n"
+            "- 송금·계좌·인증번호 요구엔 응하지 말고 즉시 중단하세요.\n"
+            "- 의심되면 112(경찰)·1332(금융감독원)로 신고하세요."
+        ),
+    ),
+}
+
+
+def classify_persona(profile_summary: str | None) -> PersonaClass:
+    """프로필 요약 텍스트에서 소비자 연령대를 결정론 키워드로 분류한다(LLM 개입 없음)."""
+    if not profile_summary:
+        return "general"
+    if any(term in profile_summary for term in _SENIOR_TERMS):
+        return "senior"
+    if any(term in profile_summary for term in _YOUTH_TERMS):
+        return "youth"
+    return "general"
+
+
+def _persona_action_block(persona: PersonaClass) -> tuple[str, str]:
+    """(라벨, 본문) — 알 수 없는 값은 general로 폴백."""
+    return _PERSONA_ACTION.get(persona, _PERSONA_ACTION["general"])
+
+
+def format_report(report: FraudReport, persona: PersonaClass = "general") -> str:
     lines = [f"### 판정: {report.verdict} (휴리스틱 점수 {report.total_score})", "발견된 근거:"]
     if report.signals:
         lines += [f"- [{s.category}] {s.detail} ({s.score:+d})" for s in report.signals]
@@ -478,6 +539,9 @@ def format_report(report: FraudReport) -> str:
     lines.append(f"※ {REPORT_GUIDE_NOTE}")
     if guides := _action_guides(report):
         lines += ["", "### 권장 행동 요령", *guides]
+        # 페르소나별 행동 우선순위 — 탐지·판정은 동일하되, 전달 눈높이를 코드로 맞춘다(맞춤형·결정론).
+        label, block = _persona_action_block(persona)
+        lines += ["", f"### 맞춤 행동 요령 (적용 프로필: {label})", block]
     return "\n".join(lines)
 
 
@@ -516,7 +580,7 @@ def web_enrichment(text: str) -> str:
 # @tool 얇은 래퍼 (노드에서 invoke된다)
 # ---------------------------------------------------------------------------
 @tool
-def fraud_check(message_text: str) -> str:
+def fraud_check(message_text: str, persona: str | None = None) -> str:
     """받은 문자·메신저 내용·링크(URL)가 사기성인지 휴리스틱으로 검증한다.
     투자 권유·고수익 보장·선입금 요구·정부기관 사칭·가족·지인 사칭·대출 빙자·
     가상자산 리딩방·환급·지원금 사칭·알바·부업 보증금 요구·수상한 링크가 의심될 때 사용하라.
@@ -524,9 +588,11 @@ def fraud_check(message_text: str) -> str:
 
     Args:
         message_text: 사용자가 받은 문자·알림·메시지 원문(링크가 포함되면 함께 넣는다).
+        persona: 소비자 연령대(senior/youth/general). 노드가 프로필에서 결정론 분류해 넘긴다.
     """
+    persona_class: PersonaClass = persona if persona in ("senior", "youth", "general") else "general"
     report = scan_message(message_text)
-    body = format_report(report)
+    body = format_report(report, persona_class)
     disabled = os.environ.get("FRAUD_CHECK_DISABLE_WEB", "").strip().lower() in ("1", "true")
     enrichment = "(생략됨)" if disabled else web_enrichment(message_text)
     body += "\n\n### 최신 피싱·사기 정보 (웹 검색 보강)\n" + enrichment
