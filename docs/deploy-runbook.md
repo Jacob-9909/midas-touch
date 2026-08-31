@@ -140,7 +140,7 @@ Actions 에서 ssh 로 밀어넣으려면 셸이 열리는 키를 레포 시크�
 
 | 장치 | 막는 것 |
 |---|---|
-| CI 게이트 | main 룰셋에 `required_status_checks` 가 **없어 빨간 CI 로도 머지된다.** 백엔드 CI 가 통과한 커밋만 배포 |
+| CI 게이트 | 백엔드 CI 가 통과한 커밋만 배포. main 룰셋의 `required_status_checks`(2026-08-31 추가)와 **이중 방어** — 룰셋은 레포 설정이라 누가 끄면 조용히 사라지지만 이 게이트는 코드라 지우면 diff 에 남는다 |
 | 변경 범위 판정 | 문서·프론트만 바뀌면 pull 만 하고 재기동 생략(재기동 = 수십 초 다운) |
 | 롤백 | 재기동 후 헬스가 안 오면 직전 커밋으로 되돌리고 다시 띄운다 |
 
@@ -231,6 +231,7 @@ cd frontend && vercel --prod --yes      # 반드시 frontend/ 안에서
 | **env 값에 주석이 섞임** | `/health`는 초록인데 챗·임베딩만 깨짐. 로그에 `cache warm failed (embedding)` | systemd `EnvironmentFile`은 값 뒤 `#` 주석을 자르지 않는다. 유닛은 `uv run --env-file .env`를 쓰도록 돼 있으니 되돌리지 말 것. 확인: `sudo tr '\0' '\n' < /proc/$(pgrep -f 'uvicorn backend')/environ \| grep AGENT_LLM_MODEL` |
 | OOM | 백엔드가 조용히 재시작 반복 | `journalctl -u midas-backend | grep -i oom`, 유닛의 `MemoryMax` 조정 또는 스왑 추가(§1) |
 | 인증서 유실 | 재발급 시도 → Let's Encrypt rate limit | `/var/lib/caddy` 를 지우지 말 것 |
+| PR 이 머지 안 됨 | "Required statuses must pass" | 2026-08-31 부터 main 룰셋이 `backend (ruff + pytest)`·`frontend (eslint + tsc)` 통과를 요구한다. CI 를 고쳐서 통과시킬 것 — 급하면 룰셋에서 잠시 해제(설정 → Rules → protect) |
 | 로컬에서 DB가 안 붙음 | `./dev.sh` 는 떴는데 청약·주식이 전부 빔, 기동 로그에 `DB 터널 실패` | DB 포트(5432·7687)는 VM 방화벽에서 막혀 있고 로컬은 SSH 터널로만 붙는다. `./db-tunnel.sh` 수동 실행 → 실패하면 `ssh oracle_vm 'echo ok'` 로 SSH 자체를 먼저 확인 |
 | 심사용 체험 계정 | 심사자가 로그인 못 함 | `/login` 화면의 `demo@midas.touch` 계정이 **배포 DB에** 있는지 확인 |
 
