@@ -1,8 +1,8 @@
-"""세율 개정안 인입 라우터 — 추출 → 검증 → 비교 → (승인 시) 반영.
+"""세율 개정안 인입 라우터 — 추출 → 검증 → 현행 대비 비교 (읽기 전용 미리보기).
 
-데모 흐름: 개정안 텍스트/파일 업로드 → `/extract`가 세율 제안·현행 대비 diff·검증 이슈를 돌려줌
-→ 사람이 확인 후 `/apply`로 승인 → 오버레이에 반영되어 그 귀속연도 계산이 새 세율을 쓴다.
-계산 산술은 승인 뒤에도 코드가 하므로 결정론 불변식은 유지된다(추출/승인만 사람+LLM 개입).
+데모 흐름: 개정안 파일(PDF/TXT/MD) 업로드 → `/extract/upload`가 세율 제안·현행 대비 diff·검증 이슈를 돌려준다.
+반영(승인) 단계는 두지 않는다 — 세율은 코드 상수(rates.RATE_REGISTRY)로만 결정되는 결정론
+불변식을 지키기 위해 런타임 오버레이 변경 경로를 제거했다. 추출·비교는 근거 확인용 미리보기다.
 """
 
 from __future__ import annotations
@@ -10,14 +10,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from pydantic import BaseModel
 
+from backend.app.api.uploads import read_upload_capped
 from backend.app.services.tax.rate_diff import diff_against_current
 from backend.app.services.tax.rate_extraction import (
     ProposedRateSet,
     extract_rate_set,
 )
-from backend.app.services.tax.rate_overlay import apply_overlay
 from backend.app.services.tax.rate_validation import validate_proposed
 from backend.app.services.tax.rates import get_rates
 
@@ -25,16 +24,6 @@ router = APIRouter(prefix="/api/v1/tax-rates", tags=["tax-rates"])
 
 _SUPPORTED_SUFFIXES = {".txt", ".md", ".pdf"}
 _MAX_TEXT_CHARS = 20_000
-
-
-class ExtractRequest(BaseModel):
-    text: str
-    year: str = "2026"
-    use_llm: bool = True
-
-
-class ApplyRequest(BaseModel):
-    proposed: ProposedRateSet
 
 
 def _diff_payload(proposed: ProposedRateSet) -> dict:
@@ -56,18 +45,8 @@ def _diff_payload(proposed: ProposedRateSet) -> dict:
             for d in diffs
         ],
         "issues": issues,
-        "can_apply": not issues,
+        "validation_passed": not issues,
     }
-
-
-@router.post("/extract")
-def extract(req: ExtractRequest) -> dict:
-    """개정안 텍스트에서 세율을 추출하고 현행 대비 diff·검증 결과를 돌려준다(승인 전)."""
-    text = (req.text or "").strip()
-    if not text:
-        raise HTTPException(status_code=400, detail="개정안 텍스트가 비어 있습니다.")
-    proposed = extract_rate_set(text[:_MAX_TEXT_CHARS], year=req.year, use_llm=req.use_llm)
-    return _diff_payload(proposed)
 
 
 def _pdf_to_text(raw: bytes) -> str:
@@ -104,7 +83,7 @@ async def extract_upload(
             status_code=400,
             detail=f"지원하지 않는 형식입니다: {suffix} (지원: {sorted(_SUPPORTED_SUFFIXES)})",
         )
-    raw = await file.read()
+    raw = await read_upload_capped(file)
     if suffix == ".pdf":
         text = _pdf_to_text(raw)
     else:
@@ -122,20 +101,9 @@ async def extract_upload(
     return _diff_payload(proposed)
 
 
-@router.post("/apply")
-def apply(req: ApplyRequest) -> dict:
-    """검증을 통과한 제안을 승인해 오버레이에 반영한다. 검증 실패 시 400으로 거부."""
-    proposed = req.proposed
-    issues = validate_proposed(proposed)
-    if issues:
-        raise HTTPException(status_code=400, detail={"message": "검증 실패로 반영을 거부했습니다.", "issues": issues})
-    apply_overlay(proposed)
-    return {"applied": True, "year": proposed.year, "active": _current_payload(proposed.year)}
-
-
 @router.get("/current")
 def current(year: str = "2026") -> dict:
-    """해당 귀속연도의 현재 유효 세율(오버레이 반영 후)을 돌려준다."""
+    """해당 귀속연도의 현행 세율(코드 상수)을 돌려준다."""
     return _current_payload(year)
 
 

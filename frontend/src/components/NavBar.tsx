@@ -26,17 +26,18 @@ import { useTheme } from "@/lib/theme";
 import { useAccessibility } from "@/lib/accessibility";
 import CommandPalette from "./CommandPalette";
 
-// 헤드라인은 청약(상담 + 목록조회 + 시뮬레이터 + 내 정보)이라 "core"로 앞세우고,
-// 나머지(주식·지식그래프·세율)는 부가 기능이라 "engine"으로 구분선 뒤에 배치한다.
+// 코어 여정은 사기검증(챗·보안) → 세법·근거(그래프) → 청약·자금(청약·시뮬·내정보).
+// 그래프는 챗 graph_rag 근거의 시각 백엔드라 부가가 아니라 코어로 앞세운다.
+// 나머지(세율·주식)는 부가 기능이라 "engine"으로 구분선 뒤에 배치하고, 보조·실험인 주식을 맨 뒤에 둔다.
 const LINKS = [
   { href: "/chat", label: "챗봇", group: "core" },
   { href: "/security", label: "보안", group: "core" },
+  { href: "/graph", label: "그래프", group: "core" },
   { href: "/cheongyak", label: "청약", group: "core" },
   { href: "/simulator", label: "시뮬레이터", group: "core" },
   { href: "/me", label: "내 정보", group: "core" },
-  { href: "/stocks", label: "주식", group: "engine" },
-  { href: "/graph", label: "그래프", group: "engine" },
   { href: "/tax-rates", label: "세율", group: "engine" },
+  { href: "/stocks", label: "주식", group: "engine" },
 ] as const;
 
 const MENU_CORE = [
@@ -53,6 +54,13 @@ const MENU_CORE = [
     desc: "12종 프롬프트 공격 방어 및 안전성 검증",
     icon: ShieldWarning,
     tag: "보안",
+  },
+  {
+    href: "/graph",
+    title: "금융 지식그래프 (근거 추적)",
+    desc: "챗 답변의 법령 근거를 추적하는 graph_rag 시각 백엔드",
+    icon: ShareNetwork,
+    tag: "근거",
   },
   {
     href: "/cheongyak",
@@ -79,22 +87,16 @@ const MENU_CORE = [
 
 const MENU_ENGINE = [
   {
-    href: "/stocks",
-    title: "주식 분석 & 백테스트",
-    desc: "RSI/MACD/KDJ 및 4종 전략 백테스트",
-    icon: ChartLineUp,
-  },
-  {
-    href: "/graph",
-    title: "금융 지식그래프",
-    desc: "금융 엔티티 관계 2D 인터랙티브 네트워크",
-    icon: ShareNetwork,
-  },
-  {
     href: "/tax-rates",
     title: "세율 갱신 콘솔",
     desc: "2026 세법 개정안 자동 인입 및 승인",
     icon: Scroll,
+  },
+  {
+    href: "/stocks",
+    title: "주식 지표 & 자가 채점",
+    desc: "지표 참고(매매권유 아님) + AI 예측 자가 채점 검증 루프 · 보조·실험",
+    icon: ChartLineUp,
   },
 ];
 

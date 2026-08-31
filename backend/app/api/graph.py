@@ -12,6 +12,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from backend.app.api.uploads import read_upload_capped
 from backend.app.services.jobs import PROJECT_ROOT, job_manager
 from shared.database.connector import list_emb_sources
 from shared.database.neo4j_client import fetch_graph_snapshot
@@ -45,9 +46,9 @@ async def upload_document(file: UploadFile = File(...)) -> dict:
             status_code=400,
             detail=f"지원하지 않는 형식입니다: {suffix} (지원: {sorted(SUPPORTED_UPLOAD_SUFFIXES)})",
         )
+    content = await read_upload_capped(file)
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     dest = RAW_DIR / Path(file.filename).name
-    content = await file.read()
     dest.write_bytes(content)
     return {"filename": dest.name, "size": len(content)}
 

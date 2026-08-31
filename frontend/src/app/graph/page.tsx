@@ -4,7 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useReducedMotion } from "motion/react";
 import { errMsg } from "@/lib/async";
-import { Play, MagnifyingGlass, ArrowUp } from "@phosphor-icons/react";
+import { MagnifyingGlass, ArrowUp } from "@phosphor-icons/react";
 import {
   apiGet,
   apiPost,
@@ -14,7 +14,6 @@ import {
 import { Card, PageTitle } from "@/components/ui";
 import { MOCK_GRAPH, withMock } from "@/lib/mock-data";
 import { useToast } from "@/lib/toast";
-import JobProgress from "@/components/JobProgress";
 import GraphView from "@/components/GraphView";
 
 // WebGL은 서버에서 못 돈다. 이 페이지가 앱의 유일한 WebGL 캔버스를 소유한다.
@@ -41,25 +40,11 @@ function RadarSweep() {
 export default function GraphPage() {
   const toast = useToast();
   const reduceMotion = useReducedMotion();
-  const [limit, setLimit] = useState(40);
-  const [buildJobId, setBuildJobId] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<GraphSnapshot | null>(null);
   const [snapLoading, setSnapLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState<QueryResponse | null>(null);
   const [asking, setAsking] = useState(false);
-
-  const startBuild = async () => {
-    try {
-      const res = await apiPost<{ job_id: string }>("/api/v1/graph/build/jobs", {
-        limit,
-      });
-      setBuildJobId(res.job_id);
-      toast("그래프 빌드를 시작했습니다.", "info");
-    } catch (e) {
-      toast(`빌드 실행 실패: ${errMsg(e)}`, "error");
-    }
-  };
 
   const loadSnapshot = async () => {
     setSnapLoading(true);
@@ -70,7 +55,7 @@ export default function GraphPage() {
         "그래프 스냅샷",
       );
       setSnapshot(s);
-      if (s.nodes.length === 0) toast("그래프가 비어 있습니다. 먼저 빌드하세요.", "info");
+      if (s.nodes.length === 0) toast("그래프가 비어 있습니다. 챗봇 지식베이스 패널에서 문서를 반영하세요.", "info");
     } catch (e) {
       toast(`스냅샷 로드 실패: ${errMsg(e)}`, "error");
     } finally {
@@ -109,37 +94,18 @@ export default function GraphPage() {
     <main className="mx-auto max-w-[1200px] space-y-6 px-6 py-[72px]">
       <PageTitle
         eyebrow="Knowledge Graph"
-        title="지식그래프"
-        subtitle="세법·금융 지식그래프를 빌드하고, 구조를 탐색하고, GraphRAG로 질의합니다."
+        title="지식그래프 — 근거 추적"
+        subtitle="챗봇 답변의 법령 근거(graph_rag)를 그리는 시각 백엔드입니다. 구조를 탐색하고 GraphRAG로 근거 서브그래프를 질의하세요."
       />
 
-      {/* 빌드 */}
+      {/* 문서 인입 동선 안내 — 업로드·그래프 반영은 챗 지식베이스 패널이 단일 입구다(여기엔 빌드 콘솔을 두지 않는다). */}
       <Card className="animate-rise">
-        <h2 className="mb-3 text-sm font-medium text-fg">지식그래프 증분 빌드</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="text-sm text-muted">
-            처리 단락 수
-            <input
-              type="number"
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value))}
-              className="field ml-2 w-24 px-3 py-1.5 text-sm"
-            />
-          </label>
-          <button
-            onClick={startBuild}
-            className="btn-accent flex items-center gap-1.5 px-4 py-2 text-sm"
-          >
-            <Play weight="fill" size={14} />
-            빌드 실행
-          </button>
-          <span className="text-xs text-muted">-1 입력 시 전체 처리</span>
-        </div>
-        {buildJobId && (
-          <div className="mt-4">
-            <JobProgress jobId={buildJobId} endpoint="/api/v1/graph/build/jobs" />
-          </div>
-        )}
+        <p className="text-xs leading-relaxed text-muted">
+          <span className="font-medium text-fg">문서 추가·그래프 반영</span>은 챗봇 화면의{" "}
+          <span className="text-accent">지식베이스 패널</span>에서 합니다 — 업로드 → 임베딩 → 그래프
+          반영이 한 곳에서 이어집니다. 이 페이지는 그렇게 반영된 그래프를 <strong>탐색·질의</strong>하는
+          근거 추적 면입니다.
+        </p>
       </Card>
 
       {/* 스냅샷 시각화 */}
@@ -157,7 +123,7 @@ export default function GraphPage() {
         {snapshot ? (
           snapshot.nodes.length === 0 ? (
             <p className="text-sm text-muted">
-              그래프가 비어 있습니다. 먼저 빌드를 실행하세요.
+              그래프가 비어 있습니다. 챗봇 지식베이스 패널에서 문서를 반영하세요.
             </p>
           ) : (
             <>

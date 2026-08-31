@@ -1,7 +1,8 @@
-"""세율 개정안 인입 파이프라인 검증 — 추출→검증→비교→승인→반영(DB·네트워크 불필요).
+"""세율 개정안 인입 미리보기 검증 — 추출→검증→현행 대비 비교(DB·네트워크 불필요).
 
-추출은 휴리스틱 경로(use_llm=False)만 검증한다(오프라인 결정론). 오버레이는 임시 파일로
-격리해 기존 2025 계산·테스트에 영향을 주지 않는다.
+추출은 휴리스틱 경로(use_llm=False)만 검증한다(오프라인 결정론). 반영(승인) 단계는 없다 —
+세율은 코드 상수(rates.RATE_REGISTRY)로만 결정되는 결정론 불변식을 지키기 위해 런타임 오버레이
+변경 경로를 제거했다. 이 파이프라인은 근거 확인용 읽기 전용 미리보기다.
 
 실행:
     PYTHONPATH=. uv run pytest tests/test_tax_rate_ingestion.py -q
@@ -9,7 +10,6 @@
 
 import os
 import sys
-import tempfile
 import unittest
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,9 +26,7 @@ from backend.app.services.tax.rate_extraction import (
     extract_rate_set,
     heuristic_extract,
 )
-from backend.app.services.tax.rate_overlay import apply_overlay, build_overlaid_set
 from backend.app.services.tax.rate_validation import validate_proposed
-from backend.app.services.tax.rates import get_rates
 
 _SAMPLE_AMENDMENT = (
     "2026년 귀속 세법개정안 요약\n"
@@ -92,83 +90,7 @@ class TestDiff(unittest.TestCase):
         self.assertFalse(diffs["interest_dividend_withholding_rate"].changed)
 
 
-class TestOverlayApplyAndGetRates(unittest.TestCase):
-    def setUp(self) -> None:
-        self._tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115 — setUp/tearDown 수명주기라 컨텍스트 매니저 부적합
-            suffix=".json", delete=False, mode="w", encoding="utf-8"
-        )
-        self._tmp.close()
-        os.environ["TAX_RATE_OVERLAY_PATH"] = self._tmp.name
-
-    def tearDown(self) -> None:
-        os.environ.pop("TAX_RATE_OVERLAY_PATH", None)
-        os.unlink(self._tmp.name)
-
-    def test_apply_then_get_rates_reflects_new_rate(self) -> None:
-        proposed = heuristic_extract(_SAMPLE_AMENDMENT, year="2026")
-        apply_overlay(proposed)
-
-        r2026 = get_rates("2026")
-        self.assertEqual(r2026.year, "2026")
-        self.assertAlmostEqual(r2026.foreign_stock_national_rate.value, 0.22)
-        # 개정 안 된 필드는 기본(2025) 세트에서 이어받음
-        self.assertEqual(
-            r2026.foreign_stock_basic_deduction.value, 2_500_000
-        )
-
-    def test_default_year_unaffected_by_overlay(self) -> None:
-        apply_overlay(heuristic_extract(_SAMPLE_AMENDMENT, year="2026"))
-        # 2025는 오버레이 대상이 아니므로 20% 유지
-        self.assertAlmostEqual(get_rates("2025").foreign_stock_national_rate.value, 0.20)
-
-    def test_no_overlay_returns_none(self) -> None:
-        self.assertIsNone(build_overlaid_set("2099"))
-
-
-class TestChatCalcUsesApprovedRates(unittest.TestCase):
-    """승인된 개정 세율이 챗봇 계산 경로(tax_calculator 툴)에도 반영되는지."""
-
-    def setUp(self) -> None:
-        self._tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115 — setUp/tearDown 수명주기라 컨텍스트 매니저 부적합
-            suffix=".json", delete=False, mode="w", encoding="utf-8"
-        )
-        self._tmp.close()
-        os.environ["TAX_RATE_OVERLAY_PATH"] = self._tmp.name
-
-    def tearDown(self) -> None:
-        os.environ.pop("TAX_RATE_OVERLAY_PATH", None)
-        os.unlink(self._tmp.name)
-
-    def test_tool_uses_latest_approved_year_by_default(self) -> None:
-        from backend.app.services.agent.tools import tax_calculator
-
-        apply_overlay(heuristic_extract(_SAMPLE_AMENDMENT, year="2026"))
-        out = tax_calculator.invoke(
-            {
-                "calc_type": "foreign_stock_sale",
-                "sale_price": 152_500_000,
-                "acquisition_cost": 50_000_000,
-            }
-        )
-        # 개정 후 22%: 과세표준 1억 × 22% + 지방 10% = 24,200,000
-        self.assertIn("24,200,000", out)
-        self.assertIn("2026 귀속", out)
-
-    def test_explicit_past_year_overrides_latest(self) -> None:
-        from backend.app.services.agent.tools import tax_calculator
-
-        apply_overlay(heuristic_extract(_SAMPLE_AMENDMENT, year="2026"))
-        out = tax_calculator.invoke(
-            {
-                "calc_type": "foreign_stock_sale",
-                "sale_price": 152_500_000,
-                "acquisition_cost": 50_000_000,
-                "year": "2025",
-            }
-        )
-        # 2025 명시 → 20%: 과세표준 1억 × 20% + 지방 10% = 22,000,000
-        self.assertIn("22,000,000", out)
-
+class TestDetectYear(unittest.TestCase):
     def test_detect_year_from_utterance(self) -> None:
         from backend.app.services.agent.nodes.tax_calculator import _detect_year
 
@@ -178,48 +100,18 @@ class TestChatCalcUsesApprovedRates(unittest.TestCase):
 
 class TestApiFlow(unittest.TestCase):
     def setUp(self) -> None:
-        self._tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115 — setUp/tearDown 수명주기라 컨텍스트 매니저 부적합
-            suffix=".json", delete=False, mode="w", encoding="utf-8"
-        )
-        self._tmp.close()
-        os.environ["TAX_RATE_OVERLAY_PATH"] = self._tmp.name
         from fastapi.testclient import TestClient
 
         from backend.app.main import app
 
         self.client = TestClient(app)
 
-    def tearDown(self) -> None:
-        os.environ.pop("TAX_RATE_OVERLAY_PATH", None)
-        os.unlink(self._tmp.name)
-
-    def test_extract_then_apply_flow(self) -> None:
-        res = self.client.post(
-            "/api/v1/tax-rates/extract",
-            json={"text": _SAMPLE_AMENDMENT, "year": "2026", "use_llm": False},
-        )
+    def test_current_returns_code_constants(self) -> None:
+        # 반영 경로가 없으므로 현행 세율은 항상 코드 상수(해외주식 20%)다 — 결정론 불변식.
+        res = self.client.get("/api/v1/tax-rates/current", params={"year": "2026"})
         self.assertEqual(res.status_code, 200)
-        body = res.json()
-        self.assertTrue(body["can_apply"])
-        self.assertEqual(body["issues"], [])
-        self.assertTrue(any(d["field"] == "foreign_stock_national_rate" for d in body["diff"]))
-
-        apply_res = self.client.post(
-            "/api/v1/tax-rates/apply", json={"proposed": body["proposed"]}
-        )
-        self.assertEqual(apply_res.status_code, 200)
-        self.assertTrue(apply_res.json()["applied"])
-
-        current = self.client.get("/api/v1/tax-rates/current", params={"year": "2026"})
-        rate = current.json()["rates"]["foreign_stock_national_rate"]["value"]
-        self.assertAlmostEqual(rate, 0.22)
-
-    def test_apply_rejects_invalid(self) -> None:
-        bad = ProposedRateSet(
-            year="2026", foreign_stock_national_rate=ProposedRate(value=9.9)
-        ).model_dump()
-        res = self.client.post("/api/v1/tax-rates/apply", json={"proposed": bad})
-        self.assertEqual(res.status_code, 400)
+        rate = res.json()["rates"]["foreign_stock_national_rate"]["value"]
+        self.assertAlmostEqual(rate, 0.20)
 
     def test_text_file_upload(self) -> None:
         res = self.client.post(
@@ -247,7 +139,7 @@ class TestApiFlow(unittest.TestCase):
         finally:
             tr._pdf_to_text = original
         self.assertEqual(res.status_code, 200)
-        self.assertTrue(res.json()["can_apply"])
+        self.assertTrue(res.json()["validation_passed"])
 
     def test_unsupported_suffix_rejected(self) -> None:
         res = self.client.post(
