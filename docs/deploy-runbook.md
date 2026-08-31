@@ -91,7 +91,8 @@ sudo journalctl -u caddy -f
 
 # 헬스체크
 curl -s https://midas-touch.duckdns.org/health
-# → {"status":"healthy","database":"healthy","neo4j":"bolt://..."}
+# → {"status":"healthy","database":"healthy","neo4j":"healthy","neo4j_url":"bolt://..."}
+#   status 는 둘 다 살았을 때만 healthy, 하나라도 죽으면 degraded(코드는 계속 200).
 ```
 
 **메모리(12GB, 실측 사용 3.2GB / 여유 6.6GB)**: Postgres·Neo4j가 이미 3.2GB를 쓰고 있어
@@ -120,6 +121,34 @@ systemctl show midas-backend -p MemoryCurrent
 
 재기동하면 bge-m3 를 다시 로드하느라 수십 초 응답이 없다. `vm.sh` 가 `database: healthy`
 가 뜰 때까지 기다렸다가 결과를 보여주므로, **바로 curl 해서 실패로 오해하지 말 것.**
+
+### 자동배포 (2026-08-31~)
+
+VM 이 2분마다 main 을 폴링해서 스스로 배포한다. **수동 `./vm.sh deploy` 는 이제 급할 때만
+쓰면 된다.** push 가 아니라 pull 인 이유는 `infra/vm-autodeploy.sh` 주석에 있다 — 요약하면
+Actions 에서 ssh 로 밀어넣으려면 셸이 열리는 키를 레포 시크릿에 둬야 하는데 이 VM 은 DB 도
+같이 돌린다.
+
+```bash
+./vm.sh autodeploy status      # 타이머 상태
+./vm.sh autodeploy log 40      # 무슨 일이 있었나
+./vm.sh autodeploy off         # 심사 기간엔 꺼두길 권장
+./vm.sh autodeploy on
+```
+
+안전장치 3개:
+
+| 장치 | 막는 것 |
+|---|---|
+| CI 게이트 | main 룰셋에 `required_status_checks` 가 **없어 빨간 CI 로도 머지된다.** 백엔드 CI 가 통과한 커밋만 배포 |
+| 변경 범위 판정 | 문서·프론트만 바뀌면 pull 만 하고 재기동 생략(재기동 = 수십 초 다운) |
+| 롤백 | 재기동 후 헬스가 안 오면 직전 커밋으로 되돌리고 다시 띄운다 |
+
+> **심사 기간(9/7~9/11)엔 `./vm.sh autodeploy off` 를 권한다.** 재기동이 심사자 채팅
+> 한복판에 떨어질 수 있다. 그동안 배포가 필요하면 `./vm.sh deploy` 로 타이밍을 골라서 한다.
+
+> `infra/midas-backend.service`(systemd 유닛)가 바뀐 경우는 **자동 적용하지 않는다.**
+> 로그로만 알리므로 VM 에서 직접 `sudo cp` + `daemon-reload` 할 것.
 
 ---
 
