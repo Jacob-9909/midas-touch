@@ -13,6 +13,21 @@ import { Spinner } from "@/components/ui";
 const DEMO_EMAIL = "demo@midas.touch";
 const DEMO_PASSWORD = "MidasDemo2026!";
 
+/** 로그인 후 돌아갈 곳. 인증 가드가 ?next= 로 원래 주소를 넘겨주며, 없으면 홈이다.
+ *
+ *  값은 반드시 검증한다 — 그대로 믿으면 `?next=https://evil.example` 로 오픈 리다이렉트가
+ *  된다. 사이트 안의 경로("/" 로 시작)만 허용하고, `//host` 와 `/\host` 는 브라우저가
+ *  외부 주소로 해석하므로 함께 막는다.
+ *
+ *  useSearchParams 를 쓰지 않는 이유: 이 함수는 렌더가 아니라 클릭 시점에만 불리므로
+ *  훅이 필요 없고, 훅을 쓰면 페이지를 Suspense 로 감싸야 한다(Next 16). */
+function safeNext(): string {
+  const raw = new URLSearchParams(window.location.search).get("next");
+  if (!raw) return "/";
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return "/";
+  return raw;
+}
+
 export default function LoginPage() {
   const { login } = useSelectedUser();
   const router = useRouter();
@@ -27,7 +42,7 @@ export default function LoginPage() {
     setError(null);
     try {
       await login(id.trim(), pw);
-      router.replace("/");
+      router.replace(safeNext());
     } catch (err) {
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다.");
     } finally {

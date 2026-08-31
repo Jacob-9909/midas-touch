@@ -52,9 +52,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // 인증 가드: 켜져 있고 토큰이 없으면 로그인 페이지로 밀어낸다.
+  // 원래 가려던 주소를 ?next= 로 넘긴다. 안 넘기면 README 퀵투어의 딥링크
+  // (/chat?prefill=... 같은)가 로그인 리다이렉트에서 통째로 버려진다.
+  // useSearchParams 대신 window.location 을 쓰는 건 이 코드가 이미 effect 안이라
+  // 브라우저에서만 돌고, 훅을 쓰면 Suspense 경계를 따로 둘러야 하기 때문이다.
   useEffect(() => {
     if (!AUTH_ENABLED) return;
-    if (!getToken() && pathname !== "/login") router.replace("/login");
+    if (!getToken() && pathname !== "/login") {
+      const here = window.location.pathname + window.location.search;
+      router.replace(`/login?next=${encodeURIComponent(here)}`);
+    }
   }, [pathname, router]);
 
   const setSelected = (u: SelectedUser | null) => {
