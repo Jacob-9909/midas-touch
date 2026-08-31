@@ -97,6 +97,18 @@ export default function TaxRatesPage() {
           PDF·TXT·MD 지원. PDF는 서버가 표까지 텍스트로 추출해 세율을 뽑고 현행과 비교합니다.
           별도 텍스트 작성 없이 개정안 문서 그대로 올리면 됩니다.
         </p>
+        <p className="text-xs text-muted">
+          세법개정안 원문은{" "}
+          <a
+            href="https://www.moef.go.kr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+          >
+            기획재정부(moef.go.kr) ↗
+          </a>
+          에서 받아 그대로 올리세요.
+        </p>
       </Card>
 
       {error && (
