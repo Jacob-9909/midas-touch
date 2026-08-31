@@ -130,11 +130,18 @@ systemctl show midas-backend -p MemoryCurrent
 프로젝트는 이미 연결돼 있다(`vercel link` 완료, 프로젝트명 `midas-touch`).
 `frontend/`에서 `vercel --prod --yes` 하면 재배포된다.
 
-| 항목 | 값 |
-|---|---|
-| Root Directory | `frontend` |
-| Framework | Next.js (자동 감지) |
-| Build Command | 기본값 |
+| 항목 | 값 | 현재 |
+|---|---|---|
+| Root Directory | `frontend` | ⚠️ **`.` 로 돼 있다** — 아래 참고 |
+| Framework | Next.js (자동 감지) | ✅ |
+| Build Command | 기본값 | ✅ |
+
+> ⚠️ **Root Directory 가 `.` 인데도 CLI 배포는 성공한다.** `frontend/` 안에서
+> `vercel --prod` 를 돌리면 CLI 가 그 디렉터리를 배포 루트로 업로드하기 때문이다.
+> 하지만 **git 연동을 켜면 Vercel 이 레포 루트에서 빌드하고, 루트엔 `package.json`
+> 이 없어 빌드가 깨진다.** git 연동을 켤 거면 Root Directory 를 `frontend` 로
+> 먼저 바꿀 것. (빌드가 깨져도 기존 프로덕션 배포는 그대로 살아 있으니 사이트가
+> 죽지는 않는다 — 대신 자동배포가 조용히 안 되는 상태가 된다.)
 
 환경변수 (Production + Preview 양쪽):
 
@@ -148,6 +155,19 @@ NEXT_PUBLIC_AUTH_ENABLED=true
 >
 > `NEXT_PUBLIC_*`은 **빌드 타임에 번들에 박힌다.** 값을 바꾸면 반드시 재배포해야 반영된다.
 > 로컬 `frontend/.env.local`은 `NEXT_PUBLIC_API_BASE=`(빈 값)로 두어 rewrites 프록시를 계속 쓴다.
+
+### 배포 방법 (현재: 수동)
+
+**레포에 Vercel git 연동이 안 걸려 있다(웹훅 없음).** main 에 머지해도 프론트는
+자동 배포되지 않는다 — 실제로 2026-08-31 에 #57 의 UI 개선이 하루 동안 심사자
+화면에 안 반영된 채로 있었다. 프론트를 고쳤으면 **반드시** 아래를 직접 돌릴 것:
+
+```bash
+cd frontend && vercel --prod --yes      # 반드시 frontend/ 안에서
+```
+
+자동화하려면 ① Vercel 대시보드 → Settings → Git 에서 레포 연결(GitHub App 인가
+필요) ② **그 전에** Root Directory 를 `frontend` 로 변경. 순서를 바꾸면 빌드가 깨진다.
 
 배포 후 백엔드 `.env`의 `CORS_ALLOW_ORIGINS`에 **실제 Vercel 도메인**을 넣고 백엔드를 재기동한다.
 이걸 빼먹으면 화면은 뜨는데 모든 API가 CORS로 막혀 빈 화면처럼 보인다.
@@ -192,6 +212,8 @@ NEXT_PUBLIC_AUTH_ENABLED=true
 
 **9/7 제출 직전**
 - [ ] 제출 URL = Vercel **프로덕션** 도메인인지 확인(프리뷰 URL 제출 금지)
+- [ ] **프론트가 최신 main 인지** — git 연동이 없으면 자동배포가 안 된다.
+      `cd frontend && vercel ls | head -3` 의 배포 시각이 마지막 프론트 머지보다 뒤인지
 - [ ] `/health`가 `database: healthy`인지
 - [ ] 새 시크릿창으로 처음부터 밟아보기 (§6)
 - [ ] 체험 계정으로 실제 로그인되는지
