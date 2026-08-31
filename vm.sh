@@ -15,6 +15,7 @@
 #   ./vm.sh restart         # 코드 변경 없이 재기동(.env 만 고쳤을 때)
 #   ./vm.sh logs [N]        # 최근 N줄(기본 50). 인자 없이 -f 로 따라가려면 ./vm.sh logs -f
 #   ./vm.sh errors          # 최근 24시간 에러만
+#   ./vm.sh autodeploy <cmd>  # install|on|off|status|log — main 머지 시 자동배포
 #
 # 접속 대상은 ~/.ssh/config 의 Host 별칭(기본 oracle_vm). 바꾸려면 VM_HOST=myvm ./vm.sh …
 set -uo pipefail
@@ -117,8 +118,39 @@ case "${1:-health}" in
     [ -n "$out" ] && echo "$out" || echo "✅ 최근 24시간 에러 없음"
     ;;
 
+  autodeploy)
+    # 자동배포는 VM이 GitHub를 2분마다 폴링하는 방식이다(pull). Actions에서 ssh로
+    # 밀어넣지 않는 이유는 infra/vm-autodeploy.sh 주석 참고 — 요약하면 셸이 열리는
+    # 키를 레포 시크릿에 두게 되는데 이 VM은 DB도 같이 돌린다.
+    case "${2:-status}" in
+      install)
+        vm "cd $APP_DIR && sudo -n cp infra/midas-autodeploy.service infra/midas-autodeploy.timer /etc/systemd/system/ \
+            && sudo -n systemctl daemon-reload \
+            && sudo -n systemctl enable --now midas-autodeploy.timer" \
+          && echo "✅ 자동배포 설치·기동" || { echo "❌ 설치 실패" >&2; exit 1; }
+        vm 'systemctl list-timers midas-autodeploy.timer --no-pager | head -2'
+        ;;
+      on)
+        vm 'sudo -n systemctl enable --now midas-autodeploy.timer' && echo "✅ 자동배포 ON"
+        ;;
+      off)
+        # 심사 중엔 꺼두는 게 낫다 — 재기동이 심사자 채팅 한복판에 떨어질 수 있다.
+        vm 'sudo -n systemctl disable --now midas-autodeploy.timer' && echo "⏸️  자동배포 OFF (배포는 ./vm.sh deploy 로 수동)"
+        ;;
+      status)
+        vm 'systemctl is-enabled midas-autodeploy.timer 2>/dev/null || echo "미설치"'
+        vm 'systemctl list-timers midas-autodeploy.timer --no-pager 2>/dev/null | head -2'
+        ;;
+      log)
+        vm "sudo -n journalctl -u midas-autodeploy -n ${3:-40} --no-pager"
+        ;;
+      *)
+        echo "사용법: ./vm.sh autodeploy [install|on|off|status|log [N]]" >&2; exit 1 ;;
+    esac
+    ;;
+
   *)
-    echo "사용법: ./vm.sh [health|status|deploy|restart|logs [N|-f]|errors]" >&2
+    echo "사용법: ./vm.sh [health|status|deploy|restart|logs [N|-f]|errors|autodeploy <cmd>]" >&2
     exit 1
     ;;
 esac

@@ -1,0 +1,25 @@
+# main 이 움직였는지 보고, 움직였으면 배포한다. 타이머(midas-autodeploy.timer)가 부른다.
+#
+# 설치:
+#   sudo cp infra/midas-autodeploy.{service,timer} /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now midas-autodeploy.timer
+# (맥에서 ./vm.sh autodeploy install 하면 위를 대신 해준다)
+
+[Unit]
+Description=Midas Touch 백엔드 자동배포 (git pull + 재기동)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/midas-touch
+ExecStart=/home/ubuntu/midas-touch/infra/vm-autodeploy.sh
+
+# 배포가 재기동을 기다리다(최대 200초) 롤백까지 가면 두 배가 된다. 넉넉히 잡되
+# 무한정 매달리지는 않게 한다 — 매달리면 다음 틱이 계속 잠금에 막힌다.
+TimeoutStartSec=600
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=midas-autodeploy
