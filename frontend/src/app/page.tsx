@@ -90,6 +90,17 @@ export default function HomePage() {
               판단을 대신하지 않고 근거를 정리해 보여주는 정보 제공 서비스이며, 투자·세무 자문이 아닙니다.
             </p>
 
+            {/* 데모 데이터 고지 — 정직성 원칙 증거. 페르소나·또래·시장 데이터가 합성/공공임을
+                UI에서 명시해, 심사위원이 실개인정보로 오해하지 않게 한다. */}
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-line bg-[color-mix(in_srgb,var(--ink-1)_60%,transparent)] px-3.5 py-2.5 max-w-2xl">
+              <SealCheck weight="fill" size={15} className="mt-0.5 shrink-0 text-accent" />
+              <p className="text-xs leading-relaxed text-muted break-keep">
+                <span className="font-semibold text-fg/80">데모 안내</span> · 표시되는 사용자·또래·시장 데이터는
+                데모용 <span className="text-fg/80">합성/공공 데이터</span>이며 실제 개인정보가 아닙니다.
+                세법·청약 근거는 국세청·공공데이터 등 공개 출처를 사용합니다.
+              </p>
+            </div>
+
             {/* 주 CTA — 인디고 그라디언트 pill */}
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link href="/me" className="btn-accent text-sm sm:text-[15px]">
