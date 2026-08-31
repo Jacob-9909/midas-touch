@@ -92,8 +92,19 @@ uv run alembic upgrade head
 # 개발 모드 (백엔드 :8000 / 프론트엔드 :3000)
 ./dev.sh
 
-# 프로덕션 모드
+# 프로덕션 빌드로 로컬 확인 (next build && next start)
 ./start.sh
+```
+
+> DB(Postgres·Neo4j)는 오라클 VM에 있고 포트가 방화벽에서 막혀 있다. `dev.sh`·`start.sh`가
+> 기동할 때 `db-tunnel.sh`로 SSH 터널을 알아서 세운다(`~/.ssh/config`의 `oracle_vm` 별칭 사용).
+
+배포된 백엔드(오라클 VM)를 다루는 건 `vm.sh`다:
+
+```bash
+./vm.sh health     # 밖에서 보는 상태 — 프론트·API·DB 의존 엔드포인트
+./vm.sh deploy     # git pull → uv sync → 재기동 → 헬스 대기
+./vm.sh logs -f    # 백엔드 로그 따라가기
 ```
 
 * **웹 콘솔 접속**: [http://localhost:3000](http://localhost:3000)
@@ -134,8 +145,11 @@ midas-touch/
 ├── shared/         # PostgreSQL/Neo4j 클라이언트, NIM Rate Limiter
 ├── tests/          # 백엔드, 라우터, 단위/통합 테스트
 ├── openwiki/       # 상세 아키텍처 및 도메인 문서 모음
+├── infra/          # Caddyfile, systemd 유닛 (오라클 VM 배포)
 ├── dev.sh          # 로컬 개발 통합 실행 스크립트
-└── start.sh        # 프로덕션 실행 스크립트
+├── start.sh        # 프로덕션 빌드 로컬 확인
+├── db-tunnel.sh    # VM DB로 가는 SSH 터널 (dev.sh/start.sh가 자동 호출)
+└── vm.sh           # 배포된 VM 백엔드 운영 (deploy/status/logs/health)
 ```
 
 ---

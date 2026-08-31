@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 #
-# start.sh — Midas Touch 프로덕션 런처
+# start.sh — 프로덕션 빌드로 로컬에서 돌려 보기
 # 백엔드(uvicorn, --reload 없음)와 프론트(next build && next start)를 기동한다.
 # Ctrl+C 한 번으로 둘 다 종료된다.
+#
+# 진짜 프로덕션은 여기가 아니다 — 백엔드는 오라클 VM의 systemd(midas-backend),
+# 프론트는 Vercel 이다(운영은 ./vm.sh). 이 스크립트는 Vercel 에 올리기 전에
+# dev 가 아닌 프로덕션 빌드에서만 터지는 것(빌드 에러·SSR 차이)을 잡는 용도다.
 #
 # 사용법:
 #   ./start.sh              # 프론트 빌드 후 백엔드 + 프론트 기동

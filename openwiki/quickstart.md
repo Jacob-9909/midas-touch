@@ -74,7 +74,7 @@ Below are the primary OpenWiki pages. Click a link to dive deeper:
 - **[Pipelines](/openwiki/pipelines.md)** – data ingestion, embedding, and knowledge‑graph pipelines; how they are triggered via CLI.
 - **[Data Models](/openwiki/data-models.md)** – PostgreSQL schema (tables, pgvector columns) and Neo4j graph model.
 - **[Agents](/openwiki/agents.md)** – LangGraph agent graph, nodes, tools, and persistence strategy.
-- **[Operations](/openwiki/operations.md)** – async job manager, CLI scripts (`dev.sh`, `expose.sh`, `start.sh`), Docker Compose orchestration.
+- **[Operations](/openwiki/operations.md)** – async job manager, CLI scripts (`dev.sh`, `start.sh`, `vm.sh`, `db-tunnel.sh`), VM deployment.
 - **[Testing](/openwiki/testing.md)** – test suite layout, how to run unit/integration tests.
 
 ---
