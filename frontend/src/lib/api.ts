@@ -676,17 +676,6 @@ export interface RateCurrent {
   rates: Record<string, { value: number; basis: string }>;
 }
 
-/** 개정안 텍스트에서 세율을 추출하고 현행 대비 diff·검증 결과를 받는다(읽기 전용 미리보기).
- *  useLlm 기본 false — 데모/오프라인에서 결정론 휴리스틱으로 안정 동작.
- *  반영(승인) 경로는 없다 — 세율은 코드 상수로만 결정되는 결정론 불변식을 지킨다. */
-export function extractRates(
-  text: string,
-  year = "2026",
-  useLlm = false,
-): Promise<RateExtractResult> {
-  return apiPost("/api/v1/tax-rates/extract", { text, year, use_llm: useLlm });
-}
-
 export function getCurrentRates(year = "2026"): Promise<RateCurrent> {
   return apiGet(`/api/v1/tax-rates/current?year=${encodeURIComponent(year)}`);
 }

@@ -106,17 +106,6 @@ class TestApiFlow(unittest.TestCase):
 
         self.client = TestClient(app)
 
-    def test_extract_preview_flow(self) -> None:
-        res = self.client.post(
-            "/api/v1/tax-rates/extract",
-            json={"text": _SAMPLE_AMENDMENT, "year": "2026", "use_llm": False},
-        )
-        self.assertEqual(res.status_code, 200)
-        body = res.json()
-        self.assertTrue(body["validation_passed"])
-        self.assertEqual(body["issues"], [])
-        self.assertTrue(any(d["field"] == "foreign_stock_national_rate" for d in body["diff"]))
-
     def test_current_returns_code_constants(self) -> None:
         # 반영 경로가 없으므로 현행 세율은 항상 코드 상수(해외주식 20%)다 — 결정론 불변식.
         res = self.client.get("/api/v1/tax-rates/current", params={"year": "2026"})
