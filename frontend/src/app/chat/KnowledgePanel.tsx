@@ -160,6 +160,10 @@ export default function KnowledgePanel() {
           임베딩된 단락을 Neo4j 지식그래프에 반영합니다(챗 답변의 <span className="text-accent">graph_rag 근거</span>가 됨).
           새 문서 임베딩 후 한 번 실행하세요. 반영된 그래프는 <span className="text-fg">그래프</span> 화면에서 시각 추적할 수 있습니다.
         </p>
+        <p className="mt-1.5 px-1 text-[10px] leading-relaxed text-warning">
+          ⚠ 엔티티 추출(LLM)로 <span className="font-medium">수 분 소요</span>되며, 그동안 같은 LLM 자원을 공유하는
+          챗 응답이 느려질 수 있습니다. 시연·발표 중에는 실행하지 마세요.
+        </p>
         {buildJobId && (
           <div className="mt-3">
             <JobProgress jobId={buildJobId} endpoint="/api/v1/graph/build/jobs" />
