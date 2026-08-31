@@ -7,12 +7,31 @@ Welcome to the **Midas Touch** OpenWiki documentation. This guide helps you get 
 ## 📖 Repository Overview
 Midas Touch is a full‑stack, AI‑augmented investment‑assistant platform built with:
 - **FastAPI** backend (Python) that exposes a suite of REST endpoints under `/api/v1`.
-- **Next.js 16 (App Router)** frontend written in TypeScript + Tailwind, providing interactive UI pages such as Chat, Stocks, Cheongyak, Graph, Finetune, and Dashboard.
+- **Next.js 16 (App Router)** frontend written in TypeScript + Tailwind, providing interactive UI pages:
+  - 💬 **Chat (`/chat`)**: Multi-turn LangGraph agent with deterministic tax calculation and 🛡 5-layer defense proof.
+  - 🛡️ **Security (`/security`)**: Fraud detection heuristics & prompt injection defense arena.
+  - 🏠 **Cheongyak (`/cheongyak`)**: Korean public housing subscription matching & 84-point calculator.
+  - 📊 **Simulator (`/simulator`)**: Privacy-first wealth timeline & compound interest simulator.
+  - 🕸️ **Graph (`/graph`, `/query`)**: Neo4j GraphRAG tax law knowledge graph visualizer.
+  - 📈 **Stocks (`/stocks`)**: Technical analysis & self-calibration validation loop (`validate_calibration_moat.py`).
 - **Data pipelines** for financial data ingestion, embedding generation, and Neo4j knowledge‑graph construction.
 - **Shared utilities** (`shared/`) for database access (PostgreSQL + pgvector) and common helpers.
 - **LangGraph agents** that orchestrate tool calls, maintain multi‑turn state, and persist conversation checkpoints.
 
 The repository follows a clear separation of concerns, mirroring the directory layout shown in the root `README.md`.
+
+---
+
+## 🎯 3-Minute Quick Evaluation Guide for Judges
+
+For evaluators reviewing Midas Touch, follow these 4 primary validation flows:
+
+| Step | Focus Area | Entrypoint | Validation Check |
+|---|---|---|---|
+| **1** | **Fraud Defense** | `GET /chat?prefill=...` or `/security` | 10-category scoring, official reporting guide (112/1332), and 🛡 defense proof card appended. |
+| **2** | **Zero-Hallucination Tax** | `POST /api/v1/chat` | Deterministic Python calculation (2.5M KRW deduction, 22% rate) with NTS citation footnote. |
+| **3** | **Housing & Wealth** | `/cheongyak` & `/simulator` | 84-point subscription score match + compound timeline graph (client-side execution). |
+| **4** | **5-Layer Security** | `/security` | 12 attack presets (DAN, prompt leak) blocked by strict tool whitelisting and outer boundaries. |
 
 ---
 
