@@ -242,8 +242,22 @@ def health_check():
     except Exception as exc:
         db_status = f"unhealthy ({exc})"
 
+    # Neo4j 는 예전에 NEO4J_URL 을 그대로 돌려줬다. 그건 설정값이지 상태가 아니라서
+    # Neo4j 가 죽어도 이 필드는 멀쩡해 보였고, GraphRAG 만 조용히 빈 채로 돌았다.
+    # 드라이버는 프로세스 1회 생성분을 재사용한다(shared/database/neo4j_client.py).
+    try:
+        from shared.database.neo4j_client import get_driver
+
+        get_driver().verify_connectivity()
+        neo4j_status = "healthy"
+    except Exception as exc:
+        neo4j_status = f"unhealthy ({exc})"
+
+    # status 가 무조건 "healthy" 였다. DB 가 죽어도 초록이라 헬스체크가 사고를 못 잡았다.
+    ok = db_status == "healthy" and neo4j_status == "healthy"
     return {
-        "status": "healthy",
+        "status": "healthy" if ok else "degraded",
         "database": db_status,
-        "neo4j": os.environ.get("NEO4J_URL", "unset"),
+        "neo4j": neo4j_status,
+        "neo4j_url": os.environ.get("NEO4J_URL", "unset"),
     }
