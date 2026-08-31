@@ -1,12 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowRight, CheckCircle, Warning, Sparkle, FilePdf } from "@phosphor-icons/react";
+import { ArrowRight, CheckCircle, Warning, Sparkle, FilePdf, ShieldCheck } from "@phosphor-icons/react";
 import {
-  applyRates,
   extractRates,
   extractRatesUpload,
-  type RateApplyResult,
   type RateDiffRow,
   type RateExtractResult,
 } from "@/lib/api";
@@ -44,7 +42,6 @@ export default function TaxRatesPage() {
   const [text, setText] = useState(SAMPLE_AMENDMENT);
   const [year, setYear] = useState("2026");
   const [result, setResult] = useState<RateExtractResult | null>(null);
-  const [applied, setApplied] = useState<RateApplyResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -52,7 +49,6 @@ export default function TaxRatesPage() {
   async function onExtract() {
     setBusy(true);
     setError(null);
-    setApplied(null);
     setResult(null);
     try {
       setResult(await extractRates(text, year, false));
@@ -66,7 +62,6 @@ export default function TaxRatesPage() {
   async function onUpload(file: File) {
     setBusy(true);
     setError(null);
-    setApplied(null);
     setResult(null);
     try {
       setResult(await extractRatesUpload(file, year, false));
@@ -78,25 +73,12 @@ export default function TaxRatesPage() {
     }
   }
 
-  async function onApply() {
-    if (!result) return;
-    setBusy(true);
-    setError(null);
-    try {
-      setApplied(await applyRates(result.proposed));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "반영에 실패했습니다.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="mx-auto max-w-[900px] px-6 py-12">
       <PageTitle
         eyebrow="결정론 계산기 · 개정 대응"
-        title="세율 개정안 인입"
-        subtitle="개정안을 붙여넣거나 PDF로 올리면 시스템이 세율을 추출하고 현행과 비교합니다. 승인해야만 레지스트리에 반영되며, 세액 산술은 승인 뒤에도 코드가 합니다 — LLM은 추출만, 계산은 하지 않습니다."
+        title="세율 개정안 인입 (미리보기)"
+        subtitle="개정안을 붙여넣거나 PDF로 올리면 시스템이 세율을 추출해 현행과 비교·검증합니다. 자동 반영은 하지 않습니다 — 세율은 코드 상수로만 결정되는 결정론 불변식을 지키기 위해서입니다. LLM은 추출만, 계산은 코드가 합니다."
       />
 
       {/* ── 입력 ── */}
@@ -124,7 +106,7 @@ export default function TaxRatesPage() {
             className="btn-accent inline-flex items-center gap-2 disabled:opacity-50"
           >
             <Sparkle size={16} weight="fill" />
-            {busy && !applied ? "추출 중…" : "세율 추출"}
+            {busy ? "추출 중…" : "세율 추출"}
           </button>
 
           <span className="text-xs text-muted">또는</span>
@@ -184,7 +166,7 @@ export default function TaxRatesPage() {
 
           {result.issues.length > 0 ? (
             <div className="space-y-1 rounded-lg border border-negative/40 bg-negative/10 px-4 py-3 text-sm text-negative">
-              <p className="font-semibold">검증 실패 — 반영할 수 없습니다</p>
+              <p className="font-semibold">검증 실패 — 형식·범위 이상</p>
               {result.issues.map((i) => (
                 <p key={i} className="text-xs">
                   · {i}
@@ -197,52 +179,16 @@ export default function TaxRatesPage() {
             </div>
           )}
 
-          <p className="text-xs leading-relaxed text-muted">
-            추출값은 &ldquo;검수 필요&rdquo; 라벨이 붙은 제안입니다. 승인하면 {year} 귀속 계산이 새
-            세율을 쓰지만, 기존 2025 귀속 계산과 방어 증명 &ldquo;LLM 개입 없음&rdquo; 불변식은 그대로
-            유지됩니다.
-          </p>
-
-          <button
-            onClick={onApply}
-            disabled={busy || !result.can_apply || applied !== null}
-            className="btn-accent inline-flex items-center gap-2 disabled:opacity-50"
-          >
-            <CheckCircle size={16} weight="fill" />
-            {applied ? "반영됨" : "승인하고 레지스트리 반영"}
-          </button>
-        </Card>
-      )}
-
-      {/* ── 반영 완료 ── */}
-      {applied && (
-        <Card className="mt-6 space-y-3" variant="glass">
-          <div className="flex items-center gap-2 text-positive">
-            <CheckCircle size={20} weight="fill" />
-            <span className="font-semibold text-fg">
-              {applied.year} 귀속 세율이 레지스트리에 반영되었습니다
-            </span>
+          <div className="flex items-start gap-2.5 rounded-lg border border-accent/30 bg-accent/[0.06] px-4 py-3">
+            <ShieldCheck size={16} weight="bold" className="mt-0.5 shrink-0 text-accent" />
+            <p className="text-xs leading-relaxed text-fg/80">
+              <span className="font-semibold text-fg">여기까지가 미리보기입니다.</span> 추출·비교
+              결과를 런타임에 자동 반영하지 않습니다 — 세율은 코드 상수(레지스트리)로만 결정되어야
+              같은 질문에 <span className="text-accent">항상 같은 세액</span>이 나오는 결정론 불변식이
+              지켜지기 때문입니다. 실제 개정 반영은 코드 리뷰·릴리스를 거친 레지스트리 변경으로만
+              이뤄집니다. <span className="text-muted">근거 확인은 여기서, 반영은 코드로.</span>
+            </p>
           </div>
-          <p className="text-xs text-muted">{applied.active.provenance}</p>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <tbody className="divide-y divide-line/50">
-                {Object.entries(applied.active.rates).map(([field, r]) => (
-                  <tr key={field}>
-                    <td className="px-3 py-2 text-muted">{field}</td>
-                    <td className="px-3 py-2 text-right font-mono-spec text-fg">
-                      {r.value < 1 ? `${(r.value * 100).toFixed(2).replace(/\.?0+$/, "")}%` : fmtKRW(r.value)}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-muted">{r.basis}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs leading-relaxed text-muted">
-            이제 세금 계산기가 {applied.year} 귀속 질의에 이 세율을 사용합니다. 세액 산술은 여전히
-            코드가 수행합니다(LLM 개입 없음).
-          </p>
         </Card>
       )}
     </div>

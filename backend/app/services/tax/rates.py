@@ -120,25 +120,16 @@ DEFAULT_YEAR = "2025"
 
 
 def latest_year() -> str:
-    """등록된(하드코딩 + 승인 오버레이) 귀속연도 중 가장 최신.
+    """등록된 귀속연도 중 가장 최신.
 
     규정은 기본적으로 최신 연도로 적용한다 — 계산 노드가 발화에 과거 연도가 없을 때 이 값을 쓴다.
     """
-    from .rate_overlay import overlay_years
-
-    years = set(RATE_REGISTRY) | set(overlay_years())
-    return max(years, key=int)
+    return max(RATE_REGISTRY, key=int)
 
 
 def get_rates(year: str = DEFAULT_YEAR) -> TaxRateSet:
-    """귀속연도에 해당하는 세율 세트를 돌려준다.
+    """귀속연도에 해당하는 세율 세트를 돌려준다(코드에 고정된 레지스트리 상수).
 
-    우선순위: 승인된 오버레이(rate_overlay) > 하드코딩 기본 세트 > DEFAULT_YEAR 폴백.
-    오버레이는 승인된 개정안만 반영되므로, 승인 전에는 기본 세트 동작이 유지된다.
+    세율은 코드 상수(RATE_REGISTRY)로만 결정되며 런타임에 변경되지 않는다 — 결정론 불변식.
     """
-    from .rate_overlay import build_overlaid_set  # 지연 import — 순환 참조 회피
-
-    overlaid = build_overlaid_set(year)
-    if overlaid is not None:
-        return overlaid
     return RATE_REGISTRY.get(year, RATE_REGISTRY[DEFAULT_YEAR])
