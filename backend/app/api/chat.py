@@ -8,6 +8,7 @@ session_id(thread_id)별로 대화 상태가 체크포인터에 보존되어 멀
 
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -24,6 +25,8 @@ from shared.database.repositories.sessions import (
     get_chat_session,
     list_chat_sessions,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["agent"])
 
@@ -59,7 +62,8 @@ def chat(req: ChatRequest, auth_uuid: str | None = Depends(current_uuid)) -> Cha
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"대화 처리 중 오류가 발생했습니다: {exc}")
+        logger.exception("대화 처리 실패 session=%s", req.session_id)
+        raise HTTPException(status_code=500, detail="대화 처리 중 오류가 발생했습니다.") from exc
 
 
 @router.post("/chat/stream")

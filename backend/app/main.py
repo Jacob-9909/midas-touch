@@ -31,6 +31,7 @@ from backend.app.api.research import router as research_router
 from backend.app.api.stocks import router as stocks_router
 from backend.app.api.tax_rates import router as tax_rates_router
 from backend.app.api.users import router as users_router
+from backend.app.middleware.rate_limit import RateLimitMiddleware
 from shared.database.connector import get_connection
 
 # uvicorn은 자기 로거만 설정해서, 앱 로거의 INFO가 root(기본 WARNING)에서 잘린다.
@@ -196,6 +197,10 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# IP별 속도 제한(무인증 공개 URL 스팸·DoS 완화). CORS보다 먼저 등록 →
+# CORS가 바깥 계층으로 남아 429 응답에도 CORS 헤더가 붙는다(브라우저가 본문을 읽을 수 있게).
+app.add_middleware(RateLimitMiddleware)
 
 # 웹 콘솔(Next.js dev) → API 호출 허용. 운영 시 도메인을 좁힐 것.
 app.add_middleware(

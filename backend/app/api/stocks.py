@@ -31,6 +31,8 @@ from shared.database.repositories.watchlist import (
 )
 from shared.utils.timez import KST, now_kst
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/v1/stocks", tags=["stocks"])
 
 _PERIOD_DAYS: dict[str, int] = {
@@ -92,14 +94,16 @@ def quick_analysis(ticker: str = Query(min_length=1, max_length=20)) -> dict:
     try:
         analyzer.fetch_data()
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"데이터 조회 실패: {exc}")
+        logger.exception("주가 데이터 조회 실패")
+        raise HTTPException(status_code=502, detail="데이터 조회에 실패했습니다.") from exc
 
     try:
         indicators = analyzer.quick_analysis()
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"지표 계산 실패: {exc}")
+        logger.exception("지표 계산 실패")
+        raise HTTPException(status_code=502, detail="지표 계산에 실패했습니다.") from exc
 
     # 과거 유사 패턴(교차종목) + 자신감별 적중률 → LLM 프롬프트 컨텍스트로 주입(미가용이면 빈 값).
     memory = get_analysis_memory()
@@ -233,9 +237,10 @@ def run_backtest(req: BacktestRequest) -> dict:
         analyzer.fetch_data()
         return analyzer.backtest(req.strategy)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"백테스트 실패: {exc}")
+        logger.exception("백테스트 실패 ticker=%s strategy=%s", req.ticker, req.strategy)
+        raise HTTPException(status_code=502, detail="백테스트에 실패했습니다.") from exc
 
 
 @router.post("/grid-search")
@@ -262,9 +267,10 @@ def grid_search(req: GridSearchRequest) -> dict:
         analyzer.fetch_data()
         result = analyzer.grid_search(req.strategy)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"그리드 서치 실패: {exc}")
+        logger.exception("그리드 서치 실패 ticker=%s strategy=%s", req.ticker, req.strategy)
+        raise HTTPException(status_code=502, detail="그리드 서치에 실패했습니다.") from exc
 
     return {
         "ticker": req.ticker.upper(),
@@ -280,7 +286,8 @@ def run_analysis(req: AnalysisRequest) -> dict:
     try:
         report = generate_analysis(req.ticker, req.strategy, req.metrics)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"리포트 생성 실패: {exc}")
+        logger.exception("리포트 생성 실패 ticker=%s", req.ticker)
+        raise HTTPException(status_code=502, detail="리포트 생성에 실패했습니다.") from exc
     return {"ticker": req.ticker, "strategy": req.strategy, "report": report}
 
 
@@ -503,7 +510,8 @@ def get_price_history(
     try:
         hist = yf.Ticker(symbol).history(period=period)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"시세 조회 실패: {exc}")
+        logger.exception("시세 조회 실패 symbol=%s period=%s", symbol, period)
+        raise HTTPException(status_code=502, detail="시세 조회에 실패했습니다.") from exc
 
     if hist.empty:
         raise HTTPException(status_code=404, detail=f"{symbol} 시세 데이터가 없습니다.")

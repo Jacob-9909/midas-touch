@@ -7,6 +7,7 @@ GraphRAG 질의(근거 서브그래프 포함)는 api/query.py의 `/api/v1/query
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -16,6 +17,8 @@ from backend.app.api.uploads import read_upload_capped
 from backend.app.services.jobs import PROJECT_ROOT, job_manager
 from shared.database.connector import list_emb_sources
 from shared.database.neo4j_client import fetch_graph_snapshot
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/graph", tags=["graph"])
 
@@ -102,4 +105,5 @@ def graph_snapshot(limit: int = 200) -> dict:
     try:
         return fetch_graph_snapshot(limit=limit)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Neo4j 조회 실패: {exc}")
+        logger.exception("Neo4j 스냅샷 조회 실패")
+        raise HTTPException(status_code=500, detail="그래프 조회에 실패했습니다.") from exc
