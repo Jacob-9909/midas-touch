@@ -6,16 +6,29 @@
 
 ---
 
+## 🔗 접속 정보
+
+| | |
+|---|---|
+| **웹 콘솔 (심사 제출용)** | **https://midas-touch-five.vercel.app** |
+| API | https://midas-touch.duckdns.org · [`/health`](https://midas-touch.duckdns.org/health) |
+| **체험 계정** | 로그인 화면의 **"체험 계정으로 바로 시작"** 버튼 한 번 (`demo@midas.touch`) |
+
+회원가입 경로가 없어 체험 계정을 열어 뒀습니다. 아래 퀵투어 링크를 먼저 눌러도 로그인 화면을
+거쳐 **원래 누른 화면으로 돌아옵니다.**
+
+---
+
 ## 🎯 심사위원을 위한 3분 퀵 평가 가이드 (Judge Quick Tour)
 
 심사위원이 콘솔 접속 즉시 3분 만에 **Midas Touch의 4대 핵심 안전망**을 검증할 수 있는 직행 시나리오입니다.
 
 | # | 평가 항목 | 원클릭 질의 / 시연 링크 | 심사위원 검증 포인트 |
 |---|---|---|---|
-| **01** | **피싱·사기 방어** | [사기 문자 검증 챗봇 실행](http://localhost:3000/chat?prefill=%EC%9D%B4%20%EB%AC%B8%EC%9E%90%20%EC%82%AC%EA%B8%B0%EC%95%BC%3F%20%EC%97%84%EB%A7%88%20%EB%82%98%20%ED%8F%B0%20%EC%95%A1%EC%A0%95%20%EA%B9%A8%EC%A0%B8%EC%84%9C%20%EC%88%98%EB%A6%AC%20%EB%A7%A1%EA%B2%BC%EC%96%B4.%20%EC%A7%80%EA%B8%88%20%EA%B8%89%ED%95%98%EA%B2%8C%20%EA%B2%B0%EC%A0%9C%ED%95%A0%20%EA%B2%8C%20%EC%9E%88%EB%8A%94%EB%8D%B0%20%EC%9D%B4%20%EB%A7%81%ED%81%AC%EB%A1%9C%20%EB%93%A4%EC%96%B4%EA%B0%80%EC%84%9C%20300%EB%A7%8C%EC%9B%90%EB%A7%8C%20%EB%B3%B4%EB%82%B4%EC%A4%98%3A%20http%3A%2F%2Fbit.ly%2Furgent-pay88.%20%EC%A0%84%ED%99%94%EB%8A%94%20%EC%95%88%20%EB%8F%BC.) | 10카테고리 결정론 휴리스틱 판정 + 행동 요령 + 112/1332 공식 신고번호 + **🛡 방어 증명** 부착 확인 |
-| **02** | **세법 환각 제로** | [해외주식 양도세 계산 질의](http://localhost:3000/chat?prefill=%EB%AF%B8%EA%B5%AD%20%EC%A3%BC%EC%8B%9D(%EC%97%94%EB%B9%84%EB%94%94%EC%95%84)%20%ED%8C%94%EC%95%84%EC%84%9C%20%EC%98%AC%ED%95%B4%202%2C000%EB%A7%8C%EC%9B%90%20%EB%82%A8%EA%B2%BC%EB%8A%94%EB%8D%B0%20%EC%96%91%EB%8F%84%EC%86%8C%EB%93%9D%EC%84%B8%20%EC%96%BC%EB%A7%88%EB%82%98%20%EB%82%B4%EC%95%BC%20%ED%95%B4%3F) | LLM이 지어내지 않고 코드가 기본공제(250만원)·세율(22%)을 정확히 계산 + 국세청 해설서 조문 출처 확인 |
-| **03** | **청약·자산 설계** | [/cheongyak](http://localhost:3000/cheongyak) 및 [/simulator](http://localhost:3000/simulator) | 84점 만점 청약가점표 비교 + 청년도약계좌 vs 일반적금 복리 도달 시점 그래프 (브라우저 로컬 연산) |
-| **04** | **5겹 보안 방어** | [/security](http://localhost:3000/security) | 프롬프트 인젝션·탈옥(DAN) 프리셋을 직접 던져 도구 화이트리스트 및 외곽 경계 방어 검증 |
+| **01** | **피싱·사기 방어** | [사기 문자 검증 챗봇 실행](https://midas-touch-five.vercel.app/chat?prefill=%EC%9D%B4%20%EB%AC%B8%EC%9E%90%20%EC%82%AC%EA%B8%B0%EC%95%BC%3F%20%EC%97%84%EB%A7%88%20%EB%82%98%20%ED%8F%B0%20%EC%95%A1%EC%A0%95%20%EA%B9%A8%EC%A0%B8%EC%84%9C%20%EC%88%98%EB%A6%AC%20%EB%A7%A1%EA%B2%BC%EC%96%B4.%20%EC%A7%80%EA%B8%88%20%EA%B8%89%ED%95%98%EA%B2%8C%20%EA%B2%B0%EC%A0%9C%ED%95%A0%20%EA%B2%8C%20%EC%9E%88%EB%8A%94%EB%8D%B0%20%EC%9D%B4%20%EB%A7%81%ED%81%AC%EB%A1%9C%20%EB%93%A4%EC%96%B4%EA%B0%80%EC%84%9C%20300%EB%A7%8C%EC%9B%90%EB%A7%8C%20%EB%B3%B4%EB%82%B4%EC%A4%98%3A%20http%3A%2F%2Fbit.ly%2Furgent-pay88.%20%EC%A0%84%ED%99%94%EB%8A%94%20%EC%95%88%20%EB%8F%BC.) | 10카테고리 결정론 휴리스틱 판정 + 행동 요령 + 112/1332 공식 신고번호 + **🛡 방어 증명** 부착 확인 |
+| **02** | **세법 환각 제로** | [해외주식 양도세 계산 질의](https://midas-touch-five.vercel.app/chat?prefill=%EB%AF%B8%EA%B5%AD%20%EC%A3%BC%EC%8B%9D(%EC%97%94%EB%B9%84%EB%94%94%EC%95%84)%20%ED%8C%94%EC%95%84%EC%84%9C%20%EC%98%AC%ED%95%B4%202%2C000%EB%A7%8C%EC%9B%90%20%EB%82%A8%EA%B2%BC%EB%8A%94%EB%8D%B0%20%EC%96%91%EB%8F%84%EC%86%8C%EB%93%9D%EC%84%B8%20%EC%96%BC%EB%A7%88%EB%82%98%20%EB%82%B4%EC%95%BC%20%ED%95%B4%3F) | LLM이 지어내지 않고 코드가 기본공제(250만원)·세율(22%)을 정확히 계산 + 국세청 해설서 조문 출처 확인 |
+| **03** | **청약·자산 설계** | [/cheongyak](https://midas-touch-five.vercel.app/cheongyak) 및 [/simulator](https://midas-touch-five.vercel.app/simulator) | 84점 만점 청약가점표 비교 + 청년도약계좌 vs 일반적금 복리 도달 시점 그래프 (브라우저 로컬 연산) |
+| **04** | **5겹 보안 방어** | [/security](https://midas-touch-five.vercel.app/security) | 프롬프트 인젝션·탈옥(DAN) 프리셋을 직접 던져 도구 화이트리스트 및 외곽 경계 방어 검증 |
 
 ### ⚖️ 일반 금융 AI vs Midas Touch 비교
 
@@ -126,9 +139,36 @@ uv run pytest
 
 * **Frontend**: Next.js 16 (React 19), TypeScript, Tailwind CSS v4
 * **Backend**: Python 3.12, FastAPI, Uvicorn, LangGraph, LangChain, Alembic
-* **Database**: PostgreSQL 16 (pgvector), Neo4j Graph DB
+* **Database**: PostgreSQL 17 (pgvector), Neo4j 5 Graph DB
 * **AI & Data**: NVIDIA NIM (`openai/gpt-oss-120b`, `BAAI/bge-m3`), Tavily, yfinance, 청약홈 공공데이터 API
-* **Tooling**: uv, Docker Compose, ruff, pytest
+* **Infra**: 오라클 VM(systemd + Caddy/Let's Encrypt) · Vercel · GitHub Actions
+* **Tooling**: uv, ruff, pytest, ESLint
+
+---
+
+## 🚢 배포 구성
+
+```
+브라우저 ─HTTPS─> Vercel (Next.js)
+    └────HTTPS─> midas-touch.duckdns.org ─Caddy(TLS)─> backend:8000 ─┬─ PostgreSQL(pgvector)
+                        (오라클 VM 2 OCPU/12GB)                       └─ Neo4j
+```
+
+프론트는 `NEXT_PUBLIC_API_BASE`로 백엔드를 직접 호출합니다. Vercel rewrites로 프록시하지
+않는 이유는 챗 한 턴이 2분을 넘기는 경우가 있어 서버리스 실행시간 제한에 SSE가 잘릴 수 있기
+때문입니다. DB 포트(5432·7687)는 방화벽에서 막아 두고 로컬 개발은 SSH 터널로 붙습니다.
+
+**CI/CD** — `main` 머지 한 번으로 양쪽이 배포됩니다.
+
+| | 프론트 | 백엔드 |
+|---|---|---|
+| 방식 | Vercel Git 연동(푸시형) | VM이 2분마다 폴링(당김형) |
+| 반영 | 즉시(~40초) | 최대 2분 + CI 통과 대기 |
+| 안전장치 | 빌드 실패 시 이전 배포 유지 | CI 게이트 · 변경범위 판정 · **헬스 실패 시 자동 롤백** |
+
+백엔드가 당김형인 이유는 푸시형이면 셸이 열리는 SSH 키를 레포 시크릿에 둬야 하는데,
+그 VM이 DB도 함께 돌리기 때문입니다. `main` 룰셋은 CI 2종 통과를 머지 조건으로 요구합니다.
+자세한 절차와 함정은 [배포 런북](docs/deploy-runbook.md)에 있습니다.
 
 ---
 
@@ -145,11 +185,12 @@ midas-touch/
 ├── shared/         # PostgreSQL/Neo4j 클라이언트, NIM Rate Limiter
 ├── tests/          # 백엔드, 라우터, 단위/통합 테스트
 ├── openwiki/       # 상세 아키텍처 및 도메인 문서 모음
-├── infra/          # Caddyfile, systemd 유닛 (오라클 VM 배포)
+├── infra/          # Caddyfile, systemd 유닛, 자동배포 스크립트 (오라클 VM)
+├── docs/           # 배포 런북, 디자인 시스템, 제출 문서
 ├── dev.sh          # 로컬 개발 통합 실행 스크립트
 ├── start.sh        # 프로덕션 빌드 로컬 확인
 ├── db-tunnel.sh    # VM DB로 가는 SSH 터널 (dev.sh/start.sh가 자동 호출)
-└── vm.sh           # 배포된 VM 백엔드 운영 (deploy/status/logs/health)
+└── vm.sh           # 배포된 VM 백엔드 운영 (deploy/status/logs/health/autodeploy)
 ```
 
 ---
@@ -163,3 +204,4 @@ midas-touch/
 * [에이전트 구조](openwiki/agents.md)
 * [API 명세서](openwiki/api.md)
 * [디자인 시스템 — Bullion Terminal](docs/DESIGN-bullion-terminal.md)
+* [배포 런북](docs/deploy-runbook.md) — VM·Vercel 구성, 자동배포, 트러블슈팅
