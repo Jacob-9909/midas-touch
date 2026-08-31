@@ -19,6 +19,7 @@ load_dotenv()
 from backend.app.services.agent.tools.fraud_check import (
     VERDICT_CAUTION_MIN,
     VERDICT_DANGER_MIN,
+    classify_persona,
     format_report,
     fraud_check,
     scan_message,
@@ -299,6 +300,34 @@ class TestDeterministicActionGuides(unittest.TestCase):
         """매칭된 카테고리가 없으면 행동 요령 섹션 자체를 출력하지 않는다."""
         body = format_report(scan_message(_BENIGN_MESSAGE))
         self.assertNotIn("권장 행동 요령", body)
+
+
+class TestPersonaTailoredGuides(unittest.TestCase):
+    """같은 사기 문자라도 소비자 특성별로 결정론 맞춤 행동요령이 달라진다(주제: 맞춤형)."""
+
+    def test_classify_persona_keywords(self) -> None:
+        self.assertEqual(classify_persona("시니어, 70대 무주택"), "senior")
+        self.assertEqual(classify_persona("사회초년생 20대"), "youth")
+        self.assertEqual(classify_persona("무주택 5년, 부양가족 2명"), "general")
+        self.assertEqual(classify_persona(None), "general")
+
+    def test_same_message_differs_by_persona(self) -> None:
+        report = scan_message(_FAMILY_IMPERSONATION_MESSAGE)
+        senior = format_report(report, "senior")
+        youth = format_report(report, "youth")
+        # 판정·근거는 동일하되 맞춤 행동요령 블록이 다르다.
+        self.assertIn("적용 프로필: 고령층 맞춤", senior)
+        self.assertIn("적용 프로필: 청년 맞춤", youth)
+        self.assertNotEqual(senior, youth)
+
+    def test_persona_block_only_when_flagged(self) -> None:
+        """위험 신호가 없으면 맞춤 행동요령 블록도 출력하지 않는다."""
+        body = format_report(scan_message(_BENIGN_MESSAGE), "senior")
+        self.assertNotIn("맞춤 행동 요령", body)
+
+    def test_unknown_persona_falls_back_to_general(self) -> None:
+        report = scan_message(_FAMILY_IMPERSONATION_MESSAGE)
+        self.assertIn("적용 프로필: 일반", format_report(report, "general"))
 
 
 if __name__ == "__main__":
