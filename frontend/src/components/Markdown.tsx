@@ -58,40 +58,40 @@ function CodeBlock({
 
 // 채팅/리포트용 마크다운 렌더러.
 const components: Components = {
-  p: ({ children }) => <p className="mb-2.5 last:mb-0 text-[15px] sm:text-base leading-relaxed break-keep">{children}</p>,
-  h1: ({ children }) => <h1 className="mb-3 mt-4 text-xl font-bold first:mt-0 break-keep text-fg">{children}</h1>,
-  h2: ({ children }) => <h2 className="mb-2.5 mt-3.5 text-lg font-bold first:mt-0 break-keep text-fg">{children}</h2>,
-  h3: ({ children }) => <h3 className="mb-2 mt-3 text-base font-semibold first:mt-0 break-keep text-fg">{children}</h3>,
-  ul: ({ children }) => <ul className="mb-2.5 list-disc space-y-1.5 pl-5 text-[15px] sm:text-base">{children}</ul>,
-  ol: ({ children }) => <ol className="mb-2.5 list-decimal space-y-1.5 pl-5 text-[15px] sm:text-base">{children}</ol>,
-  li: ({ children }) => <li className="leading-relaxed break-keep">{children}</li>,
-  strong: ({ children }) => <strong className="font-semibold text-fg">{children}</strong>,
+  p: ({ children }) => <p className="mb-3 last:mb-0 text-base sm:text-[17px] leading-[1.7] break-keep">{children}</p>,
+  h1: ({ children }) => <h1 className="mb-3.5 mt-5 text-2xl font-bold first:mt-0 break-keep text-fg">{children}</h1>,
+  h2: ({ children }) => <h2 className="mb-3 mt-4 text-xl font-bold first:mt-0 break-keep text-fg">{children}</h2>,
+  h3: ({ children }) => <h3 className="mb-2.5 mt-3.5 text-lg font-semibold first:mt-0 break-keep text-fg">{children}</h3>,
+  ul: ({ children }) => <ul className="mb-3 list-disc space-y-2 pl-5 text-base sm:text-[17px] leading-[1.7]">{children}</ul>,
+  ol: ({ children }) => <ol className="mb-3 list-decimal space-y-2 pl-5 text-base sm:text-[17px] leading-[1.7]">{children}</ol>,
+  li: ({ children }) => <li className="leading-[1.7] break-keep">{children}</li>,
+  strong: ({ children }) => <strong className="font-bold text-fg">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   a: ({ href, children }) => (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-accent font-medium underline underline-offset-2 hover:opacity-80"
+      className="text-accent font-semibold underline underline-offset-2 hover:opacity-80"
     >
       {children}
     </a>
   ),
   blockquote: ({ children }) => (
-    <blockquote className="my-3 border-l-3 border-accent/40 bg-surface/30 px-3.5 py-1.5 rounded-r-lg text-muted text-sm sm:text-[15px]">{children}</blockquote>
+    <blockquote className="my-3.5 border-l-4 border-accent/50 bg-surface/40 px-4 py-2.5 rounded-r-xl text-muted text-sm sm:text-base leading-relaxed">{children}</blockquote>
   ),
-  hr: () => <hr className="my-3.5 border-line" />,
+  hr: () => <hr className="my-4 border-line" />,
   table: ({ children }) => (
-    <div className="my-3 overflow-x-auto rounded-xl border border-line">
-      <table className="w-full border-collapse text-sm">{children}</table>
+    <div className="my-3.5 overflow-x-auto rounded-xl border border-line">
+      <table className="w-full border-collapse text-sm sm:text-[15px]">{children}</table>
     </div>
   ),
   th: ({ children }) => (
-    <th className="border-b border-line bg-surface/60 px-3 py-2 text-left font-semibold text-fg text-xs uppercase tracking-wider">
+    <th className="border-b border-line bg-surface/60 px-3.5 py-2.5 text-left font-bold text-fg text-xs sm:text-sm uppercase tracking-wider">
       {children}
     </th>
   ),
-  td: ({ children }) => <td className="border-b border-line/60 px-3 py-2 text-fg/90">{children}</td>,
+  td: ({ children }) => <td className="border-b border-line/60 px-3.5 py-2.5 text-fg/90">{children}</td>,
   pre: ({ children }) => <>{children}</>,
   code: ({ className, children }) => {
     const isBlock = /\n/.test(String(children)) || (className ?? "").startsWith("language-");
