@@ -172,6 +172,7 @@ curl -s "$A/api/v1/cheongyak/list/apt" | head -c 120   # 외부 API까지 살았
 | **env 값에 주석이 섞임** | `/health`는 초록인데 챗·임베딩만 깨짐. 로그에 `cache warm failed (embedding)` | systemd `EnvironmentFile`은 값 뒤 `#` 주석을 자르지 않는다. 유닛은 `uv run --env-file .env`를 쓰도록 돼 있으니 되돌리지 말 것. 확인: `sudo tr '\0' '\n' < /proc/$(pgrep -f 'uvicorn backend')/environ \| grep AGENT_LLM_MODEL` |
 | OOM | 백엔드가 조용히 재시작 반복 | `journalctl -u midas-backend | grep -i oom`, 유닛의 `MemoryMax` 조정 또는 스왑 추가(§1) |
 | 인증서 유실 | 재발급 시도 → Let's Encrypt rate limit | `/var/lib/caddy` 를 지우지 말 것 |
+| 로컬에서 DB가 안 붙음 | `./dev.sh` 는 떴는데 청약·주식이 전부 빔, 기동 로그에 `DB 터널 실패` | DB 포트(5432·7687)는 VM 방화벽에서 막혀 있고 로컬은 SSH 터널로만 붙는다. `./db-tunnel.sh` 수동 실행 → 실패하면 `ssh oracle_vm 'echo ok'` 로 SSH 자체를 먼저 확인 |
 | 심사용 체험 계정 | 심사자가 로그인 못 함 | `/login` 화면의 `demo@midas.touch` 계정이 **배포 DB에** 있는지 확인 |
 
 ---

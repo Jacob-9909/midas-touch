@@ -1,6 +1,6 @@
 # Environments
 .env
-.env.bak
+.env*.bak
 .venv
 
 # Secrets / GCP service account credentials
