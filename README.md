@@ -54,35 +54,39 @@
 
 핵심 여정은 **사기 검증 → 세법·근거 계산 → 청약·자금마련** 3단계이며, 모든 답변에 출처와 방어 증명이 붙습니다.
 
-* 💬 **통합 상담 챗봇 (`/chat`)**
+* 💬 **통합 상담 챗봇 ([`/chat`](https://midas-touch-five.vercel.app/chat))**
   * LangGraph 기반 멀티턴 에이전트 및 PostgresSaver 세션 저장
   * Intent 판정 후 필요한 툴만 병렬 실행(fan-out) → 단일 synthesize 작문, SSE 토큰 스트리밍
   * 사기 메시지 검증·결정론 세금 계산·청약 상담을 한 대화에서 처리, 답변 말미에 🛡 방어 증명 자동 부착
 
-* 🛡️ **방어 체험 & 사기 검증 (`/security`)**
+* 🛡️ **방어 체험 & 사기 검증 ([`/security`](https://midas-touch-five.vercel.app/security))**
   * 사기 문자 10카테고리 결정론 휴리스틱 판정(+공식 도메인 안심 신호) + 페르소나별 대응 요령·공식 신고 번호
   * 심사위원이 프롬프트 인젝션 공격 프리셋을 직접 던져 도구 화이트리스트 방어를 검증(20종 회귀 테스트 연계)
 
-* 🏠 **청약 정보 및 가점 계산 (`/cheongyak`)**
+* 🏠 **청약 정보 및 가점 계산 ([`/cheongyak`](https://midas-touch-five.vercel.app/cheongyak))**
   * 공공데이터 API 기반 APT, 오피스텔, 무순위, 공공임대 공고 조회
   * 주택형별 경쟁률, 당첨 가점, 특별공급 현황 상세 조회 및 챗봇 연계
   * 청약가점 계산기(84점 만점, 「주택공급에 관한 규칙」 별표1 기준) — 공고별 최저 당첨가점과 내 점수를 나란히 비교
 
-* 📊 **자금마련 타임라인 시뮬레이터 (`/simulator`)**
+* 📊 **자금마련 타임라인 시뮬레이터 ([`/simulator`](https://midas-touch-five.vercel.app/simulator))**
   * 목표금액(청약 예치금 기준표 또는 직접 입력) · 현재 자산 · 월 저축액 입력 → 도달 시점 시각화
   * 상품 2개(연이율) 비교로 "이 상품을 쓰면 O개월 당겨짐"을 그래프로 제시
   * 계산은 전부 브라우저에서 수행 — 개인 자산 숫자가 서버로 전송되지 않음
 
-* 🕸️ **지식그래프 및 GraphRAG (`/graph`, `/query`)**
+* 🕸️ **지식그래프 및 GraphRAG ([`/graph`](https://midas-touch-five.vercel.app/graph), API `/query`)**
   * Neo4j 기반 세법 및 자산 관계 지식그래프 증분 구축
   * D3 Force 2D 시각화 및 근거 서브그래프/원문 출처 조회 API (`/query`)
   * PDF 문서 업로드 → 파싱·임베딩 인입(`POST /api/v1/graph/upload`)
 
-* 📈 **주식 지표 참고 & 자가 채점 루프 (`/stocks`)** — 보조·실험
+* 📈 **주식 지표 참고 & 자가 채점 루프 ([`/stocks`](https://midas-touch-five.vercel.app/stocks))** — 보조·실험
   * yfinance 실데이터 기반 기술지표 스냅샷(RSI, MACD, KDJ, BB, ATR) — 매매 권유가 아닌 참고 지표
   * **핵심은 예측 자체가 아니라 검증**: AI의 진단을 실현 수익률로 사후 채점하고 성적표를 그대로 공개(`validate_calibration_moat.py`) — "우리 예측조차 채점한다"는 감사 가능성의 연장. 현재 edge는 미입증으로 정직하게 표기
 
-* 👤 **내 정보 (`/me`)** — 청약가점 3요소·1순위 자격·자금 상황 입력
+* ⚖️ **세율 현황 및 개정안 인입 ([`/tax-rates`](https://midas-touch-five.vercel.app/tax-rates))** — 부가
+  * 결정론 세금 계산에 쓰이는 현행 세율을 연도별로 조회
+  * 개정안 문서(`.txt`/`.md`/`.pdf`)를 올리면 현행 세율과의 차이와 검증 결과를 미리보기로 제시 — 법이 바뀌어도 코드 수정 없이 따라간다
+
+* 👤 **내 정보 ([`/me`](https://midas-touch-five.vercel.app/me))** — 청약가점 3요소·1순위 자격·자금 상황 입력
   * 입력값은 브라우저에만 저장되며 공고 목록·챗봇·시뮬레이터의 계산 기준이 됩니다
 
 ---
