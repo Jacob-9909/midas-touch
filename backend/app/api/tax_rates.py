@@ -12,6 +12,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from backend.app.api.uploads import read_upload_capped
 from backend.app.services.tax.rate_diff import diff_against_current
 from backend.app.services.tax.rate_extraction import (
     ProposedRateSet,
@@ -104,7 +105,7 @@ async def extract_upload(
             status_code=400,
             detail=f"지원하지 않는 형식입니다: {suffix} (지원: {sorted(_SUPPORTED_SUFFIXES)})",
         )
-    raw = await file.read()
+    raw = await read_upload_capped(file)
     if suffix == ".pdf":
         text = _pdf_to_text(raw)
     else:

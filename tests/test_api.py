@@ -76,6 +76,14 @@ class TestGraphUploadRoute(unittest.TestCase):
         r = client.post("/api/v1/graph/ingest/jobs", json={"filename": "__no_such_file__.pdf"})
         self.assertEqual(r.status_code, 404)
 
+    def test_upload_rejects_oversize_file(self) -> None:
+        from backend.app.api.uploads import MAX_UPLOAD_BYTES
+
+        oversize = io.BytesIO(b"a" * (MAX_UPLOAD_BYTES + 1))
+        files = {"file": ("huge.txt", oversize, "text/plain")}
+        r = client.post("/api/v1/graph/upload", files=files)
+        self.assertEqual(r.status_code, 413)
+
 
 class TestChatRoutes(unittest.TestCase):
     def test_sessions_list(self) -> None:
