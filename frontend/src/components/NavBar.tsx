@@ -19,7 +19,6 @@ import {
   ChartLineUp,
   ShareNetwork,
   Scroll,
-  Lightning,
   ArrowRight,
 } from "@phosphor-icons/react";
 import { useTheme } from "@/lib/theme";
@@ -40,63 +39,82 @@ const LINKS = [
   { href: "/stocks", label: "주식", group: "engine" },
 ] as const;
 
-const MENU_CORE = [
+const MENU_GROUPS = [
   {
-    href: "/chat",
-    title: "AI 에이전트 챗봇",
-    desc: "5겹 보안 검증 기반 멀티턴 금융 상담",
-    icon: ChatCircleText,
-    tag: "상담",
+    category: "핵심 금융 안전망",
+    categoryEn: "CORE SERVICES",
+    items: [
+      {
+        href: "/chat",
+        title: "AI 에이전트 챗봇",
+        desc: "사기 검증 · 세법 결정론 계산 · 🛡 방어 증명",
+        icon: ChatCircleText,
+        badge: "상담",
+        tone: "text-accent border-accent/40 bg-accent/10",
+      },
+      {
+        href: "/security",
+        title: "AI 보안 & 사기 검증",
+        desc: "12종 프롬프트 공격 방어 및 피싱 문자 즉시 판정",
+        icon: ShieldWarning,
+        badge: "보안",
+        tone: "text-gilt border-gilt/40 bg-gilt/10",
+      },
+      {
+        href: "/cheongyak",
+        title: "청약 공고 & 가점표",
+        desc: "전국 실시간 분양 지도 및 84점 만점 자가진단",
+        icon: Coins,
+        badge: "청약",
+        tone: "text-positive border-positive/40 bg-positive/10",
+      },
+      {
+        href: "/simulator",
+        title: "자금마련 시뮬레이터",
+        desc: "청년도약계좌 vs 일반적금 복리 목표 달성 비교",
+        icon: Calculator,
+        badge: "시뮬",
+        tone: "text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
+      },
+      {
+        href: "/me",
+        title: "내 프로필 & 자산 설정",
+        desc: "무주택 기간, 부양가족, 청약통장 기준 저장 (로컬 격리)",
+        icon: User,
+        badge: "설정",
+        tone: "text-fg/80 border-line bg-surface/50",
+      },
+    ],
   },
   {
-    href: "/security",
-    title: "AI 보안 대응 비서",
-    desc: "12종 프롬프트 공격 방어 및 안전성 검증",
-    icon: ShieldWarning,
-    tag: "보안",
-  },
-  {
-    href: "/graph",
-    title: "금융 지식그래프 (근거 추적)",
-    desc: "챗 답변의 법령 근거를 추적하는 graph_rag 시각 백엔드",
-    icon: ShareNetwork,
-    tag: "근거",
-  },
-  {
-    href: "/cheongyak",
-    title: "청약 공고 & 가점표",
-    desc: "전국 시도 지도 및 84점 만점 자가진단",
-    icon: Coins,
-    tag: "청약",
-  },
-  {
-    href: "/simulator",
-    title: "자금마련 시뮬레이터",
-    desc: "청년도약계좌 vs 적금 목표 달성 비교",
-    icon: Calculator,
-    tag: "시뮬",
-  },
-  {
-    href: "/me",
-    title: "내 정보 & 프로필",
-    desc: "무주택 기간, 부양가족, 통장 가점 설정",
-    icon: User,
-    tag: "설정",
-  },
-];
-
-const MENU_ENGINE = [
-  {
-    href: "/tax-rates",
-    title: "세율 갱신 콘솔",
-    desc: "2026 세법 개정안 자동 인입 및 승인",
-    icon: Scroll,
-  },
-  {
-    href: "/stocks",
-    title: "주식 지표 & 자가 채점",
-    desc: "지표 참고(매매권유 아님) + AI 예측 자가 채점 검증 루프 · 보조·실험",
-    icon: ChartLineUp,
+    category: "지식그래프 & 전문 분석 엔진",
+    categoryEn: "KNOWLEDGE & ENGINE",
+    items: [
+      {
+        href: "/graph",
+        title: "금융 지식그래프 (GraphRAG)",
+        desc: "챗봇 답변의 법령 조문 출처를 시각화하는 지식망",
+        icon: ShareNetwork,
+        badge: "근거",
+        tone: "text-indigo-400 border-indigo-400/40 bg-indigo-400/10",
+      },
+      {
+        href: "/tax-rates",
+        title: "세율 갱신 콘솔",
+        desc: "최신 세법 개정안 자동 인입 및 법령 조문 조회",
+        icon: Scroll,
+        badge: "세법",
+        tone: "text-amber-400 border-amber-400/40 bg-amber-400/10",
+      },
+      {
+        href: "/stocks",
+        title: "주식 지표 & 자가 채점 루프",
+        desc: "보조 지표 참고 + AI 예측 실현 수익률 사후 채점 공개",
+        icon: ChartLineUp,
+        badge: "실험",
+        tone: "text-emerald-400 border-emerald-400/40 bg-emerald-400/10",
+      },
+    ],
   },
 ];
 
@@ -124,33 +142,41 @@ export default function NavBar() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <header className="sticky top-3 z-50 px-3 sm:px-5">
-      <nav className="mx-auto flex min-h-14 max-w-[1280px] w-full items-center justify-between gap-2 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_82%,transparent)] px-3.5 py-1.5 shadow-[var(--shadow-1)] backdrop-blur-xl">
+    <header className="sticky top-2.5 z-50 px-3 sm:px-5 mb-2 sm:mb-3">
+      <nav className="mx-auto flex min-h-[54px] max-w-[1280px] w-full items-center justify-between gap-2.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_90%,transparent)] px-3.5 sm:px-4 py-1.5 shadow-sm shadow-black/5 dark:shadow-md dark:shadow-black/50 backdrop-blur-xl transition-all">
+        {/* 좌측 브랜드 로고 */}
         <Link
           href="/"
-          className="mr-3 flex shrink-0 items-center gap-2 whitespace-nowrap pl-1 font-display text-base sm:text-lg tracking-tight"
+          className="group mr-2 flex shrink-0 items-center gap-2.5 whitespace-nowrap pl-0.5 font-display transition-transform duration-150 active:scale-95"
         >
-          <ShieldChevron weight="fill" className="text-gilt shrink-0" size={20} />
-          <span className="font-semibold tracking-tight">Midas Touch</span>
-          <span className="hidden rounded-full border border-line/60 px-1.5 py-0.5 font-mono-spec text-[9px] uppercase tracking-widest text-muted md:inline-block">
-            Console
-          </span>
+          <div className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-xl border border-accent/35 bg-accent/10 text-accent group-hover:border-accent group-hover:bg-accent/15 transition-colors">
+            <ShieldChevron weight="fill" size={18} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[15px] sm:text-[16px] font-extrabold tracking-tight text-fg group-hover:text-accent transition-colors">
+              Midas Touch
+            </span>
+            <span className="hidden items-center gap-1 rounded-full border border-positive/30 bg-positive/10 px-2 py-0.5 font-mono-spec text-[10px] font-bold text-positive md:inline-flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-positive animate-pulse" />
+              AI GUARD
+            </span>
+          </div>
         </Link>
 
-        {/* 데스크톱 링크 (화면 넓을 때) */}
-        <div className="hidden shrink-0 items-center gap-0.5 xl:flex">
+        {/* 데스크톱 메뉴 링크 (중앙) */}
+        <div className="hidden shrink-0 items-center gap-1 xl:flex">
           {LINKS.map((l, i) => (
             <span key={l.href} className="flex items-center">
               {i > 0 && LINKS[i - 1].group !== l.group && (
-                <span aria-hidden className="mx-2 h-3.5 w-px bg-line/50" />
+                <span aria-hidden className="mx-2 h-4 w-px bg-line/70" />
               )}
               <Link
                 href={l.href}
-                className={`whitespace-nowrap rounded-full px-2.5 2xl:px-3 py-1 text-xs font-mono-spec transition-colors duration-200 ${
+                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold transition-all duration-150 ${
                   isActive(l.href)
-                    ? "bg-accent/15 text-accent border border-accent/40 font-semibold"
-                    : "text-muted hover:text-fg hover:bg-surface/60 border border-transparent"
-                } ${l.group === "engine" && !isActive(l.href) ? "opacity-70" : ""}`}
+                    ? "!bg-accent !text-white !border-accent shadow-sm font-bold"
+                    : "text-muted hover:text-fg hover:bg-surface/80 border border-transparent"
+                } ${l.group === "engine" && !isActive(l.href) ? "opacity-75" : ""}`}
               >
                 {l.label}
               </Link>
@@ -159,16 +185,17 @@ export default function NavBar() {
         </div>
 
         {/* 우측 컨트롤 영역 */}
-        <div className="relative ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
-          {/* 빠른 실행 (⌘K) */}
+        <div className="relative ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+          {/* 빠른 실행 검색바 (⌘K) */}
           <button
             onClick={() => setCommandOpen(true)}
             aria-label="빠른 실행 및 검색 (단축키 ⌘K)"
-            title="빠른 실행 (⌘K)"
-            className="btn-ghost shrink-0 gap-1.5 rounded-full px-2.5 py-1 text-muted hover:text-fg border border-line/60 h-9"
+            title="빠른 검색 (⌘K)"
+            className="flex items-center gap-2 rounded-full border border-line bg-surface/60 hover:bg-surface hover:border-accent/40 px-3 py-1.5 text-xs text-muted hover:text-fg transition-all h-[38px]"
           >
             <MagnifyingGlass size={15} className="text-accent" weight="bold" />
-            <kbd className="hidden sm:inline-flex items-center rounded border border-line bg-surface/80 px-1 font-mono-spec text-[9px] text-muted">
+            <span className="hidden sm:inline font-medium text-muted">검색</span>
+            <kbd className="inline-flex items-center rounded border border-line bg-surface px-1.5 py-0.5 font-mono-spec text-[10px] font-bold text-muted">
               ⌘K
             </kbd>
           </button>
@@ -177,7 +204,7 @@ export default function NavBar() {
           <button
             onClick={toggle}
             aria-label="테마 전환"
-            className="btn-ghost btn-icon shrink-0 h-9 w-9"
+            className="btn-ghost btn-icon shrink-0 h-[38px] w-[38px] rounded-full border border-line/70 hover:border-line hover:bg-surface/80"
           >
             {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
           </button>
@@ -188,181 +215,146 @@ export default function NavBar() {
             aria-pressed={largeText}
             aria-label="큰 글씨 모드"
             title={largeText ? "큰 글씨 모드 끄기" : "큰 글씨 모드 켜기"}
-            className={`btn-ghost shrink-0 gap-1.5 rounded-full px-2.5 py-1 h-9 ${
-              largeText ? "border-accent/40 bg-accent/15 text-accent" : ""
+            className={`btn-ghost shrink-0 gap-1.5 rounded-full px-3 py-1.5 h-[38px] border border-line/70 hover:border-line hover:bg-surface/80 ${
+              largeText ? "!border-accent/50 !bg-accent/15 !text-accent font-bold" : ""
             }`}
           >
             <TextAa weight={largeText ? "fill" : "regular"} size={16} />
-            <span className="hidden 2xl:inline text-xs font-medium">큰 글씨</span>
+            <span className="hidden 2xl:inline text-xs font-semibold">큰 글씨</span>
           </button>
 
-          {/* 전체 메뉴 허브 버튼 */}
+          {/* 전체 메뉴 햄버거 버튼 */}
           <button
             onClick={() => setOpen((o) => !o)}
-            aria-label="전체 메뉴 및 서비스 허브 열기"
+            aria-label="전체 메뉴 열기"
             aria-expanded={open}
             title="전체 메뉴"
-            className={`btn-ghost btn-icon shrink-0 h-9 w-9 ${
-              open ? "border-accent/50 bg-accent/20 text-accent" : ""
+            className={`btn-ghost btn-icon shrink-0 h-[38px] w-[38px] rounded-full border transition-all ${
+              open
+                ? "!border-accent !bg-accent/20 !text-accent"
+                : "border-line/70 hover:border-line hover:bg-surface/80 text-fg"
             }`}
           >
-            {open ? <X size={16} /> : <List size={16} />}
+            {open ? <X size={18} /> : <List size={18} />}
           </button>
         </div>
       </nav>
 
-      {/* ── 전체 메뉴 허브 모달 (All-in-One Mega Drawer) ── */}
+      {/* ── 전체 메뉴 허브 모달 (고가독성 모던 메가 드로어) ── */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 sm:pt-24 px-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-20 px-4 pb-6 overflow-y-auto">
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity"
+            className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity"
             onClick={() => setOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-3xl rounded-2xl border border-line bg-[var(--ink-1)] p-5 shadow-[var(--shadow-2)] overflow-hidden animate-rise">
+          <div className="relative z-10 w-full max-w-4xl rounded-2xl border border-line bg-[var(--ink-1)] p-6 sm:p-7 shadow-[var(--shadow-2)] overflow-hidden animate-rise">
             {/* 상단 타이틀 바 */}
-            <div className="flex items-center justify-between border-b border-line pb-3">
-              <div className="flex items-center gap-2">
-                <ShieldChevron weight="fill" className="text-gilt" size={20} />
-                <span className="font-display text-base font-semibold text-fg">
-                  Midas Touch 전체 서비스 허브
-                </span>
-                <span className="rounded-full border border-line bg-surface/50 px-2 py-0.5 font-mono-spec text-[10px] text-muted">
-                  Sitemap & Quick Demos
-                </span>
+            <div className="flex items-center justify-between border-b border-line pb-4">
+              <div className="flex items-center gap-2.5">
+                <ShieldChevron weight="fill" className="text-accent" size={22} />
+                <div>
+                  <span className="font-display text-lg font-bold text-fg block leading-tight">
+                    Midas Touch 전체 서비스
+                  </span>
+                  <span className="font-mono-spec text-xs text-muted">
+                    신뢰 가능한 4대 금융 안전망 & 분석 엔진
+                  </span>
+                </div>
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className="btn-ghost btn-icon h-8 w-8"
+                className="btn-ghost btn-icon h-9 w-9 rounded-full border border-line/60 hover:border-line text-muted hover:text-fg"
                 aria-label="메뉴 닫기"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* ⚡ 3초 퀵 데모 시연 스트립 */}
-            <div className="my-4 rounded-xl border border-accent/30 bg-accent/10 p-3">
-              <div className="flex items-center gap-1.5 font-mono-spec text-[11px] font-semibold uppercase tracking-wider text-accent mb-2">
-                <Lightning weight="fill" size={13} /> 심사위원 3초 원클릭 퀵 데모:
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href={`/chat?prefill=${encodeURIComponent("이 문자 사기야? 엄마 나 사고났어. 경찰서에 있는데 지금 당장 300만원 이체해줘. 전화하지 마세요.")}`}
-                  onClick={() => setOpen(false)}
-                  className="lift inline-flex items-center gap-1 rounded-full border border-line bg-surface/80 px-3 py-1 text-xs text-fg hover:border-accent transition-colors"
-                >
-                  <span>🚨 사기 문자 검증 시연</span>
-                  <ArrowRight size={11} className="text-accent" />
-                </Link>
-                <Link
-                  href={`/chat?prefill=${encodeURIComponent("미국 주식 팔아서 2,000만원 벌었는데 양도소득세 얼마나 내야 해? 기본공제랑 세율 근거도 알려줘.")}`}
-                  onClick={() => setOpen(false)}
-                  className="lift inline-flex items-center gap-1 rounded-full border border-line bg-surface/80 px-3 py-1 text-xs text-fg hover:border-accent transition-colors"
-                >
-                  <span>⚖️ 해외주식 세법 계산</span>
-                  <ArrowRight size={11} className="text-accent" />
-                </Link>
-                <Link
-                  href="/simulator"
-                  onClick={() => setOpen(false)}
-                  className="lift inline-flex items-center gap-1 rounded-full border border-line bg-surface/80 px-3 py-1 text-xs text-fg hover:border-accent transition-colors"
-                >
-                  <span>📈 자금마련 타임라인</span>
-                  <ArrowRight size={11} className="text-accent" />
-                </Link>
-              </div>
+            {/* 2단 카테고리 그리드 */}
+            <div className="mt-6 grid gap-6 md:grid-cols-2">
+              {MENU_GROUPS.map((group) => (
+                <div key={group.category} className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="font-display text-sm font-bold text-fg">
+                      {group.category}
+                    </span>
+                    <span className="font-mono-spec text-[10px] font-semibold tracking-wider text-accent">
+                      {group.categoryEn}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      const active = isActive(item.href);
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setOpen(false)}
+                          className={`group flex items-center justify-between gap-3.5 rounded-xl border p-3.5 transition-all duration-150 ${
+                            active
+                              ? "border-accent/50 bg-accent/15 text-fg shadow-sm"
+                              : "border-line bg-[var(--ink-2)]/60 hover:bg-[var(--ink-2)] hover:border-accent/40 text-fg"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <div
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors ${
+                                active
+                                  ? "border-accent/50 bg-accent text-white"
+                                  : "border-line bg-surface text-fg/80 group-hover:border-accent/40 group-hover:text-accent"
+                              }`}
+                            >
+                              <Icon size={20} weight={active ? "fill" : "duotone"} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-[14px] font-bold text-fg group-hover:text-accent transition-colors">
+                                {item.title}
+                              </div>
+                              <div className="text-xs text-muted/90 leading-snug mt-0.5 line-clamp-1">
+                                {item.desc}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 flex items-center gap-2">
+                            <span
+                              className={`rounded-full border px-2 py-0.5 font-mono-spec text-[10px] font-bold ${item.tone}`}
+                            >
+                              {item.badge}
+                            </span>
+                            <ArrowRight
+                              size={14}
+                              className="text-muted group-hover:text-accent group-hover:translate-x-0.5 transition-transform shrink-0"
+                            />
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* 서비스 목록 그리드 */}
-            <div className="grid gap-4 sm:grid-cols-2 max-h-[50vh] overflow-y-auto pr-1">
-              {/* 핵심 서비스 섹션 */}
-              <div className="space-y-2">
-                <div className="font-mono-spec text-[10px] font-semibold uppercase tracking-wider text-muted px-1">
-                  Core Services (핵심 5대 기능)
-                </div>
-                <div className="space-y-1.5">
-                  {MENU_CORE.map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(item.href);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        className={`flex items-center justify-between gap-3 rounded-xl border p-2.5 transition ${
-                          active
-                            ? "border-accent/40 bg-accent/15 text-fg"
-                            : "border-line bg-surface/40 hover:bg-surface/80 hover:border-line/80 text-muted hover:text-fg"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${
-                            active ? "border-accent/40 bg-accent/20 text-accent" : "border-line bg-surface text-muted"
-                          }`}>
-                            <Icon size={16} weight={active ? "fill" : "regular"} />
-                          </div>
-                          <div className="min-w-0">
-                            <div className={`text-xs font-semibold ${active ? "text-fg" : "text-fg/90"}`}>
-                              {item.title}
-                            </div>
-                            <div className="text-[11px] text-muted truncate">{item.desc}</div>
-                          </div>
-                        </div>
-                        <span className="shrink-0 rounded-full border border-line px-1.5 py-0.5 font-mono-spec text-[9px] text-muted">
-                          {item.tag}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
+            {/* 하단 퀵 액션 & 단축키 바 */}
+            <div className="mt-6 pt-4 border-t border-line/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-muted">
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-fg/80">단축키 안내:</span>
+                <span>어디서나</span>
+                <kbd className="rounded border border-line bg-surface px-1.5 py-0.5 font-mono-spec text-[10px] font-bold text-fg">
+                  ⌘K
+                </kbd>
+                <span>를 누르면 빠른 검색창이 열립니다.</span>
               </div>
-
-              {/* 금융 분석 엔진 섹션 */}
-              <div className="space-y-2">
-                <div className="font-mono-spec text-[10px] font-semibold uppercase tracking-wider text-muted px-1">
-                  Analysis Engine (전문 분석 도구)
-                </div>
-                <div className="space-y-1.5">
-                  {MENU_ENGINE.map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(item.href);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        className={`flex items-center justify-between gap-3 rounded-xl border p-2.5 transition ${
-                          active
-                            ? "border-accent/40 bg-accent/15 text-fg"
-                            : "border-line bg-surface/40 hover:bg-surface/80 hover:border-line/80 text-muted hover:text-fg"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${
-                            active ? "border-accent/40 bg-accent/20 text-accent" : "border-line bg-surface text-muted"
-                          }`}>
-                            <Icon size={16} weight={active ? "fill" : "regular"} />
-                          </div>
-                          <div className="min-w-0">
-                            <div className={`text-xs font-semibold ${active ? "text-fg" : "text-fg/90"}`}>
-                              {item.title}
-                            </div>
-                            <div className="text-[11px] text-muted truncate">{item.desc}</div>
-                          </div>
-                        </div>
-                        <ArrowRight size={13} className="text-muted shrink-0" />
-                      </Link>
-                    );
-                  })}
-                </div>
-
-                {/* 시스템 단축키 힌트 카드 */}
-                <div className="mt-3 rounded-xl border border-line/60 bg-surface/30 p-3 text-xs text-muted">
-                  <div className="font-semibold text-fg mb-1">💡 빠른 탐색 팁</div>
-                  <p className="text-[11px] leading-relaxed">
-                    언제든 <kbd className="rounded border border-line px-1 font-mono-spec bg-surface text-fg text-[10px]">⌘K</kbd> 단축키로
-                    12종 보안 공격 및 페이지를 0.1초 만에 실행할 수 있습니다.
-                  </p>
-                </div>
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/security"
+                  onClick={() => setOpen(false)}
+                  className="text-accent hover:underline font-semibold"
+                >
+                  🛡️ 5겹 보안 검증장 바로가기 →
+                </Link>
               </div>
             </div>
           </div>

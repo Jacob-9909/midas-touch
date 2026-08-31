@@ -47,7 +47,7 @@ export default function LoginPage() {
           <ShieldChevron
             weight="fill"
             size={22}
-            className="text-gilt"
+            className="text-accent"
           />
           <h1 className="font-display text-xl font-semibold tracking-tight text-fg">Midas Touch 로그인</h1>
         </div>
