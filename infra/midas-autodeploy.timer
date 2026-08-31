@@ -1,0 +1,18 @@
+# 2분마다 main 을 확인한다.
+#
+# 왜 폴링인가: webhook 이면 즉시 반응하지만 VM 에 수신 엔드포인트와 HMAC 시크릿이
+# 새로 필요하다. 배포가 2분 늦어서 곤란한 상황이 없어서 폴링으로 둔다.
+# 변화가 없으면 스크립트가 fetch 한 번 하고 조용히 끝나므로 비용도 무시할 만하다.
+
+[Unit]
+Description=Midas Touch 자동배포 타이머 (2분 주기)
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+# 여러 대가 동시에 GitHub 를 때리지 않게 하는 관행 — 여기선 한 대지만 무해하다.
+RandomizedDelaySec=20
+Unit=midas-autodeploy.service
+
+[Install]
+WantedBy=timers.target
