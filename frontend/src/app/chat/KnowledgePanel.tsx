@@ -157,7 +157,8 @@ export default function KnowledgePanel() {
           지식그래프 반영 (재빌드)
         </button>
         <p className="mt-1.5 px-1 text-[10px] leading-relaxed text-muted">
-          임베딩된 단락을 지식그래프에 반영합니다. 새 문서 임베딩 후 한 번 실행하세요.
+          임베딩된 단락을 Neo4j 지식그래프에 반영합니다(챗 답변의 <span className="text-accent">graph_rag 근거</span>가 됨).
+          새 문서 임베딩 후 한 번 실행하세요. 반영된 그래프는 <span className="text-fg">그래프</span> 화면에서 시각 추적할 수 있습니다.
         </p>
         {buildJobId && (
           <div className="mt-3">
