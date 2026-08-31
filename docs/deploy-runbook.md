@@ -132,16 +132,15 @@ systemctl show midas-backend -p MemoryCurrent
 
 | 항목 | 값 | 현재 |
 |---|---|---|
-| Root Directory | `frontend` | ⚠️ **`.` 로 돼 있다** — 아래 참고 |
+| Root Directory | `frontend` | ✅ (2026-08-31 `.` → `frontend` 수정) |
 | Framework | Next.js (자동 감지) | ✅ |
 | Build Command | 기본값 | ✅ |
 
-> ⚠️ **Root Directory 가 `.` 인데도 CLI 배포는 성공한다.** `frontend/` 안에서
-> `vercel --prod` 를 돌리면 CLI 가 그 디렉터리를 배포 루트로 업로드하기 때문이다.
-> 하지만 **git 연동을 켜면 Vercel 이 레포 루트에서 빌드하고, 루트엔 `package.json`
-> 이 없어 빌드가 깨진다.** git 연동을 켤 거면 Root Directory 를 `frontend` 로
-> 먼저 바꿀 것. (빌드가 깨져도 기존 프로덕션 배포는 그대로 살아 있으니 사이트가
-> 죽지는 않는다 — 대신 자동배포가 조용히 안 되는 상태가 된다.)
+> **Root Directory 는 대시보드 Settings → Build and Deployment 에 있다**(General 이 아니다).
+> 2026-08-31 이전엔 `.` 이었는데, `frontend/` 안에서 `vercel --prod` 를 돌리면 CLI 가
+> 그 디렉터리를 배포 루트로 업로드해서 **CLI 배포만으로는 안 깨졌다.** git 연동은
+> 레포 루트에서 빌드하므로 `.` 인 채로 켰으면 루트에 `package.json` 이 없어 깨졌을 것이다
+> — 사이트는 기존 배포로 살아 있고 자동배포만 조용히 안 되는, 늦게 발견되는 형태로.
 
 환경변수 (Production + Preview 양쪽):
 
