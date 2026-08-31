@@ -4,7 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useReducedMotion } from "motion/react";
 import { errMsg } from "@/lib/async";
-import { MagnifyingGlass, ArrowUp } from "@phosphor-icons/react";
+import { MagnifyingGlass, ArrowUp, Info } from "@phosphor-icons/react";
 import {
   apiGet,
   apiPost,
@@ -98,37 +98,47 @@ export default function GraphPage() {
         subtitle="챗봇 답변의 법령 근거(graph_rag)를 그리는 시각 백엔드입니다. 구조를 탐색하고 GraphRAG로 근거 서브그래프를 질의하세요."
       />
 
-      {/* 문서 인입 동선 안내 — 업로드·그래프 반영은 챗 지식베이스 패널이 단일 입구다(여기엔 빌드 콘솔을 두지 않는다). */}
-      <Card className="animate-rise">
-        <p className="text-xs leading-relaxed text-muted">
-          <span className="font-medium text-fg">문서 추가·그래프 반영</span>은 챗봇 화면의{" "}
-          <span className="text-accent">지식베이스 패널</span>에서 합니다 — 업로드 → 임베딩 → 그래프
-          반영이 한 곳에서 이어집니다. 이 페이지는 그렇게 반영된 그래프를 <strong>탐색·질의</strong>하는
-          근거 추적 면입니다.
-        </p>
-      </Card>
+      {/* 문서 인입 동선 안내 콜아웃 배너 */}
+      <div className="animate-rise flex items-start gap-4 rounded-2xl border border-accent/40 bg-[color-mix(in_srgb,var(--ink-1)_85%,var(--accent)_15%)] p-5 sm:p-6 shadow-sm">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent/40 bg-accent/20 text-accent">
+          <Info size={22} weight="fill" />
+        </div>
+        <div className="space-y-1.5 min-w-0">
+          <div className="text-base sm:text-[17px] font-bold text-fg">
+            문서 추가 및 지식그래프 연동 안내
+          </div>
+          <div className="text-sm sm:text-[15px] leading-relaxed text-muted/95 break-keep space-y-1">
+            <p>
+              신규 세법 문서 업로드와 임베딩·그래프 구축은 <strong className="text-accent font-semibold">챗봇 화면의 지식베이스 패널</strong>에서 한 번에 처리됩니다.
+            </p>
+            <p>
+              이 페이지는 그렇게 구축된 Neo4j 지식그래프를 직접 시각화하고 탐색·질의하는 <strong className="text-fg font-bold">근거 추적 전용 콘솔</strong>입니다.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* 스냅샷 시각화 */}
-      <Card className="animate-rise">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-fg">그래프 구조</h2>
+      <Card className="animate-rise p-5 sm:p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base sm:text-lg font-bold text-fg">그래프 구조 스냅샷</h2>
           <button
             onClick={loadSnapshot}
             disabled={snapLoading}
-            className="btn-ghost px-4 py-1.5 text-sm disabled:opacity-40"
+            className="btn-ghost px-4 py-2 text-sm font-semibold disabled:opacity-40"
           >
             {snapLoading ? "불러오는 중…" : snapshot ? "새로고침" : "스냅샷 불러오기"}
           </button>
         </div>
         {snapshot ? (
           snapshot.nodes.length === 0 ? (
-            <p className="text-sm text-muted">
+            <p className="text-sm sm:text-base text-muted py-4">
               그래프가 비어 있습니다. 챗봇 지식베이스 패널에서 문서를 반영하세요.
             </p>
           ) : (
             <>
-              <p className="mb-2 text-xs text-muted">
-                노드 {snapshot.nodes.length} · 관계 {snapshot.links.length}
+              <p className="mb-3 text-xs sm:text-sm font-medium text-muted">
+                노드 {snapshot.nodes.length}개 · 관계 {snapshot.links.length}개
                 {highlight.length > 0 && " · 흰 테두리 = RAG 근거 노드"}
               </p>
               <GraphView data={snapshot} highlight={highlight} />
@@ -136,19 +146,17 @@ export default function GraphPage() {
           )
         ) : (
           // 빈 상태 = "스캔 대기". 레이더 스윕이 그 상태를 그대로 말해준다.
-          // 텍스트 뒤에 깔면 링이 글자를 관통해 읽기를 망치므로, 계기판처럼 분리해 나란히 둔다.
-          // reduced-motion이면 캔버스 없이 안내 문구만 남는다.
-          <div className="flex flex-col items-center gap-6 rounded-lg border border-line/50 bg-[var(--ink)] px-6 py-10 sm:flex-row sm:justify-center sm:gap-10">
+          <div className="flex flex-col items-center gap-6 rounded-xl border border-line/50 bg-[var(--ink)] px-6 py-10 sm:flex-row sm:justify-center sm:gap-10">
             {!reduceMotion && (
               <div className="h-36 w-36 shrink-0 [mask-image:radial-gradient(closest-side,black_60%,transparent_100%)]">
                 <RadarSweep />
               </div>
             )}
             <div className="text-center sm:text-left">
-              <span className="font-mono-spec text-[10px] uppercase tracking-[0.22em] text-accent">
+              <span className="font-mono-spec text-xs font-bold uppercase tracking-[0.2em] text-accent">
                 Standing by · 스캔 대기
               </span>
-              <p className="mt-2 text-sm text-muted">
+              <p className="mt-2 text-sm sm:text-[15px] font-medium text-muted">
                 버튼을 눌러 Neo4j 그래프 스냅샷을 시각화하세요.
               </p>
             </div>
@@ -157,43 +165,43 @@ export default function GraphPage() {
       </Card>
 
       {/* GraphRAG 질의 */}
-      <Card className="animate-rise">
-        <h2 className="mb-3 text-sm font-medium text-fg">GraphRAG 질의</h2>
-        <div className="flex gap-2">
+      <Card className="animate-rise p-5 sm:p-6">
+        <h2 className="mb-3.5 text-base sm:text-lg font-bold text-fg">GraphRAG 질의</h2>
+        <div className="flex gap-2.5">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && ask()}
             placeholder="예: 1세대 1주택 양도소득세 비과세 요건은?"
-            className="field flex-1 px-4 py-2.5 text-sm"
+            className="field flex-1 px-4 py-3 text-sm sm:text-base"
           />
           <button
             onClick={ask}
             disabled={asking || !query.trim()}
-            className="btn-accent flex items-center gap-1.5 px-5 py-2.5 text-sm disabled:opacity-40"
+            className="btn-accent flex items-center gap-2 px-5 py-3 text-sm sm:text-base font-semibold disabled:opacity-40"
           >
-            <MagnifyingGlass weight="bold" size={15} />
+            <MagnifyingGlass weight="bold" size={17} />
             {asking ? "조회 중…" : "질의"}
           </button>
         </div>
 
         {answer && (
-          <div className="mt-5 space-y-4">
-            <div className="whitespace-pre-wrap rounded-lg border border-line bg-[var(--ink-2)] p-4 text-sm leading-relaxed">
+          <div className="mt-6 space-y-4">
+            <div className="whitespace-pre-wrap rounded-xl border border-line bg-[var(--ink-2)] p-5 text-sm sm:text-base leading-relaxed text-fg">
               {answer.response}
             </div>
             {answer.subgraph_triplets.length > 0 && (
               <div>
-                <h3 className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                <h3 className="mb-2 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-muted">
                   근거 그래프 관계망
                 </h3>
-                <div className="space-y-1 rounded-lg border border-line bg-[var(--ink-2)] p-3 font-mono text-xs text-muted">
+                <div className="space-y-1.5 rounded-xl border border-line bg-[var(--ink-2)] p-4 font-mono text-xs sm:text-sm text-muted">
                   {answer.subgraph_triplets.map((t, i) => (
                     <div key={i}>{t}</div>
                   ))}
                 </div>
-                <p className="mt-2 flex items-center gap-1 text-xs text-muted">
-                  <ArrowUp size={13} />
+                <p className="mt-2.5 flex items-center gap-1.5 text-xs sm:text-sm text-muted">
+                  <ArrowUp size={14} className="text-accent" />
                   위 그래프 스냅샷을 불러오면 이 근거 노드들이 강조됩니다.
                 </p>
               </div>
