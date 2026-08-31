@@ -8,11 +8,15 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.app.services.agent.llm import build_chat_model
 from backend.app.services.agent.tools.graph_rag import retrieve_graph_context
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["graph-rag"])
 
@@ -69,4 +73,5 @@ def query_graph_rag(request: QueryRequest) -> QueryResponse:
             source_texts=source_texts,
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logger.exception("GraphRAG 질의 실패")
+        raise HTTPException(status_code=500, detail="질의 처리에 실패했습니다.") from exc

@@ -27,6 +27,10 @@ from dotenv import load_dotenv
 load_dotenv()
 os.environ.setdefault("NIM_GENERATION_MODEL", "ci-test-placeholder")
 
+# 공용 TestClient가 단일 IP로 heavy 경로를 다수 호출하면 속도 제한(20/분)에 걸려
+# 무관한 테스트가 429로 깨진다. 스위트 전체는 제한을 끄고, 전용 테스트만 자체 앱에서 켠다.
+os.environ.setdefault("RATE_LIMIT_DISABLED", "1")
+
 # DB 연결을 실제로 필요로 하는 통합 테스트 클래스.
 # ponytail: 클래스명이 곧 스킵 스위치다. 클래스 rename 시 여기도 갱신.
 _DB_DEPENDENT_CLASSES = {

@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -19,6 +20,8 @@ from backend.app.services.tax.rate_extraction import (
 )
 from backend.app.services.tax.rate_validation import validate_proposed
 from backend.app.services.tax.rates import get_rates
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/tax-rates", tags=["tax-rates"])
 
@@ -64,9 +67,10 @@ def _pdf_to_text(raw: bytes) -> str:
         try:
             return DocumentParser()._parse_pdf(Path(tmp.name))
         except Exception as exc:  # 파서 라이브러리 부재·손상 PDF 등
+            logger.exception("PDF 텍스트 추출 실패")
             raise HTTPException(
                 status_code=400,
-                detail=f"PDF에서 텍스트를 추출하지 못했습니다: {exc}",
+                detail="PDF에서 텍스트를 추출하지 못했습니다. 손상되지 않은 개정안 PDF인지 확인하세요.",
             ) from exc
 
 
