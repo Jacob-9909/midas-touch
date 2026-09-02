@@ -7,8 +7,6 @@ import {
   Plus,
   TrashSimple,
   PaperPlaneTilt,
-  SpeakerHigh,
-  Stop,
   SidebarSimple,
   X,
   ShieldCheck,
@@ -37,35 +35,11 @@ interface Msg {
   content: string;
 }
 
-// ── 읽어주기(TTS) ── Web Speech API(speechSynthesis)는 브라우저 전역 단일 채널.
-// 소유 판정은 각 답변의 로컬 ref로 한다 — cancel()이 남의 재생을 끊으면 그 인스턴스만
-// onend를 받아 자기 버튼을 원래대로 되돌린다.
-
 // 어시스턴트 답변 렌더: 본문 마크다운 + 실시간 5겹 방어 검증 증명서 + 출처 칩 리스트.
 function AssistantAnswer({ content }: { content: string }) {
   const { body, defense, sources } = splitChatSources(content);
-  const [speaking, setSpeaking] = useState(false);
   const [copied, setCopied] = useState(false);
   const toast = useToast();
-  /** 이벤트 핸들러(onend)가 언마운트 후 상태를 건드리지 않게 실제 재생 소유를 ref로 이중화 */
-  const speakingRef = useRef(false);
-
-  useEffect(() => {
-    // 언마운트(대화 전환 등) 시 내가 읽는 중이었을 때만 끊는다 — 남의 재생을 건드리지 않음.
-    return () => {
-      if (speakingRef.current && typeof speechSynthesis !== "undefined") {
-        speechSynthesis.cancel();
-        speakingRef.current = false;
-      }
-    };
-  }, []);
-
-  const finishSpeak = () => {
-    if (speakingRef.current) {
-      speakingRef.current = false;
-      setSpeaking(false);
-    }
-  };
 
   const copyAnswer = async () => {
     try {
@@ -76,31 +50,6 @@ function AssistantAnswer({ content }: { content: string }) {
     } catch {
       toast("복사에 실패했습니다.", "error");
     }
-  };
-
-  const toggleSpeak = () => {
-    if (typeof speechSynthesis === "undefined") return;
-    const synth = speechSynthesis;
-    if (speaking) {
-      speakingRef.current = false;
-      setSpeaking(false);
-      synth.cancel();
-      return;
-    }
-    const fenceAt = body.search(/^---\s*$/m);
-    const text = (fenceAt === -1 ? body : body.slice(0, fenceAt))
-      .replace(/\[\d+\]/g, "")
-      .trim();
-    if (!text) return;
-    synth.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "ko-KR";
-    utterance.rate = 0.95;
-    utterance.onend = finishSpeak;
-    utterance.onerror = finishSpeak;
-    speakingRef.current = true;
-    setSpeaking(true);
-    synth.speak(utterance);
   };
 
   return (
@@ -169,28 +118,8 @@ function AssistantAnswer({ content }: { content: string }) {
         </div>
       )}
 
-      {/* ── 액션 툴바: 읽어주기 + 답변 복사 ── */}
+      {/* ── 액션 툴바: 답변 복사 ── */}
       <div className="mt-3.5 flex items-center gap-2">
-        <button
-          onClick={toggleSpeak}
-          aria-label={speaking ? "읽기 정지" : "답변 읽어주기"}
-          aria-pressed={speaking}
-          className={`btn-ghost gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-[13px] ${
-            speaking ? "border-accent/40 bg-accent/15 text-accent font-semibold" : ""
-          }`}
-        >
-          {speaking ? (
-            <>
-              <Stop weight="fill" size={14} />
-              정지
-            </>
-          ) : (
-            <>
-              <SpeakerHigh weight="fill" size={14} />
-              읽어주기
-            </>
-          )}
-        </button>
         <button
           onClick={copyAnswer}
           aria-label="답변 복사"
@@ -323,8 +252,22 @@ function ChatClient() {
       );
       setMessages(res.messages);
     } catch (e) {
-      toast(`기록 로드 실패: ${errMsg(e)}`, "error");
+      const msg = errMsg(e);
       setMessages([]);
+      // 세션이 이미 없어진 대화(체크포인트 유실 등)는 목록에 죽은 채로 남겨두지 않고
+      // 바로 지운다 — 사용자가 매번 눌러서 같은 에러를 다시 보게 두지 않는다.
+      if (msg.startsWith("404")) {
+        if (currentId === s.session_id) setCurrentId(null);
+        try {
+          await apiDelete(`/api/v1/chat/sessions/${encodeURIComponent(s.session_id)}`);
+        } catch {
+          /* 이미 없으면 그것대로 목표 달성 */
+        }
+        await refreshSessions();
+        toast("세션을 찾을 수 없어 대화 기록을 삭제했습니다.", "error");
+      } else {
+        toast(`기록 로드 실패: ${msg}`, "error");
+      }
     } finally {
       setLoadingHistory(false);
     }

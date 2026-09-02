@@ -626,6 +626,10 @@ export function listRagDocuments(): Promise<{ documents: RagDocument[] }> {
   return apiGet("/api/v1/graph/documents");
 }
 
+export function deleteRagDocument(source: string): Promise<{ source: string; deleted_passages: number }> {
+  return apiDelete(`/api/v1/graph/documents/${encodeURIComponent(source)}`);
+}
+
 export function ingestDocument(filename: string): Promise<{ job_id: string }> {
   return apiPost("/api/v1/graph/ingest/jobs", { filename });
 }

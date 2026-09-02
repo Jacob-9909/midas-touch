@@ -58,3 +58,15 @@ def list_emb_sources() -> list[dict[str, Any]]:
         return [{"source": src, "passages": cnt} for src, cnt in cursor.fetchall()]
 
 
+def delete_emb_passages_by_source(source: str) -> int:
+    """해당 문서(source)의 단락을 emb_passages에서 전부 지운다. 지식베이스 '파일 삭제'용.
+
+    Neo4j에 이미 반영된 엔티티/관계는 건드리지 않는다 — 어떤 노드가 이 source에서 나왔는지
+    추적하지 않아 안전하게 되돌릴 방법이 없다. 필요하면 그래프 재빌드로 다시 정리한다.
+    """
+    sql = "DELETE FROM emb_passages WHERE source = %s;"
+    with db_cursor() as (_, cursor):
+        cursor.execute(sql, (source,))
+        return cursor.rowcount
+
+

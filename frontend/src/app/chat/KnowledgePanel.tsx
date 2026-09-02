@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { errMsg } from "@/lib/async";
-import { FileText, UploadSimple, Sparkle, ArrowsClockwise } from "@phosphor-icons/react";
+import { FileText, TrashSimple, UploadSimple, Sparkle, ArrowsClockwise } from "@phosphor-icons/react";
 import {
   apiUpload,
   buildGraph,
+  deleteRagDocument,
   ingestDocument,
   listRagDocuments,
   type JobState,
@@ -23,6 +24,7 @@ export default function KnowledgePanel() {
   const [uploading, setUploading] = useState(false);
   const [ingestJobId, setIngestJobId] = useState<string | null>(null);
   const [buildJobId, setBuildJobId] = useState<string | null>(null);
+  const [deletingSource, setDeletingSource] = useState<string | null>(null);
 
   const loadDocs = useCallback(async () => {
     try {
@@ -53,6 +55,20 @@ export default function KnowledgePanel() {
       toast(`업로드/임베딩 실패: ${errMsg(e)}`, "error");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const removeDoc = async (source: string) => {
+    if (!confirm(`"${source}"를 지식베이스에서 삭제할까요? 이미 임베딩된 단락이 모두 지워집니다.`)) return;
+    setDeletingSource(source);
+    try {
+      await deleteRagDocument(source);
+      toast(`"${source}"를 삭제했습니다.`, "success");
+      await loadDocs();
+    } catch (e) {
+      toast(`삭제 실패: ${errMsg(e)}`, "error");
+    } finally {
+      setDeletingSource(null);
     }
   };
 
@@ -102,15 +118,28 @@ export default function KnowledgePanel() {
             {docs.map((d) => (
               <li
                 key={d.source}
-                className="flex items-start gap-1.5 rounded-lg bg-[color-mix(in_srgb,var(--accent)_5%,transparent)] px-2 py-1.5"
+                className="group flex items-start gap-1.5 rounded-lg bg-[color-mix(in_srgb,var(--accent)_5%,transparent)] px-2 py-1.5"
               >
                 <FileText size={14} className="mt-0.5 shrink-0 text-accent" />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="truncate text-xs text-fg" title={d.source}>
                     {d.source}
                   </div>
                   <div className="text-[10px] text-muted">{d.passages}개 단락</div>
                 </div>
+                <button
+                  onClick={() => removeDoc(d.source)}
+                  disabled={deletingSource === d.source}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted opacity-0 transition hover:text-negative group-hover:opacity-100 disabled:opacity-40"
+                  aria-label={`${d.source} 삭제`}
+                  title="지식베이스에서 삭제"
+                >
+                  {deletingSource === d.source ? (
+                    <Spinner className="h-3.5 w-3.5" />
+                  ) : (
+                    <TrashSimple size={14} />
+                  )}
+                </button>
               </li>
             ))}
           </ul>

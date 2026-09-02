@@ -17,6 +17,7 @@ from backend.app.api.uploads import read_upload_capped
 from backend.app.services.jobs import PROJECT_ROOT, job_manager
 from shared.database.connector import list_emb_sources
 from shared.database.neo4j_client import fetch_graph_snapshot
+from shared.database.repositories.embeddings import delete_emb_passages_by_source
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,22 @@ class IngestRequest(BaseModel):
 def list_documents() -> dict:
     """현재 RAG(emb_passages)에 반영된 문서 목록 — 챗봇 지식베이스 패널용."""
     return {"documents": list_emb_sources()}
+
+
+@router.delete("/documents/{source}")
+def delete_document(source: str) -> dict:
+    """지식베이스에서 문서 하나를 지운다 — emb_passages 단락 + data/raw_documents/ 원본 파일.
+
+    이미 그래프에 반영된 엔티티/관계는 지우지 않는다(어느 노드가 이 source에서 나왔는지
+    추적 안 함). 필요하면 지식그래프 재빌드로 정리한다.
+    """
+    deleted = delete_emb_passages_by_source(source)
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail=f"반영된 문서를 찾을 수 없습니다: {source}")
+    raw_path = RAW_DIR / Path(source).name
+    if raw_path.exists():
+        raw_path.unlink()
+    return {"source": source, "deleted_passages": deleted}
 
 
 @router.post("/upload")
