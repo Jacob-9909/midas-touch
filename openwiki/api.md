@@ -6,6 +6,7 @@ This repository exposes a **FastAPI** server under the `/api/v1` prefix. The API
 
 * **Path Prefix** – All routes start with `/api/v1`.
 * **Response Models** – Pydantic models are used for request validation and response schemas (see the source files).
+* **Rate Limiting** – Global IP‑based request throttling is enforced by `backend/app/middleware/rate_limit.py`. See the middleware source for configuration (`RATE_LIMIT`, `RATE_LIMIT_WINDOW`).
 * **Authentication** – Auth routes are available (`/api/v1/auth/login`). The UI can obtain a JWT token via login; if `AUTH_ENABLED` is false, the auth layer is bypassed and `user_uuid` may be passed directly.
 * **Streaming** – The chat endpoint supports Server‑Sent Events (SSE) for token‑by‑token streaming.
 
