@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 os.environ.setdefault("NVIDIA_API_KEY", "nvapi-test-key-one")
 os.environ.setdefault("NVIDIA_API_KEY_2", "nvapi-test-key-two")
-os.environ.setdefault("AGENT_LLM_MODEL", "openai/gpt-oss-120b")
+os.environ.setdefault("AGENT_LLM_MODEL", "google/gemma-4-31b-it")
 os.environ.setdefault("NIM_RPM", "0")  # 테스트에서 실제 60초 대기하지 않도록 RPM 제한 해제
 
 from httpx import Request, Response
@@ -80,7 +80,7 @@ class NIMStructuredOutputTest(unittest.TestCase):
     def _llm(self):
         from shared.utils.nim_openai import NIMOpenAI
 
-        return NIMOpenAI(model="openai/gpt-oss-120b", api_key="nvapi-test-key-one")
+        return NIMOpenAI(model="google/gemma-4-31b-it", api_key="nvapi-test-key-one")
 
     def test_parses_json_with_surrounding_text(self) -> None:
         from pydantic import BaseModel

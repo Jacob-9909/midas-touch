@@ -54,18 +54,6 @@ This repository exposes a **FastAPI** server under the `/api/v1` prefix. The API
 ---
 
 ## Cheongyak (Housing) Endpoints (`backend/app/api/cheongyak.py`)
-
-## Tax Rates API (`backend/app/api/tax_rates.py`)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/tax-rates/extract` | Extract tax rate proposals from raw text (up to 20k chars). Returns diff against current rates and validation issues. |
-| `POST` | `/tax-rates/extract/upload` | Upload a `.txt`, `.md`, or `.pdf` file to extract tax rates. Supports same diff and validation as above. |
-| `POST` | `/tax-rates/apply` | Apply a validated tax rate proposal to the overlay for a given year. Returns confirmation and active rates payload. |
-| `GET` | `/tax-rates/current` | Retrieve the current effective tax rates for a given year (default 2026), after any overlays. |
-| `GET` | `/tax-rates/current?year=2025` | Retrieve rates for a specific year.
-
-These endpoints support the tax calculator tool and UI tax‑rate management features. Source: `backend/app/api/tax_rates.py`.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/cheongyak/list/{kind}` | List housing projects of a given `kind` (e.g., `apt`, `officetel`).
@@ -76,28 +64,29 @@ These endpoints support the tax calculator tool and UI tax‑rate management fea
 
 ---
 
-## Finetuning & Embedding Pipelines (`backend/app/api/finetune.py`)
+## Tax Rates API (`backend/app/api/tax_rates.py`)
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/finetune/upload` | Upload a document (PDF/TXT/MD/JSONL) for embedding and triplet generation.
-| `POST` | `/finetune/jobs` | Start a new finetuning pipeline job. Returns a job ID.
-| `POST` | `/finetune/train/jobs` | Start LoRA finetuning training job on generated triplet dataset. Returns a job ID.
-| `GET` | `/finetune/jobs` | List all finetuning jobs with status.
-| `GET` | `/finetune/jobs/{id}` | Get detailed progress and logs for a specific job.
-| `GET` | `/finetune/datasets` | Preview generated training/evaluation datasets (triplets) for a given sub‑directory.
+| `POST` | `/tax-rates/extract` | Extract tax rate proposals from raw text (up to 20k chars). Returns diff against current rates and validation issues. |
+| `POST` | `/tax-rates/extract/upload` | Upload a `.txt`, `.md`, or `.pdf` file to extract tax rates. Supports same diff and validation as above. |
+| `POST` | `/tax-rates/apply` | Apply a validated tax rate proposal to the overlay for a given year. Returns confirmation and active rates payload. |
+| `GET` | `/tax-rates/current` | Retrieve the current effective tax rates for a given year (default 2026), after any overlays. |
+| `GET` | `/tax-rates/current?year=2025` | Retrieve rates for a specific year. |
 
 ---
 
-## Knowledge Graph Endpoints (`backend/app/api/graph.py`)
+## Knowledge Graph & Document RAG Endpoints (`backend/app/api/graph.py`)
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/graph/build/jobs` | Trigger an incremental Neo4j graph build job.
-| `GET` | `/graph/build/jobs` | List active/completed graph‑build jobs.
-| `GET` | `/graph/build/jobs/{id}` | Retrieve job status and logs.
-| `GET` | `/graph/snapshot` | Return a JSON snapshot of Neo4j nodes/edges (used by the UI visualiser).
-| `GET` | `/graph/documents` | List currently ingested RAG documents (used by Knowledge Panel).
-| `POST` | `/graph/ingest/jobs` | Trigger a document ingest job (parse & embed uploaded file).
-| `GET` | `/graph/ingest/jobs/{job_id}` | Get status of a document ingest job.
+| `GET` | `/graph/documents` | List currently ingested RAG documents (used by Knowledge Panel). |
+| `DELETE` | `/graph/documents/{source}` | Delete a document from RAG (`emb_passages` records and `data/raw_documents/` file). |
+| `POST` | `/graph/upload` | Upload a financial document to `data/raw_documents/` for embedding. |
+| `POST` | `/graph/ingest/jobs` | Trigger a document ingest job (parse & embed uploaded file). |
+| `GET` | `/graph/ingest/jobs/{job_id}` | Get status of a document ingest job. |
+| `POST` | `/graph/build/jobs` | Trigger an incremental Neo4j graph build job. |
+| `GET` | `/graph/build/jobs` | List active/completed graph‑build jobs. |
+| `GET` | `/graph/build/jobs/{id}` | Retrieve job status and logs. |
+| `GET` | `/graph/snapshot` | Return a JSON snapshot of Neo4j nodes/edges (used by the UI visualiser). |
 
 
 ---

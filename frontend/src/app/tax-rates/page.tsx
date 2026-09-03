@@ -1,13 +1,19 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowRight, CheckCircle, Warning, FilePdf, ShieldCheck } from "@phosphor-icons/react";
+import { ArrowRight, CheckCircle, Warning, FilePdf, ShieldCheck, Sparkle } from "@phosphor-icons/react";
 import {
+  extractRates,
   extractRatesUpload,
   type RateDiffRow,
   type RateExtractResult,
 } from "@/lib/api";
 import { Card, PageTitle, SectionLabel, fmtKRW } from "@/components/ui";
+
+const SAMPLE_AMENDMENT = `2026년 귀속 세법개정안 요약
+- 해외주식 양도소득세율을 20%에서 22%로 상향한다.
+- 이자·배당 분리과세율은 15.4%로 유지한다.
+- 금융소득종합과세 기준을 2,000만원에서 3,000만원으로 상향한다.`;
 
 /** 세율값을 종류에 맞게 렌더 — rate는 퍼센트, amount는 원화. */
 function fmtRateValue(kind: "rate" | "amount", value: number): string {
@@ -33,11 +39,26 @@ function DiffRow({ row }: { row: RateDiffRow }) {
 }
 
 export default function TaxRatesPage() {
+  const [text, setText] = useState(SAMPLE_AMENDMENT);
   const [year, setYear] = useState("2026");
   const [result, setResult] = useState<RateExtractResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  async function onExtract() {
+    if (!text.trim()) return;
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      setResult(await extractRates(text, year, false));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "세율 추출에 실패했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function onUpload(file: File) {
     setBusy(true);
@@ -58,12 +79,19 @@ export default function TaxRatesPage() {
       <PageTitle
         eyebrow="결정론 계산기 · 개정 대응"
         title="세율 개정안 인입 (미리보기)"
-        subtitle="개정안 PDF·파일을 올리면 시스템이 세율을 추출해 현행과 비교·검증합니다. 자동 반영은 하지 않습니다 — 세율은 코드 상수로만 결정되는 결정론 불변식을 지키기 위해서입니다. LLM은 추출만, 계산은 코드가 합니다."
+        subtitle="개정안 텍스트를 붙여넣거나 PDF·파일을 올리면 시스템이 세율을 추출해 현행과 비교·검증합니다. 자동 반영은 하지 않습니다 — 세율은 코드 상수로만 결정되는 결정론 불변식을 지키기 위해서입니다. LLM은 추출만, 계산은 코드가 합니다."
       />
 
-      {/* ── 입력 (파일 업로드) ── */}
+      {/* ── 입력 (텍스트 붙여넣기 + 파일 업로드) ── */}
       <Card className="space-y-4">
-        <SectionLabel>개정안 파일 업로드</SectionLabel>
+        <SectionLabel>개정안 텍스트 입력</SectionLabel>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={5}
+          className="field w-full resize-y p-3 font-mono-spec text-sm"
+          placeholder="세법개정안 텍스트를 붙여넣으세요…"
+        />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-muted">
             귀속연도
@@ -73,6 +101,17 @@ export default function TaxRatesPage() {
               className="field w-20 px-2.5 py-1 text-sm font-mono-spec"
             />
           </label>
+
+          <button
+            onClick={onExtract}
+            disabled={busy || !text.trim()}
+            className="btn-accent inline-flex items-center gap-2 disabled:opacity-50"
+          >
+            <Sparkle size={16} weight="fill" />
+            {busy ? "추출 중…" : "세율 추출"}
+          </button>
+
+          <span className="text-xs text-muted">또는</span>
 
           <input
             ref={fileRef}
@@ -87,27 +126,15 @@ export default function TaxRatesPage() {
           <button
             onClick={() => fileRef.current?.click()}
             disabled={busy}
-            className="btn-accent inline-flex items-center gap-2 disabled:opacity-50"
+            className="btn-ghost inline-flex items-center gap-2 disabled:opacity-50"
           >
             <FilePdf size={16} />
-            {busy ? "추출 중…" : "개정안 파일 업로드"}
+            개정안 파일 업로드
           </button>
         </div>
         <p className="text-xs text-muted">
-          PDF·TXT·MD 지원. PDF는 서버가 표까지 텍스트로 추출해 세율을 뽑고 현행과 비교합니다.
-          별도 텍스트 작성 없이 개정안 문서 그대로 올리면 됩니다.
-        </p>
-        <p className="text-xs text-muted">
-          세법개정안 원문은{" "}
-          <a
-            href="https://www.moef.go.kr"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
-          >
-            기획재정부(moef.go.kr) ↗
-          </a>
-          에서 받아 그대로 올리세요.
+          위 기본 예시로 1초 만에 테스트하거나, PDF·TXT·MD 파일을 직접 올릴 수 있습니다.
+          PDF는 서버가 표까지 텍스트로 추출해 세율을 뽑고 현행과 비교합니다.
         </p>
       </Card>
 
