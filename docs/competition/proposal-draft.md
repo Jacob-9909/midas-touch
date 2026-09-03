@@ -160,7 +160,7 @@
 
 - **Frontend**: Next.js 16(App Router), TypeScript, Tailwind, GSAP/D3/WebGL 시각화
 - **Backend**: FastAPI, LangGraph(StateGraph + PostgresSaver 체크포인터)
-- **AI**: NVIDIA NIM(gpt-oss-120b / bge-m3 임베딩), Tavily·Naver 웹검색 도구
+- **AI**: NVIDIA NIM(google/gemma-4-31b-it / bge-m3 임베딩), Tavily·Naver 웹검색 도구
 - **Data**: PostgreSQL(pgvector) · Neo4j · yfinance · 청약홈 공공데이터
 - **Infra**: Docker Compose, Alembic 마이그레이션, GitHub Actions CI
 - 전체 다이어그램: `architecture.svg` 참조

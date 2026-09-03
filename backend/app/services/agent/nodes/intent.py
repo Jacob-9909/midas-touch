@@ -36,7 +36,10 @@ _INTENT_PROMPT = """당신은 한국인 자산관리 AI의 라우터입니다. �
 
 tax_and_market_lookup을 골랐고 질문이 특정 자산 종류(예: 주식·채권·예금·부동산)에 한정되면,
 asset_types에 해당 자산 종류명을 적으십시오(세법 조회를 그 자산으로 좁힘). 자산을 특정하지 않은
-일반 질문이면 asset_types는 비워 두십시오(전체 세법 조회)."""
+일반 질문이면 asset_types는 비워 두십시오(전체 세법 조회).
+
+반드시 다음 JSON 형식(객체)으로만 응답하십시오:
+{"tools": ["도구명1", "도구명2"], "asset_types": [], "ticker": ""}"""
 
 
 # 데이터 검색이 필요함을 시사하는 토큰(짧은 메시지라도 이게 있으면 잡담이 아니다).
@@ -101,7 +104,14 @@ def _keyword_route(text: str) -> list[str]:
     if any(k in text for k in ("계산", "얼마야", "얼마나 내", "비과세")):
         route.append("tax_calculator")
     # 사기 메시지 검증
-    if any(k in text for k in ("사기", "피싱", "스미싱", "믿어도 되", "괜찮을까", "의심")):
+    if any(
+        k in text
+        for k in (
+            "사기", "피싱", "스미싱", "믿어도 되", "괜찮을까", "의심",
+            "사고났어", "이체해줘", "선입금", "수수료 먼저", "입금하면",
+            "보증금", "환급금", "계좌정보를 입력", "액정 깨져",
+        )
+    ):
         route.append("fraud_check")
     # 라이브 웹 리서치(현재 금리/상품·금리 동향·국세청 해석)
     if any(k in text for k in ("예금", "적금", "연금저축", "국채", "상품", "가입", "이율", "우대")):
@@ -181,7 +191,9 @@ def classify_intent(state: AgentState) -> dict:
         # 라우터 출력은 도구 이름 몇 개짜리 JSON이라 300토큰이면 충분하다. 기본값(4000)을
         # 두면 모델이 structured output에서 폭주할 때 4000토큰을 다 태우고서야 끝난다
         # (실측 45초). 상한을 낮추면 폭주해도 금방 끝나고 아래 _keyword_route로 폴백된다.
-        router = build_chat_model(temperature=0.0, max_tokens=300).with_structured_output(_Route)
+        router = build_chat_model(temperature=0.0, max_tokens=300).with_structured_output(
+            _Route, method="json_mode"
+        )
         prompt_input = f"[대화 맥락]\n{dialogue_context}\n\n[현재 사용자 발화]\n{user_text}"
         result = router.invoke(
             [SystemMessage(content=_INTENT_PROMPT), HumanMessage(content=prompt_input)]

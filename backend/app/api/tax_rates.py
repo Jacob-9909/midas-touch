@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from pydantic import BaseModel
 
 from backend.app.api.uploads import read_upload_capped
 from backend.app.services.tax.rate_diff import diff_against_current
@@ -72,6 +73,22 @@ def _pdf_to_text(raw: bytes) -> str:
                 status_code=400,
                 detail="PDF에서 텍스트를 추출하지 못했습니다. 손상되지 않은 개정안 PDF인지 확인하세요.",
             ) from exc
+
+
+class ExtractTextRequest(BaseModel):
+    text: str
+    year: str = "2026"
+    use_llm: bool = True
+
+
+@router.post("/extract")
+def extract_text(req: ExtractTextRequest) -> dict:
+    """개정안 원문 텍스트에서 세율을 추출해 현행과 비교·검증한다."""
+    text = req.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="텍스트가 비어 있습니다.")
+    proposed = extract_rate_set(text[:_MAX_TEXT_CHARS], year=req.year, use_llm=req.use_llm)
+    return _diff_payload(proposed)
 
 
 @router.post("/extract/upload")

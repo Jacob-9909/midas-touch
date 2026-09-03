@@ -144,7 +144,7 @@ uv run pytest
 * **Frontend**: Next.js 16 (React 19), TypeScript, Tailwind CSS v4
 * **Backend**: Python 3.12, FastAPI, Uvicorn, LangGraph, LangChain, Alembic
 * **Database**: PostgreSQL 17 (pgvector), Neo4j 5 Graph DB
-* **AI & Data**: NVIDIA NIM (`openai/gpt-oss-120b`, `BAAI/bge-m3`), Tavily, yfinance, 청약홈 공공데이터 API
+* **AI & Data**: NVIDIA NIM (`google/gemma-4-31b-it`, `BAAI/bge-m3`), Tavily, yfinance, 청약홈 공공데이터 API
 * **Infra**: 오라클 VM(systemd + Caddy/Let's Encrypt) · Vercel · GitHub Actions
 * **Tooling**: uv, ruff, pytest, ESLint
 

@@ -11,7 +11,7 @@ Midas Touch is organized around **four major technical domains** that align with
 
 ## Backend Architecture
 
-* **Entry point** – `backend/app/main.py` creates a FastAPI app, registers eight routers (`chat`, `users`, `finetune`, `graph`, `query`, `stocks`, `cheongyak`, `research`). It also starts a background validation loop that periodically scores the analysis memory.
+* **Entry point** – `backend/app/main.py` creates a FastAPI app, registers routers (`auth`, `chat`, `users`, `tax_rates`, `graph`, `query`, `stocks`, `cheongyak`, `research`). It also starts a background validation loop that periodically scores the analysis memory.
 * **API Routers** – each router lives under `backend/app/api/` and groups related endpoints (e.g., `stocks.py` exposes quick‑analysis, backtest, grid‑search, and memory statistics). Routes are mounted under `/api/v1`.
 * **Services** – business logic is encapsulated in `backend/app/services/`:
   * `agent/` – LangGraph state graph, node definitions, tool implementations, persistence via `PostgresSaver`.

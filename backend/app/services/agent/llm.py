@@ -182,7 +182,5 @@ def build_chat_model(temperature: float = 0.7, max_tokens: int = 4000) -> NIMCha
         max_tokens=max_tokens,
         timeout=REQUEST_TIMEOUT,
         max_retries=0,  # 같은 키로 재시도해봐야 429는 그대로 — 위 루프가 키를 바꿔가며 재시도한다
-        # 구 모델(qwen3-next-80b)은 스트리밍이 delta 4개로만 쪼개져 오면서 비스트리밍보다
-        # 2.5배 느려 disable_streaming=True로 껐었다. gpt-oss-120b로 교체 후 실측하니
-        # 정상 토큰 단위로 흐르므로(93청크/700토큰) 다시 켠다.
+        # 정상 토큰 단위로 스트리밍되는 gemma-4-31b-it 모델 사용
     )
