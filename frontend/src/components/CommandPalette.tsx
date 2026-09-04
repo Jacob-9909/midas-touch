@@ -184,6 +184,15 @@ export default function CommandPalette({
       action: () => go("/tax-rates"),
       keywords: "세율 갱신 개정안 레지스트리",
     },
+    {
+      id: "nav-login",
+      category: "🧭 페이지 이동",
+      title: "로그인 / 계정 전환",
+      subtitle: "공개 데모 계정(demo@midas.touch) 원클릭 로그인",
+      icon: User,
+      action: () => go("/login"),
+      keywords: "로그인 계정 데모 인증 login auth",
+    },
 
     // 🛡️ 공격 프리셋
     {

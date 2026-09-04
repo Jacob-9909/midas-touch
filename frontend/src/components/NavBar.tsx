@@ -23,6 +23,7 @@ import {
 } from "@phosphor-icons/react";
 import { useTheme } from "@/lib/theme";
 import { useAccessibility } from "@/lib/accessibility";
+import { useSelectedUser } from "@/lib/user-context";
 import CommandPalette from "./CommandPalette";
 
 // 코어 여정은 사기검증(챗·보안) → 세법·근거(그래프) → 청약·자금(청약·시뮬·내정보).
@@ -114,6 +115,14 @@ const MENU_GROUPS = [
         badge: "실험",
         tone: "text-emerald-400 border-emerald-400/40 bg-emerald-400/10",
       },
+      {
+        href: "/login",
+        title: "체험 계정 로그인 / 전환",
+        desc: "공개 데모 계정(demo@midas.touch) 원클릭 로그인 및 세션 관리",
+        icon: User,
+        badge: "인증",
+        tone: "text-amber-400 border-amber-400/40 bg-amber-400/10",
+      },
     ],
   },
 ];
@@ -122,6 +131,7 @@ export default function NavBar() {
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
   const { largeText, toggleLargeText } = useAccessibility();
+  const { selected, logout } = useSelectedUser();
   const [open, setOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
 
@@ -199,6 +209,35 @@ export default function NavBar() {
               ⌘K
             </kbd>
           </button>
+
+          {/* 로그인 / 사용자 상태 */}
+          {selected ? (
+            <div className="hidden sm:flex items-center gap-1">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent"
+                title={`로그인 계정: ${selected.label || selected.uuid}`}
+              >
+                <User size={13} weight="bold" />
+                <span className="max-w-[85px] truncate">{selected.label?.split("@")[0] || "데모"}</span>
+              </span>
+              <button
+                onClick={logout}
+                title="로그아웃"
+                className="btn-ghost shrink-0 rounded-full px-2 py-1 text-xs text-muted hover:text-negative h-[38px] flex items-center"
+              >
+                로그아웃
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              title="체험 계정 로그인"
+              className="btn-ghost shrink-0 gap-1 rounded-full px-2.5 sm:px-3 py-1.5 h-[38px] border border-line/70 hover:border-accent hover:text-accent text-xs font-semibold text-fg flex items-center transition-all"
+            >
+              <User size={15} weight="bold" />
+              <span className="hidden sm:inline">로그인</span>
+            </Link>
+          )}
 
           {/* 테마 토글 */}
           <button
