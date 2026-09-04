@@ -165,6 +165,8 @@ function ChatClient() {
   const seedRef = useRef<string | null>(null);
   /** ?prefill= 로 넘어온 공격 프롬프트(/security → 챗 실험). 1회 소비용 ref. */
   const prefillRef = useRef<string | null>(null);
+  const autoSendRef = useRef(false);
+  const sendRef = useRef<(explicitText?: string | React.MouseEvent) => Promise<void>>(async () => {});
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -179,6 +181,7 @@ function ChatClient() {
     const prefill = searchParams.get("prefill");
     if (!prefill) return;
     prefillRef.current = prefill;
+    autoSendRef.current = searchParams.get("autoSend") === "1";
     router.replace("/chat", { scroll: false });
   }, [searchParams, router]);
 
@@ -232,12 +235,19 @@ function ChatClient() {
     }
   }, [uid, currentId]);
 
-  // URL prefill도 동일하게 — 입력창에 채우고 포커스(1회 소비).
+  // URL prefill도 동일하게 — autoSend=1이면 즉시 전송, 아니면 입력창에 채우고 포커스.
   useEffect(() => {
     if (prefillRef.current && uid && currentId) {
-      setInput(prefillRef.current);
+      const text = prefillRef.current;
       prefillRef.current = null;
-      requestAnimationFrame(() => inputRef.current?.focus());
+      if (autoSendRef.current) {
+        autoSendRef.current = false;
+        setInput("");
+        void sendRef.current(text);
+      } else {
+        setInput(text);
+        requestAnimationFrame(() => inputRef.current?.focus());
+      }
     }
   }, [uid, currentId]);
 
@@ -328,6 +338,7 @@ function ChatClient() {
       setStatus("");
     }
   };
+  sendRef.current = send;
 
   const fmtDate = (s: string | null) =>
     s ? new Date(s).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }) : "";

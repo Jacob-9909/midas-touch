@@ -210,9 +210,9 @@ export default function SecurityPage() {
       ? ATTACKS
       : ATTACKS.filter((a) => a.category === selectedCat);
 
-  // 공격 문구를 /chat?prefill= 로 넘긴다.
+  // 공격 문구를 /chat?prefill= 로 넘겨 즉시 실행한다.
   const experiment = (prompt: string) =>
-    router.push("/chat?prefill=" + encodeURIComponent(prompt));
+    router.push("/chat?prefill=" + encodeURIComponent(prompt) + "&autoSend=1");
 
   const copyPrompt = async (tag: string, prompt: string) => {
     try {

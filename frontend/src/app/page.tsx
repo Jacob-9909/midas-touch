@@ -68,7 +68,7 @@ export default function HomePage() {
                 내 정보 입력하고 시작하기
               </Link>
               <Link
-                href={`/chat?prefill=${encodeURIComponent("이 문자 사기야? 엄마 나 사고났어. 경찰서에 있는데 지금 당장 300만원 이체해줘. 전화하지 마세요.")}`}
+                href={`/chat?prefill=${encodeURIComponent("이 문자 사기야? 엄마 나 사고났어. 경찰서에 있는데 지금 당장 300만원 이체해줘. 전화하지 마세요.")}&autoSend=1`}
                 className="btn-ghost text-sm sm:text-[15px]"
               >
                 사기 검증 먼저 체험하기
@@ -137,7 +137,7 @@ export default function HomePage() {
             <Link
               href={`/chat?prefill=${encodeURIComponent(
                 "이 문자 사기야? 엄마 나 폰 액정 깨져서 수리 맡겼어. 지금 급하게 결제할 게 있는데 이 링크로 들어가서 300만원만 보내줘: http://bit.ly/urgent-pay88. 전화는 안 돼.",
-              )}`}
+              )}&autoSend=1`}
               className="lift group flex h-full flex-col justify-between rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-5 transition hover:border-accent/40"
             >
               <div>
@@ -174,7 +174,7 @@ export default function HomePage() {
             <Link
               href={`/chat?prefill=${encodeURIComponent(
                 "미국 주식(엔비디아) 팔아서 올해 2,000만원 벌었는데 양도소득세 얼마 내야 해? 기본공제랑 세금 계산식 알려줘.",
-              )}`}
+              )}&autoSend=1`}
               className="lift group flex h-full flex-col justify-between rounded-[var(--r-lg)] border border-line bg-[var(--ink-1)] p-5 transition hover:border-accent/40"
             >
               <div>
