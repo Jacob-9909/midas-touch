@@ -91,7 +91,7 @@ export default function GraphPage() {
     : [];
 
   return (
-    <main className="mx-auto max-w-[1200px] space-y-6 px-6 py-[72px]">
+    <div className="mx-auto max-w-[1200px] space-y-6 px-6 py-[72px]">
       <PageTitle
         eyebrow="Knowledge Graph"
         title="지식그래프 — 근거 추적"
@@ -195,7 +195,7 @@ export default function GraphPage() {
                 <h3 className="mb-2 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-muted">
                   근거 그래프 관계망
                 </h3>
-                <div className="space-y-1.5 rounded-xl border border-line bg-[var(--ink-2)] p-4 font-mono text-xs sm:text-sm text-muted">
+                <div className="space-y-1.5 rounded-xl border border-line bg-[var(--ink-2)] p-4 font-mono text-xs sm:text-sm text-muted overflow-x-auto break-all">
                   {answer.subgraph_triplets.map((t, i) => (
                     <div key={i}>{t}</div>
                   ))}
@@ -209,6 +209,6 @@ export default function GraphPage() {
           </div>
         )}
       </Card>
-    </main>
+    </div>
   );
 }

@@ -8,7 +8,7 @@ import {
   type RateDiffRow,
   type RateExtractResult,
 } from "@/lib/api";
-import { Card, PageTitle, SectionLabel, fmtKRW } from "@/components/ui";
+import { Card, PageTitle, SectionLabel, Skeleton, Spinner, fmtKRW } from "@/components/ui";
 
 const SAMPLE_AMENDMENT = `2026년 귀속 세법개정안 요약
 - 해외주식 양도소득세율을 20%에서 22%로 상향한다.
@@ -142,6 +142,21 @@ export default function TaxRatesPage() {
         <div className="mt-4 flex items-center gap-2 rounded-lg border border-negative/40 bg-negative/10 px-4 py-3 text-sm text-negative">
           <Warning size={16} weight="fill" /> {error}
         </div>
+      )}
+
+      {/* ── 로딩 상태 ── */}
+      {busy && (
+        <Card className="mt-6 space-y-4 border-accent/40 bg-accent/[0.04] p-5 animate-pulse">
+          <div className="flex items-center gap-2.5 text-sm font-semibold text-accent">
+            <Spinner className="h-4 w-4 text-accent" />
+            <span>AI 세법 개정안 분석 및 조문 추출 중… (약 5~10초 소요)</span>
+          </div>
+          <div className="space-y-2 pt-1">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </div>
+        </Card>
       )}
 
       {/* ── 추출 결과 · diff ── */}

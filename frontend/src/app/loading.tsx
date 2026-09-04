@@ -7,7 +7,7 @@ export default function Loading() {
       role="status"
       aria-live="polite"
       aria-label="로딩 중"
-      className="animate-rise space-y-6 py-8"
+      className="mx-auto max-w-[1200px] px-6 py-[72px] space-y-6 animate-rise"
     >
       {/* 제목 자리 */}
       <div className="space-y-3">

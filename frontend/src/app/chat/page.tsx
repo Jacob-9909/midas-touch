@@ -25,7 +25,8 @@ import { totalCheongyakScore } from "@/lib/cheongyak-score";
 import { useToast } from "@/lib/toast";
 import { consumeChatSeed } from "@/lib/chat-seed";
 import { splitChatSources } from "@/lib/chat-sources";
-import { Card, Spinner } from "@/components/ui";
+import { Card, Spinner, Skeleton } from "@/components/ui";
+import { useSelectedUser } from "@/lib/user-context";
 import { Markdown } from "@/components/Markdown";
 import KnowledgePanel from "./KnowledgePanel";
 import SegmentedTabs from "@/components/SegmentedTabs";
@@ -143,8 +144,7 @@ function AssistantAnswer({ content }: { content: string }) {
 }
 
 function ChatClient() {
-  // 로그인이 없으므로 세션은 이 브라우저의 익명 id 로 묶고, "누구인가"는
-  // /me 에 직접 입력한 내 정보를 첫 턴에 요약해 보내는 것으로 대신한다.
+  const { selected } = useSelectedUser();
   const [uid, setUid] = useState<string | null>(null);
   const toast = useToast();
   const [sessions, setSessions] = useState<ChatSessionMeta[]>([]);
@@ -171,9 +171,9 @@ function ChatClient() {
   const router = useRouter();
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 브라우저 식별자 복원
-    setUid(clientId());
-  }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 마운트 시 브라우저/로그인 식별자 복원
+    setUid(selected?.uuid || clientId());
+  }, [selected]);
 
   // /security 등에서 ?prefill= 로 넘어온 프롬프트를 받아두고 URL을 정리한다.
   // 파라미터가 주소에 남으면 새로고침마다 프리필이 반복되므로 즉시 replace(스크롤 없음).
@@ -484,7 +484,14 @@ function ChatClient() {
                 className="scroll-thin min-h-0 flex-1 space-y-4 overflow-y-auto p-5"
               >
                 {loadingHistory && (
-                  <p className="text-center text-sm text-muted">기록 불러오는 중…</p>
+                  <div className="space-y-3 py-6 max-w-md mx-auto animate-pulse">
+                    <div className="flex justify-start">
+                      <Skeleton className="h-14 w-3/4 rounded-2xl" />
+                    </div>
+                    <div className="flex justify-end">
+                      <Skeleton className="h-10 w-1/2 rounded-2xl" />
+                    </div>
+                  </div>
                 )}
                 {!loadingHistory && messages.length === 0 && (
                   <div className="my-auto py-8 space-y-4 text-center">
@@ -559,7 +566,7 @@ function ChatClient() {
                   >
                     <div
                       data-chat-answer
-                      className={`max-w-[85%] sm:max-w-[80%] rounded-[var(--r-lg)] px-5 py-3.5 text-base sm:text-[16.5px] leading-relaxed ${
+                      className={`max-w-[85%] sm:max-w-[80%] rounded-[var(--r-lg)] px-5 py-3.5 text-base sm:text-[16.5px] leading-relaxed break-words [overflow-wrap:anywhere] ${
                         m.role === "user"
                           ? "whitespace-pre-wrap rounded-br-md bg-gradient-to-br from-[var(--accent)] to-[var(--accent-soft)] text-white shadow-[0_6px_20px_-8px_var(--glow)] font-medium"
                           : "rounded-bl-md border border-line bg-[color-mix(in_srgb,var(--ink-1)_72%,transparent)] text-fg backdrop-blur-md [box-shadow:var(--shadow-soft)]"
@@ -619,11 +626,36 @@ function ChatClient() {
   );
 }
 
+function ChatLoadingFallback() {
+  return (
+    <div className="mx-auto flex h-[calc(100dvh-5.75rem)] max-w-[1200px] flex-col px-3 sm:px-6 pb-3 sm:pb-4 pt-4 sm:pt-6 animate-pulse">
+      <div className="mb-3.5 flex items-center justify-between">
+        <div className="h-6 w-32 rounded-lg bg-surface/80" />
+      </div>
+      <div className="flex min-h-0 flex-1 gap-4">
+        <div className="hidden md:flex w-64 flex-col gap-2 rounded-xl border border-line/60 bg-[var(--ink-1)] p-3">
+          <div className="h-8 w-full rounded-lg bg-surface/60" />
+          <div className="h-10 w-full rounded-lg bg-surface/40" />
+          <div className="h-10 w-full rounded-lg bg-surface/40" />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col rounded-2xl border border-line bg-[var(--ink-1)] p-5 justify-between">
+          <div className="space-y-4 max-w-lg mx-auto w-full pt-16 text-center">
+            <div className="h-12 w-12 rounded-full bg-accent/10 mx-auto" />
+            <div className="h-5 w-48 rounded bg-surface/80 mx-auto" />
+            <div className="h-4 w-64 rounded bg-surface/50 mx-auto" />
+          </div>
+          <div className="h-11 w-full rounded-xl border border-line bg-surface/30" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // useSearchParams는 프리렌더 경로에서 Suspense 경계를 요구한다(Next 권장 패턴) —
 // 경계 안의 챗 본문만 클라이언트 렌더로 전환하고 나머지는 그대로 유지한다.
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div className="h-[calc(100dvh-4rem)]" />}>
+    <Suspense fallback={<ChatLoadingFallback />}>
       <ChatClient />
     </Suspense>
   );

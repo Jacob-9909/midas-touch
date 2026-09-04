@@ -162,7 +162,7 @@ export default function SimulatorPage() {
   const diffMonths = reachA !== null && reachB !== null ? reachA - reachB : null;
 
   return (
-    <main className="mx-auto max-w-[1200px] px-6 py-[72px] space-y-6">
+    <div className="mx-auto max-w-[1200px] px-6 py-[72px] space-y-6">
       <GuideTour
         steps={TOUR}
         storageKey="midas.tour.simulator.v1"
@@ -377,7 +377,7 @@ export default function SimulatorPage() {
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           <Card data-tour="result">
             <SectionLabel>도달 시점 비교</SectionLabel>
             <div className="mb-4 grid grid-cols-2 gap-4">
@@ -430,7 +430,7 @@ export default function SimulatorPage() {
           </Card>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 

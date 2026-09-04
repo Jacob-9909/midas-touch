@@ -226,7 +226,7 @@ export default function SecurityPage() {
   };
 
   return (
-    <main className="mx-auto max-w-[1200px] px-6 py-[72px]">
+    <div className="mx-auto max-w-[1200px] px-6 py-[72px]">
       <PageTitle
         eyebrow="FRONTIER AI DEFENSE"
         title="AI 보안 대응 비서"
@@ -297,10 +297,10 @@ export default function SecurityPage() {
                     {a.num}
                   </span>
                   <div className="min-w-0">
-                    <h4 className="text-base font-bold text-fg truncate">
+                    <h4 className="text-base font-bold text-fg truncate" title={a.title}>
                       {a.title}
                     </h4>
-                    <p className="text-xs text-muted truncate mt-0.5">
+                    <p className="text-xs text-muted truncate mt-0.5" title={a.note}>
                       {a.note}
                     </p>
                   </div>
@@ -363,6 +363,6 @@ export default function SecurityPage() {
           인용 출처가 한 장의 감사 증명 카드(Audit Verified Trace)로 기록됩니다.
         </p>
       </Card>
-    </main>
+    </div>
   );
 }

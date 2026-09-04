@@ -345,7 +345,7 @@ export default function CheongyakPage() {
   };
 
   return (
-    <main className="mx-auto max-w-[1200px] px-6 py-[72px] space-y-6">
+    <div className="mx-auto max-w-[1200px] px-6 py-[72px] space-y-6">
       <GuideTour
         steps={TOUR}
         storageKey="midas.tour.cheongyak.v1"
@@ -524,7 +524,7 @@ export default function CheongyakPage() {
 
       {!view && !error && (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-40 w-full rounded-2xl" />
           ))}
         </div>
@@ -567,6 +567,6 @@ export default function CheongyakPage() {
           }}
         />
       )}
-    </main>
+    </div>
   );
 }

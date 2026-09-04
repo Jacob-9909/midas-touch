@@ -36,8 +36,8 @@ export default function HomePage() {
               <LandingGuide />
             </div>
             <h1 className="font-display mt-7 text-[clamp(1.45rem,2.9vw,2.65rem)] font-extrabold tracking-tight leading-[1.25] text-fg">
-              <span className="block whitespace-nowrap">피싱·환각·틀린 세법 답변</span>
-              <span className="block whitespace-nowrap mt-1 sm:mt-1.5">
+              <span className="block break-keep sm:whitespace-nowrap">피싱·환각·틀린 세법 답변</span>
+              <span className="block break-keep sm:whitespace-nowrap mt-1 sm:mt-1.5">
                 한 번에 잡는 <span className="grad-text">AI 보안 비서</span>
               </span>
             </h1>
