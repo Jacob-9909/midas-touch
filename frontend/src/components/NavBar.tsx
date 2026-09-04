@@ -212,18 +212,18 @@ export default function NavBar() {
 
           {/* 로그인 / 사용자 상태 */}
           {selected ? (
-            <div className="hidden sm:flex items-center gap-1">
+            <div className="flex items-center gap-1">
               <span
-                className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent"
+                className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2 sm:px-2.5 py-1 text-xs font-semibold text-accent"
                 title={`로그인 계정: ${selected.label || selected.uuid}`}
               >
                 <User size={13} weight="bold" />
-                <span className="max-w-[85px] truncate">{selected.label?.split("@")[0] || "데모"}</span>
+                <span className="max-w-[48px] sm:max-w-[85px] truncate">{selected.label?.split("@")[0] || "데모"}</span>
               </span>
               <button
                 onClick={logout}
                 title="로그아웃"
-                className="btn-ghost shrink-0 rounded-full px-2 py-1 text-xs text-muted hover:text-negative h-[38px] flex items-center"
+                className="btn-ghost shrink-0 rounded-full px-1.5 sm:px-2 py-1 text-xs text-muted hover:text-negative h-[38px] flex items-center"
               >
                 로그아웃
               </button>

@@ -130,7 +130,7 @@ export default function KnowledgePanel() {
                 <button
                   onClick={() => removeDoc(d.source)}
                   disabled={deletingSource === d.source}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted opacity-0 transition hover:text-negative group-hover:opacity-100 disabled:opacity-40"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted opacity-80 sm:opacity-0 transition hover:text-negative sm:group-hover:opacity-100 disabled:opacity-40"
                   aria-label={`${d.source} 삭제`}
                   title="지식베이스에서 삭제"
                 >

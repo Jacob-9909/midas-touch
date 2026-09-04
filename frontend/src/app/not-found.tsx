@@ -3,7 +3,7 @@ import Link from "next/link";
 // 요청한 경로가 없을 때의 404 폴백.
 export default function NotFound() {
   return (
-    <div className="mx-auto my-24 max-w-md text-center">
+    <div className="mx-auto my-24 max-w-md px-4 text-center">
       <p className="eyebrow">404 · NOT FOUND</p>
       <h1 className="mt-3 font-display text-4xl tracking-tight text-fg sm:text-5xl">
         페이지를 찾을 수 없어요

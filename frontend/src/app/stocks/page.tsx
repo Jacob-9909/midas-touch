@@ -528,7 +528,7 @@ export default function StocksPage() {
   const m = result?.metrics;
 
   return (
-    <main className="mx-auto max-w-[1200px] px-6 py-[72px]">
+    <div className="mx-auto max-w-[1200px] px-6 py-[72px]">
       <GuideTour
         steps={TOUR}
         storageKey="midas.tour.stocks.v1"
@@ -1239,6 +1239,6 @@ export default function StocksPage() {
           )}
         </div>
       )}
-    </main>
+    </div>
   );
 }

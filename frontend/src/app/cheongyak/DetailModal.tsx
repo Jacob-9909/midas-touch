@@ -535,29 +535,31 @@ export default function DetailModal({ item, kind, myScore, onClose, onConsult }:
         )}
 
         {/* 액션 */}
-        <div className="mt-6 flex items-center gap-3 border-t border-line pt-4">
+        <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 border-t border-line pt-4">
           {item.pblanc_url && (
             <a
               href={item.pblanc_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-accent hover:underline"
+              className="text-xs sm:text-sm text-accent hover:underline py-1"
             >
               청약홈 공고문 보기 →
             </a>
           )}
-          <Link
-            href={simulatorHref}
-            className="ml-auto flex items-center gap-1.5 rounded-full border border-line px-3.5 py-2 text-sm text-muted transition hover:border-accent hover:text-accent"
-          >
-            <ChartLineUp size={15} /> 이 청약으로 자금계획 세우기
-          </Link>
-          <button
-            onClick={() => onConsult(item)}
-            className="btn-accent flex items-center gap-1.5 px-4 py-2 text-sm"
-          >
-            <ChatCircleText size={15} /> 이 청약 상담받기
-          </button>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 sm:ml-auto w-full sm:w-auto">
+            <Link
+              href={simulatorHref}
+              className="flex items-center justify-center gap-1.5 rounded-full border border-line px-3.5 py-2 text-xs sm:text-sm text-muted transition hover:border-accent hover:text-accent"
+            >
+              <ChartLineUp size={15} /> 이 청약으로 자금계획 세우기
+            </Link>
+            <button
+              onClick={() => onConsult(item)}
+              className="btn-accent flex items-center justify-center gap-1.5 px-4 py-2 text-xs sm:text-sm"
+            >
+              <ChatCircleText size={15} /> 이 청약 상담받기
+            </button>
+          </div>
         </div>
       </div>
     </div>
