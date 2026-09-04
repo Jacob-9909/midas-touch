@@ -338,7 +338,10 @@ function ChatClient() {
       setStatus("");
     }
   };
-  sendRef.current = send;
+
+  useEffect(() => {
+    sendRef.current = send;
+  });
 
   const fmtDate = (s: string | null) =>
     s ? new Date(s).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }) : "";
