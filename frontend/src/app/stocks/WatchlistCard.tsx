@@ -70,7 +70,7 @@ export default function WatchlistCard({
         <button
           onClick={() => mutate(() => addWatchlist(userUuid, symbol))}
           disabled={busy || !symbol || alreadyIn}
-          className="btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm disabled:opacity-40"
+          className="btn-ghost min-h-0 flex items-center gap-1.5 px-3 py-1.5 text-sm disabled:opacity-40"
           title={alreadyIn ? "이미 관심종목에 있습니다" : `${symbol} 담기`}
         >
           <Plus size={14} />

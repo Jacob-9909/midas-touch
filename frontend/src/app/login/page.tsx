@@ -96,7 +96,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword((s) => !s)}
                 aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 표시"}
-                className="btn-ghost btn-icon absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 text-muted hover:text-fg"
+                className="btn-ghost btn-icon min-h-0 absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 text-muted hover:text-fg"
               >
                 {showPassword ? <EyeSlash size={16} /> : <Eye size={16} />}
               </button>

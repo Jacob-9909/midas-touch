@@ -167,102 +167,104 @@ html.dark .glass {
   backdrop-filter: blur(12px);
 }
 
-/* 버튼 — pill 라운드, 최소 높이 46px.
-   .btn-accent 가 주 CTA(인디고 그라디언트 + 호버 글로우),
-   .btn-ghost 는 외곽선. 배지·탭도 pill. */
-.btn-accent,
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-height: 46px;
-  padding: 0.65rem 1.4rem;
-  border-radius: var(--r-pill);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  /* press 피드백은 100~160ms — 눌렀다는 응답은 즉각적이어야 한다 */
-  transition:
-    background 0.15s var(--ease-soft),
-    border-color 0.15s ease,
-    box-shadow 0.2s var(--ease-soft),
-    color 0.15s ease,
-    opacity 0.15s ease,
-    transform 0.12s var(--ease-out);
-}
-/* 키보드 포커스 링 — 필드(.field:focus)와 같은 인디고 링으로 통일 */
-.btn-accent:focus-visible,
-.btn-ghost:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-
-.btn-accent {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
-  color: #fff;
-  border: none;
-  box-shadow: 0 0 0 0 transparent;
-}
-/* 호버 이동은 포인팅 디바이스에서만 — 터치 탭에 false hover가 발생한다 */
-@media (hover: hover) and (pointer: fine) {
-  .btn-accent:hover:not(:disabled) {
-    box-shadow: 0 6px 24px -6px var(--glow);
-    transform: translateY(-1px);
+@layer components {
+  /* 버튼 — pill 라운드, 최소 높이 46px.
+     .btn-accent 가 주 CTA(인디고 그라디언트 + 호버 글로우),
+     .btn-ghost 는 외곽선. 배지/탭도 pill. */
+  .btn-accent,
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 46px;
+    padding: 0.65rem 1.4rem;
+    border-radius: var(--r-pill);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    /* press 피드백은 100~160ms — 눌렀다는 응답은 즉각적이어야 한다 */
+    transition:
+      background 0.15s var(--ease-soft),
+      border-color 0.15s ease,
+      box-shadow 0.2s var(--ease-soft),
+      color 0.15s ease,
+      opacity 0.15s ease,
+      transform 0.12s var(--ease-out);
   }
-}
-.btn-accent:active:not(:disabled),
-.btn-ghost:active:not(:disabled) {
-  transform: scale(0.97); /* press 피드백 — 인터페이스가 입력을 듣고 있다는 확인 */
-}
-.btn-accent:disabled {
-  opacity: 0.35;
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--fg);
-  border: 1px solid var(--line);
-}
-@media (hover: hover) and (pointer: fine) {
-  .btn-ghost:hover:not(:disabled) {
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-    background: var(--surface);
+  /* 키보드 포커스 링 — 필드(.field:focus)와 같은 인디고 링으로 통일 */
+  .btn-accent:focus-visible,
+  .btn-ghost:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
   }
-}
-.btn-ghost:disabled {
-  opacity: 0.4;
-}
 
-/* 아이콘 정사각 버튼 — 라벨 없는 것들 전용. */
-.btn-icon {
-  min-height: 0;
-  padding: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r-md);
-}
+  .btn-accent {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+    color: #fff;
+    border: none;
+    box-shadow: 0 0 0 0 transparent;
+  }
+  /* 호버 이동은 포인팅 디바이스에서만 — 터치 탭에 false hover가 발생한다 */
+  @media (hover: hover) and (pointer: fine) {
+    .btn-accent:hover:not(:disabled) {
+      box-shadow: 0 6px 24px -6px var(--glow);
+      transform: translateY(-1px);
+    }
+  }
+  .btn-accent:active:not(:disabled),
+  .btn-ghost:active:not(:disabled) {
+    transform: scale(0.97); /* press 피드백 — 인터페이스가 입력을 듣고 있다는 확인 */
+  }
+  .btn-accent:disabled {
+    opacity: 0.35;
+  }
 
-/* 입력 필드 — 인셋 표면 + 헤어라인, 포커스는 인디고 링. */
-.field {
-  background: var(--ink-2);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  min-height: 46px;
-  font-size: 0.95rem;
-  color: var(--fg);
-  font-family: var(--font-sans);
-  outline: none;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.2s var(--ease-soft);
-}
-.field::placeholder {
-  color: var(--stone);
-}
-.field:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  .btn-ghost {
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--line);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-ghost:hover:not(:disabled) {
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+      background: var(--surface);
+    }
+  }
+  .btn-ghost:disabled {
+    opacity: 0.4;
+  }
+
+  /* 아이콘 정사각 버튼 — 라벨 없는 것들 전용. */
+  .btn-icon {
+    min-height: 0;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--r-md);
+  }
+
+  /* 입력 필드 — 인셋 표면 + 헤어라인, 포커스는 인디고 링. */
+  .field {
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    min-height: 46px;
+    font-size: 0.95rem;
+    color: var(--fg);
+    font-family: var(--font-sans);
+    outline: none;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.2s var(--ease-soft);
+  }
+  .field::placeholder {
+    color: var(--stone);
+  }
+  .field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
 }
 
 /* 스켈레톤 시머 — 중립 표면 명도로 깜빡인다. */
@@ -458,21 +460,47 @@ html.dark .glass {
 .a11y-large-text .font-display {
   letter-spacing: -0.01em;
 }
-.a11y-large-text .btn-accent,
-.a11y-large-text .btn-ghost {
-  min-height: 48px;
-  font-size: 1rem;
+@layer components {
+  .a11y-large-text .btn-accent,
+  .a11y-large-text .btn-ghost {
+    min-height: 48px;
+    font-size: 1rem;
+  }
+  .a11y-large-text .field {
+    min-height: 48px;
+    font-size: 1rem;
+  }
 }
-/* 네비게이션 바 내부 버튼은 알약 캡슐 레이아웃을 유지하도록 컴팩트 타깃 보정 */
+
+/* 아이콘 버튼 규격 절대 보호 (정사각 아이콘 버튼 및 인라인 제어는 늘어나지 않음) */
+.btn-icon,
+.a11y-large-text .btn-icon,
+.a11y-large-text .btn-ghost.btn-icon,
+.a11y-large-text .btn-accent.btn-icon {
+  min-height: 0 !important;
+  padding: 0 !important;
+}
+
+/* 네비게이션 바 내부 요소 규격 고정 — a11y 큰 글씨 모드에서도 캡슐 알약 형태를 온전히 유지 */
+.a11y-large-text nav {
+  font-size: 13px;
+}
 .a11y-large-text nav .btn-ghost,
-.a11y-large-text nav .btn-icon {
-  min-height: 36px;
-  font-size: 0.875rem;
+.a11y-large-text nav .btn-accent {
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 0 0.65rem !important;
+  font-size: 12px !important;
 }
-.a11y-large-text .field {
-  min-height: 48px;
-  font-size: 1rem;
+.a11y-large-text nav .btn-icon,
+.a11y-large-text nav .btn-ghost.btn-icon,
+.a11y-large-text nav .btn-accent.btn-icon {
+  min-height: 38px !important;
+  height: 38px !important;
+  width: 38px !important;
+  padding: 0 !important;
 }
+
 /* 답변 말풍선은 줄간격과 글자 크기를 넓혀 시니어 가독성을 보강한다 */
 .a11y-large-text [data-chat-answer] {
   font-size: 1.1rem;

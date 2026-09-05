@@ -207,16 +207,16 @@ export default function SimulatorPage() {
         <button
           type="button"
           onClick={() => applyPreset(20_000_000, 600_000, 40_000_000)}
-          className="btn-ghost text-xs px-3 py-1 rounded-full text-fg/90 hover:text-accent border-line/60"
+          className="btn-ghost min-h-0 text-xs px-3 py-1 rounded-full text-fg/90 hover:text-accent border-line/60"
         >
-          🐣 사회초년생 (자산 2천 · 월 60만 ➔ 계약금 4천만)
+          🐣 사회초년생 (자산 2천, 월 60만 ➔ 계약금 4천만)
         </button>
         <button
           type="button"
           onClick={() => applyPreset(50_000_000, 1_500_000, 100_000_000)}
-          className="btn-ghost text-xs px-3 py-1 rounded-full text-fg/90 hover:text-accent border-line/60"
+          className="btn-ghost min-h-0 text-xs px-3 py-1 rounded-full text-fg/90 hover:text-accent border-line/60"
         >
-          💍 신혼부부 (자산 5천 · 월 150만 ➔ 1억 목표)
+          💍 신혼부부 (자산 5천, 월 150만 ➔ 1억 목표)
         </button>
         <button
           type="button"
@@ -228,7 +228,7 @@ export default function SimulatorPage() {
             setMonthlySaving(300_000);
             toast("서울 85㎡ 예치금 프리셋이 적용되었습니다.", "info");
           }}
-          className="btn-ghost text-xs px-3 py-1 rounded-full text-fg/90 hover:text-accent border-line/60"
+          className="btn-ghost min-h-0 text-xs px-3 py-1 rounded-full text-fg/90 hover:text-accent border-line/60"
         >
           🏠 서울 85㎡ 청약 예치금 (300만)
         </button>

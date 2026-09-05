@@ -125,7 +125,7 @@ export default function GraphPage() {
           <button
             onClick={loadSnapshot}
             disabled={snapLoading}
-            className="btn-ghost px-4 py-2 text-sm font-semibold disabled:opacity-40"
+            className="btn-ghost min-h-0 px-4 py-2 text-sm font-semibold disabled:opacity-40"
           >
             {snapLoading ? "불러오는 중…" : snapshot ? "새로고침" : "스냅샷 불러오기"}
           </button>
