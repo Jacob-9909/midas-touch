@@ -119,13 +119,13 @@ export default function HomePage() {
           <div className="shrink-0 flex items-center gap-2">
             <Link
               href="/security"
-              className="btn-ghost text-xs font-semibold px-3 py-1.5"
+              className="btn-ghost min-h-0 text-xs font-semibold px-3 py-1.5"
             >
               5겹 보안 체험
             </Link>
             <Link
               href="/chat"
-              className="btn-accent text-xs font-semibold px-3 py-1.5"
+              className="btn-accent min-h-0 text-xs font-semibold px-3 py-1.5"
             >
               챗봇 열기 →
             </Link>

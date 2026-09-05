@@ -153,7 +153,7 @@ export default function NavBar() {
 
   return (
     <header className="sticky top-2.5 z-50 px-3 sm:px-5 mb-2 sm:mb-3">
-      <nav className="mx-auto flex min-h-[54px] max-w-[1280px] 2xl:max-w-[1400px] w-full items-center justify-between gap-2.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_90%,transparent)] px-3.5 sm:px-4 py-1.5 shadow-sm shadow-black/5 dark:shadow-md dark:shadow-black/50 backdrop-blur-xl transition-all">
+      <nav className="mx-auto flex min-h-[54px] max-w-[1280px] 2xl:max-w-[1440px] w-full items-center justify-between gap-2 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_90%,transparent)] px-3.5 sm:px-4 py-1.5 shadow-sm shadow-black/5 dark:shadow-md dark:shadow-black/50 backdrop-blur-xl transition-all">
         {/* 좌측 브랜드 로고 */}
         <Link
           href="/"
@@ -166,7 +166,7 @@ export default function NavBar() {
             <span className="text-[15px] sm:text-[16px] font-extrabold tracking-tight text-fg group-hover:text-accent transition-colors">
               Midas Touch
             </span>
-            <span className="hidden items-center gap-1 rounded-full border border-positive/30 bg-positive/10 px-2 py-0.5 font-mono-spec text-[10px] font-bold text-positive md:inline-flex">
+            <span className="hidden items-center gap-1 rounded-full border border-positive/30 bg-positive/10 px-2 py-0.5 font-mono-spec text-[10px] font-bold text-positive 2xl:inline-flex">
               <span className="h-1.5 w-1.5 rounded-full bg-positive animate-pulse" />
               AI GUARD
             </span>
@@ -174,15 +174,15 @@ export default function NavBar() {
         </Link>
 
         {/* 데스크톱 메뉴 링크 (중앙) */}
-        <div className="hidden shrink-0 items-center gap-1 xl:flex">
+        <div className="hidden shrink-0 items-center gap-0.5 2xl:gap-1 xl:flex">
           {LINKS.map((l, i) => (
             <span key={l.href} className="flex items-center">
               {i > 0 && LINKS[i - 1].group !== l.group && (
-                <span aria-hidden className="mx-2 h-4 w-px bg-line/70" />
+                <span aria-hidden className="mx-1.5 2xl:mx-2 h-4 w-px bg-line/70" />
               )}
               <Link
                 href={l.href}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold transition-all duration-150 ${
+                className={`whitespace-nowrap rounded-full px-2.5 2xl:px-3 py-1.5 text-[12.5px] 2xl:text-[13px] font-semibold transition-all duration-150 ${
                   isActive(l.href)
                     ? "!bg-accent !text-white !border-accent shadow-sm font-bold"
                     : "text-muted hover:text-fg hover:bg-surface/80 border border-transparent"
@@ -201,7 +201,7 @@ export default function NavBar() {
             onClick={() => setCommandOpen(true)}
             aria-label="빠른 실행 및 검색 (단축키 ⌘K)"
             title="빠른 검색 (⌘K)"
-            className="flex items-center gap-2 rounded-full border border-line bg-surface/60 hover:bg-surface hover:border-accent/40 px-3 py-1.5 text-xs text-muted hover:text-fg transition-all h-[38px]"
+            className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-line bg-surface/60 hover:bg-surface hover:border-accent/40 px-2.5 sm:px-3 py-1.5 text-xs text-muted hover:text-fg transition-all h-[38px] shrink-0"
           >
             <MagnifyingGlass size={15} className="text-accent" weight="bold" />
             <span className="hidden sm:inline font-medium text-muted">검색</span>
@@ -212,7 +212,7 @@ export default function NavBar() {
 
           {/* 로그인 / 사용자 상태 */}
           {selected ? (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <span
                 className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2 sm:px-2.5 py-1 text-xs font-semibold text-accent"
                 title={`로그인 계정: ${selected.label || selected.uuid}`}
@@ -223,7 +223,7 @@ export default function NavBar() {
               <button
                 onClick={logout}
                 title="로그아웃"
-                className="btn-ghost shrink-0 rounded-full px-1.5 sm:px-2 py-1 text-xs text-muted hover:text-negative h-[38px] flex items-center"
+                className="btn-ghost min-h-0 shrink-0 rounded-full px-2 py-1 text-xs text-muted hover:text-negative h-[38px] flex items-center"
               >
                 로그아웃
               </button>
@@ -232,7 +232,7 @@ export default function NavBar() {
             <Link
               href="/login"
               title="체험 계정 로그인"
-              className="btn-ghost shrink-0 gap-1 rounded-full px-2.5 sm:px-3 py-1.5 h-[38px] border border-line/70 hover:border-accent hover:text-accent text-xs font-semibold text-fg flex items-center transition-all"
+              className="btn-ghost min-h-0 shrink-0 gap-1 rounded-full px-2.5 sm:px-3 py-1.5 h-[38px] border border-line/70 hover:border-accent hover:text-accent text-xs font-semibold text-fg flex items-center transition-all"
             >
               <User size={15} weight="bold" />
               <span className="hidden sm:inline">로그인</span>
@@ -244,7 +244,7 @@ export default function NavBar() {
             onClick={toggle}
             aria-label="테마 전환"
             title={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
-            className="btn-ghost btn-icon shrink-0 h-[38px] w-[38px] rounded-full border border-line/70 hover:border-line hover:bg-surface/80"
+            className="btn-ghost btn-icon min-h-0 shrink-0 h-[38px] w-[38px] rounded-full border border-line/70 hover:border-line hover:bg-surface/80"
           >
             {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
           </button>
@@ -255,7 +255,7 @@ export default function NavBar() {
             aria-pressed={largeText}
             aria-label="큰 글씨 모드"
             title={largeText ? "큰 글씨 모드 끄기 (A11y)" : "큰 글씨 모드 켜기 (A11y)"}
-            className={`btn-ghost btn-icon shrink-0 h-[38px] w-[38px] rounded-full border border-line/70 hover:border-line hover:bg-surface/80 ${
+            className={`btn-ghost btn-icon min-h-0 shrink-0 h-[38px] w-[38px] rounded-full border border-line/70 hover:border-line hover:bg-surface/80 ${
               largeText ? "!border-accent/50 !bg-accent/15 !text-accent font-bold" : ""
             }`}
           >
@@ -268,7 +268,7 @@ export default function NavBar() {
             aria-label="전체 메뉴 열기"
             aria-expanded={open}
             title="전체 메뉴"
-            className={`btn-ghost btn-icon shrink-0 h-[38px] w-[38px] rounded-full border transition-all xl:hidden ${
+            className={`btn-ghost btn-icon min-h-0 shrink-0 h-[38px] w-[38px] rounded-full border transition-all xl:!hidden ${
               open
                 ? "!border-accent !bg-accent/20 !text-accent"
                 : "border-line/70 hover:border-line hover:bg-surface/80 text-fg"

@@ -1017,7 +1017,7 @@ export default function StocksPage() {
                   <button
                     onClick={optimize}
                     disabled={gridBusy}
-                    className="btn-ghost flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-50"
+                    className="btn-ghost min-h-0 flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-50"
                   >
                     {gridBusy ? <Spinner className="h-3.5 w-3.5" /> : <Target size={14} />}
                     {gridBusy ? "탐색 중…" : "최적 파라미터 탐색"}
@@ -1115,7 +1115,7 @@ export default function StocksPage() {
                   </SectionLabel>
                   <button
                     onClick={consult}
-                    className="btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm"
+                    className="btn-ghost min-h-0 flex items-center gap-1.5 px-3 py-1.5 text-sm"
                   >
                     <ChatCircleText size={14} /> 이 결과로 상담받기
                   </button>
@@ -1217,7 +1217,7 @@ export default function StocksPage() {
                   <button
                     onClick={() => analyze(m)}
                     disabled={reportBusy}
-                    className="btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm disabled:opacity-50"
+                    className="btn-ghost min-h-0 flex items-center gap-1.5 px-3 py-1.5 text-sm disabled:opacity-50"
                   >
                     {reportBusy ? <Spinner className="h-3.5 w-3.5" /> : <Sparkle size={14} />}
                     {reportBusy ? "생성 중…" : report ? "다시 생성" : "리포트 생성"}

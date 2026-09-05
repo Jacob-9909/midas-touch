@@ -124,7 +124,7 @@ function AssistantAnswer({ content }: { content: string }) {
         <button
           onClick={copyAnswer}
           aria-label="답변 복사"
-          className="btn-ghost gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-[13px] text-muted hover:text-fg"
+          className="btn-ghost min-h-0 gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-[13px] text-muted hover:text-fg"
         >
           {copied ? (
             <>
@@ -427,7 +427,7 @@ function ChatClient() {
         <button
           onClick={() => setMobileSidebarOpen((v) => !v)}
           aria-label="대화 목록 및 지식베이스 열기"
-          className="md:hidden btn-ghost flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-mono-spec shrink-0"
+          className="md:!hidden btn-ghost min-h-0 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-mono-spec shrink-0"
         >
           <SidebarSimple size={15} />
           <span>{tab === "chats" ? "대화 목록" : "지식베이스"}</span>
@@ -446,7 +446,7 @@ function ChatClient() {
               <span className="font-display text-sm font-semibold text-fg">대화 및 지식베이스</span>
               <button
                 onClick={() => setMobileSidebarOpen(false)}
-                className="btn-ghost btn-icon h-7 w-7 shrink-0"
+                className="btn-ghost btn-icon min-h-0 h-7 w-7 shrink-0"
                 aria-label="사이드바 닫기"
               >
                 <X size={15} />

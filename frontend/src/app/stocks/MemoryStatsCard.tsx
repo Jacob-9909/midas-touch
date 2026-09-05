@@ -94,7 +94,7 @@ export default function MemoryStatsCard({
         <button
           onClick={validate}
           disabled={busy}
-          className="btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-sm disabled:opacity-50"
+          className="btn-ghost min-h-0 flex items-center gap-1.5 px-3 py-1.5 text-sm disabled:opacity-50"
           title="7일 이상 지난 분석을 현재가와 비교해 적중 여부 채우기"
         >
           <ArrowsClockwise size={14} className={busy ? "animate-spin" : ""} />

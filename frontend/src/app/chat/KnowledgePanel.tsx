@@ -180,7 +180,7 @@ export default function KnowledgePanel() {
       <div className="border-t border-line pt-4">
         <button
           onClick={rebuild}
-          className="btn-ghost flex w-full items-center justify-center gap-1.5 px-3 py-2 text-xs"
+          className="btn-ghost min-h-0 flex w-full items-center justify-center gap-1.5 px-3 py-2 text-xs"
         >
           <Sparkle size={14} />
           지식그래프 반영 (재빌드)
