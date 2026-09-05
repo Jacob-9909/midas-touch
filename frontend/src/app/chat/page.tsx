@@ -13,6 +13,7 @@ import {
   CheckCircle,
   Copy,
   Check,
+  Paperclip,
 } from "@phosphor-icons/react";
 import {
   apiDelete,
@@ -95,7 +96,7 @@ function AssistantAnswer({ content }: { content: string }) {
             {/* 5겹째 — 라벨이 "5겹"인데 4줄만 있으면 세어 보는 사람에게 바로 걸린다. */}
             <div className="flex items-center gap-2 text-muted">
               <CheckCircle weight="fill" size={16} className="text-positive shrink-0" />
-              <span>외곽 경계: <span className="text-fg font-medium">fetch 허용목록 · JWT 세션</span></span>
+              <span>외곽 경계: <span className="text-fg font-medium">fetch 허용목록, JWT 세션</span></span>
             </div>
           </div>
         </div>
@@ -392,7 +393,7 @@ function ChatClient() {
                   >
                     <div className="truncate text-fg">{s.title}</div>
                     <div className="truncate text-[10px] text-muted">
-                      {fmtDate(s.updated_at)} · {s.message_count}개 메시지
+                      {fmtDate(s.updated_at)} / {s.message_count}개 메시지
                     </div>
                   </button>
                   <button
@@ -421,7 +422,7 @@ function ChatClient() {
           <h1 className="font-display text-lg sm:text-xl text-fg shrink-0 font-bold">에이전트 챗봇</h1>
           <span className="eyebrow hidden sm:inline-flex">AI Advisor</span>
           <span className="hidden font-mono-spec text-[10px] uppercase tracking-widest text-muted md:inline truncate">
-            MidasAdviser · 멀티턴 · 실시간 스트리밍
+            MidasAdviser / 멀티턴 / 실시간 스트리밍
           </span>
         </div>
         <button
@@ -501,12 +502,12 @@ function ChatClient() {
                       </div>
                       <h3 className="text-sm font-semibold text-fg">무엇이든 질문해보세요</h3>
                       <p className="text-xs text-muted mt-1">
-                        사기 문자 검증, 세법 근거·계산, 청약 자격까지 — 근거와 함께 정리해 드립니다.
+                        사기 문자 검증, 세법 근거 및 계산, 청약 자격까지 — 근거와 함께 정리해 드립니다.
                       </p>
                     </div>
 
                       {/* 예시 질문은 첫 화면의 실질적 헤드라인이다 — 공모 주제('AI 금융 보안 비서')의
-                          핵심 기능(사기 검증·결정론 계산)을 앞세우고 청약·자산은 균형으로 둔다. */}
+                          핵심 기능(사기 검증, 결정론 계산)을 앞세우고 청약 및 자산은 균형으로 둔다. */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left max-w-xl mx-auto pt-2">
                         {[
                           {
@@ -594,7 +595,20 @@ function ChatClient() {
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2 border-t border-line p-3">
+              <div className="flex items-center gap-2 border-t border-line p-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTab("kb");
+                    setMobileSidebarOpen(true);
+                    toast("지식베이스 패널에서 PDF, TXT, MD 문서를 첨부하고 임베딩할 수 있습니다.", "info");
+                  }}
+                  aria-label="지식베이스 파일 첨부"
+                  title="문서 첨부 및 지식베이스 열기"
+                  className="btn-ghost flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted hover:text-accent hover:border-accent/40 transition"
+                >
+                  <Paperclip size={18} />
+                </button>
                 <input
                   ref={inputRef}
                   value={input}
@@ -605,7 +619,7 @@ function ChatClient() {
                       send();
                     }
                   }}
-                  placeholder="메시지를 입력하세요…"
+                  placeholder="메시지를 입력하세요… (서류 첨부는 좌측 클립 아이콘)"
                   className="field flex-1 px-4 py-2.5 text-sm"
                 />
                 <button

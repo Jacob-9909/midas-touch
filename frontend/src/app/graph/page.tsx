@@ -109,10 +109,10 @@ export default function GraphPage() {
           </div>
           <div className="text-sm sm:text-[15px] leading-relaxed text-muted/95 break-keep space-y-1">
             <p>
-              신규 세법 문서 업로드와 임베딩·그래프 구축은 <strong className="text-accent font-semibold">챗봇 화면의 지식베이스 패널</strong>에서 한 번에 처리됩니다.
+              신규 세법 문서 업로드와 임베딩 및 그래프 구축은 <strong className="text-accent font-semibold">챗봇 화면의 지식베이스 패널</strong>에서 한 번에 처리됩니다.
             </p>
             <p>
-              이 페이지는 그렇게 구축된 Neo4j 지식그래프를 직접 시각화하고 탐색·질의하는 <strong className="text-fg font-bold">근거 추적 전용 콘솔</strong>입니다.
+              이 페이지는 그렇게 구축된 Neo4j 지식그래프를 직접 시각화하고 탐색 및 질의하는 <strong className="text-fg font-bold">근거 추적 전용 콘솔</strong>입니다.
             </p>
           </div>
         </div>
@@ -138,8 +138,8 @@ export default function GraphPage() {
           ) : (
             <>
               <p className="mb-3 text-xs sm:text-sm font-medium text-muted">
-                노드 {snapshot.nodes.length}개 · 관계 {snapshot.links.length}개
-                {highlight.length > 0 && " · 흰 테두리 = RAG 근거 노드"}
+                노드 {snapshot.nodes.length}개 / 관계 {snapshot.links.length}개
+                {highlight.length > 0 && " (흰색 노드: GraphRAG 질의 근거)"}
               </p>
               <GraphView data={snapshot} highlight={highlight} />
             </>
@@ -154,7 +154,7 @@ export default function GraphPage() {
             )}
             <div className="text-center sm:text-left">
               <span className="font-mono-spec text-xs font-bold uppercase tracking-[0.2em] text-accent">
-                Standing by · 스캔 대기
+                Standing by / 스캔 대기
               </span>
               <p className="mt-2 text-sm sm:text-[15px] font-medium text-muted">
                 버튼을 눌러 Neo4j 그래프 스냅샷을 시각화하세요.
