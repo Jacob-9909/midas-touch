@@ -153,7 +153,7 @@ export default function NavBar() {
 
   return (
     <header className="sticky top-2.5 z-50 px-3 sm:px-5 mb-2 sm:mb-3">
-      <nav className="mx-auto flex min-h-[54px] max-w-[1280px] w-full items-center justify-between gap-2.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_90%,transparent)] px-3.5 sm:px-4 py-1.5 shadow-sm shadow-black/5 dark:shadow-md dark:shadow-black/50 backdrop-blur-xl transition-all">
+      <nav className="mx-auto flex min-h-[54px] max-w-[1280px] 2xl:max-w-[1400px] w-full items-center justify-between gap-2.5 rounded-full border border-line bg-[color-mix(in_srgb,var(--ink-1)_90%,transparent)] px-3.5 sm:px-4 py-1.5 shadow-sm shadow-black/5 dark:shadow-md dark:shadow-black/50 backdrop-blur-xl transition-all">
         {/* 좌측 브랜드 로고 */}
         <Link
           href="/"
@@ -243,32 +243,32 @@ export default function NavBar() {
           <button
             onClick={toggle}
             aria-label="테마 전환"
+            title={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
             className="btn-ghost btn-icon shrink-0 h-[38px] w-[38px] rounded-full border border-line/70 hover:border-line hover:bg-surface/80"
           >
             {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
           </button>
 
-          {/* 큰 글씨 모드 토글 */}
+          {/* 큰 글씨 모드 토글 (A11y) */}
           <button
             onClick={toggleLargeText}
             aria-pressed={largeText}
             aria-label="큰 글씨 모드"
-            title={largeText ? "큰 글씨 모드 끄기" : "큰 글씨 모드 켜기"}
-            className={`btn-ghost shrink-0 gap-1.5 rounded-full px-3 py-1.5 h-[38px] border border-line/70 hover:border-line hover:bg-surface/80 ${
+            title={largeText ? "큰 글씨 모드 끄기 (A11y)" : "큰 글씨 모드 켜기 (A11y)"}
+            className={`btn-ghost btn-icon shrink-0 h-[38px] w-[38px] rounded-full border border-line/70 hover:border-line hover:bg-surface/80 ${
               largeText ? "!border-accent/50 !bg-accent/15 !text-accent font-bold" : ""
             }`}
           >
-            <TextAa weight={largeText ? "fill" : "regular"} size={16} />
-            <span className="hidden 2xl:inline text-xs font-semibold">큰 글씨</span>
+            <TextAa weight={largeText ? "fill" : "bold"} size={17} />
           </button>
 
-          {/* 전체 메뉴 햄버거 버튼 */}
+          {/* 전체 메뉴 햄버거 버튼 (데스크톱에선 중앙 링크가 노출되므로 xl 미만 모바일/태블릿에서만 표출) */}
           <button
             onClick={() => setOpen((o) => !o)}
             aria-label="전체 메뉴 열기"
             aria-expanded={open}
             title="전체 메뉴"
-            className={`btn-ghost btn-icon shrink-0 h-[38px] w-[38px] rounded-full border transition-all ${
+            className={`btn-ghost btn-icon shrink-0 h-[38px] w-[38px] rounded-full border transition-all xl:hidden ${
               open
                 ? "!border-accent !bg-accent/20 !text-accent"
                 : "border-line/70 hover:border-line hover:bg-surface/80 text-fg"
