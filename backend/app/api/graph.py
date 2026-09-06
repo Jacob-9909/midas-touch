@@ -75,7 +75,7 @@ async def upload_document(file: UploadFile = File(...)) -> dict:
 
 @router.post("/ingest/jobs")
 async def start_ingest_job(req: IngestRequest) -> dict:
-    """업로드된 문서를 파싱·임베딩해 emb_passages에 적재(reingest)한다. 완료 후 그래프 빌드를 실행하면 RAG에 반영된다."""
+    """업로드된 문서를 파싱/임베딩해 emb_passages에 적재(reingest)한다. 완료 후 그래프 빌드를 실행하면 RAG에 반영된다."""
     target = RAW_DIR / Path(req.filename).name
     if not target.exists():
         raise HTTPException(status_code=404, detail=f"업로드된 파일을 찾을 수 없습니다: {req.filename}")
