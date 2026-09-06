@@ -148,9 +148,15 @@ export default function KnowledgePanel() {
 
       {/* 파일 첨부 → 임베딩 */}
       <div className="border-t border-line pt-4">
-        <h3 className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-muted">
-          파일 추가
-        </h3>
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
+            파일 추가 (첨부)
+          </h3>
+          <span className="text-[10px] text-muted">PDF, TXT, MD</span>
+        </div>
+        <p className="mb-2 text-[11px] text-muted leading-relaxed">
+          세무 서류, 청약 가이드, 금융사기 예방 매뉴얼 등을 첨부하면 임베딩되어 챗봇 답변의 근거로 활용됩니다.
+        </p>
         <input
           type="file"
           accept=".pdf,.txt,.md,.jsonl"
@@ -191,7 +197,7 @@ export default function KnowledgePanel() {
         </p>
         <p className="mt-1.5 px-1 text-[10px] leading-relaxed text-warning">
           ⚠ 엔티티 추출(LLM)로 <span className="font-medium">수 분 소요</span>되며, 그동안 같은 LLM 자원을 공유하는
-          챗 응답이 느려질 수 있습니다. 시연·발표 중에는 실행하지 마세요.
+          챗 응답이 느려질 수 있습니다. 시연이나 발표 중에는 실행하지 마세요.
         </p>
         {buildJobId && (
           <div className="mt-3">
