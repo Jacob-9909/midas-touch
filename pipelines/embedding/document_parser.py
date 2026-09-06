@@ -189,8 +189,8 @@ class DocumentParser:
 
     def __init__(self) -> None:
         self._chunker = FinancialChunker(
-            chunk_size=750,  # 한국어 금융 문맥 보존용 최적 크기
-            chunk_overlap=150,
+            chunk_size=450,  # 한국어 금융 문맥 보존 및 정밀 검색용 최적 크기 (주식과 세금 단락 기준 통일)
+            chunk_overlap=100,
         )
 
     def parse_file(self, path: Path) -> list[Passage]:
