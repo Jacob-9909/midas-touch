@@ -325,6 +325,7 @@ def build_knowledge_graph(documents: list[Document], delay: float = 0.0, workers
         password=neo4j_password,
         url=neo4j_url,
         database="neo4j",
+        refresh_schema=False,
     )
 
     # 병렬 처리 시 Neo4j schema refresh의 동시성 버그(pop from empty list) 방지 및 속도 향상을 위해 get_schema 오버라이드
